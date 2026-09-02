@@ -111,26 +111,33 @@ fn wide(value: &str) -> Result<Vec<u16>, SecretError> {
 #[cfg(all(test, windows))]
 mod tests {
     use super::*;
-    const TARGET: &str = "EDY-VERDICT-LEVEL1C-TEST";
-    struct Cleanup;
+    fn isolated_target(case: &str) -> String {
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("test clock is valid")
+            .as_nanos();
+        format!("EDY-VERDICT-LEVEL0-TEST-{case}-{}-{nonce}", std::process::id())
+    }
+    struct Cleanup(String);
     impl Drop for Cleanup {
         fn drop(&mut self) {
-            let _ = CredentialStore::delete(TARGET);
+            let _ = CredentialStore::delete(&self.0);
         }
     }
     #[test]
     #[ignore = "Explicit user-authorized native credential write/read/delete; no real key"]
     fn credential_manager_fake_roundtrip() {
+        let target = isolated_target("ROUNDTRIP");
         assert!(
-            CredentialStore::read(TARGET).unwrap().is_none(),
+            CredentialStore::read(&target).unwrap().is_none(),
             "Existing credential preserved; refusing overwrite"
         );
-        let _cleanup = Cleanup;
+        let _cleanup = Cleanup(target.clone());
         let fake = SecretValue(Zeroizing::new(
             b"discardable-foundation-fixture-not-an-api-key".to_vec(),
         ));
-        CredentialStore::write(TARGET, &fake).unwrap();
-        let read = CredentialStore::read(TARGET)
+        CredentialStore::write(&target, &fake).unwrap();
+        let read = CredentialStore::read(&target)
             .unwrap()
             .expect("Credential missing");
         // Boolean assertion prevents values appearing in failure output.
@@ -138,27 +145,33 @@ mod tests {
             read.0.as_slice() == fake.0.as_slice(),
             "Credential comparison failed"
         );
-        CredentialStore::delete(TARGET).unwrap();
+        CredentialStore::delete(&target).unwrap();
         assert!(
-            CredentialStore::read(TARGET).unwrap().is_none(),
+            CredentialStore::read(&target).unwrap().is_none(),
             "Cleanup not confirmed"
         );
     }
     #[test]
     #[ignore = "Explicit user-authorized failure cleanup test"]
     fn cleanup_on_unwind() {
+        let target = isolated_target("UNWIND");
         assert!(
-            CredentialStore::read(TARGET).unwrap().is_none(),
+            CredentialStore::read(&target).unwrap().is_none(),
             "Existing credential preserved"
         );
+        let cleanup_target = target.clone();
         let result = std::panic::catch_unwind(|| {
-            let _cleanup = Cleanup;
-            CredentialStore::write(TARGET, &SecretValue(Zeroizing::new(vec![42; 16]))).unwrap();
+            let _cleanup = Cleanup(cleanup_target.clone());
+            CredentialStore::write(
+                &cleanup_target,
+                &SecretValue(Zeroizing::new(vec![42; 16])),
+            )
+            .unwrap();
             panic!("Synthetic failure without secret value");
         });
         assert!(result.is_err());
         assert!(
-            CredentialStore::read(TARGET).unwrap().is_none(),
+            CredentialStore::read(&target).unwrap().is_none(),
             "Failure cleanup not confirmed"
         );
     }
