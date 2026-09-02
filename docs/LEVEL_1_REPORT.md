@@ -1,6 +1,6 @@
 # EDY VERDICT — Level 1 Repository Security
 
-Status: implementation complete for authorized inventory and synthetic validation; production engine execution remains policy-blocked.
+Status: `LEVEL 1 IMPLEMENTATION = COMPLETE`. Production engine execution remains policy-blocked and production scanning readiness is not claimed.
 
 ## Contract
 
@@ -22,10 +22,17 @@ The supported categories are `secret`, `vulnerable_dependency`, `misconfiguratio
 - secret-safe Executive, Technical, Developer JSON and HTML reports;
 - restricted IPC for authorization, inspection, confirmed scan creation, and inventory retrieval;
 - repository preview/confirmation UI with explicit incomplete-coverage warning.
+- immediate fingerprint revalidation before the worker reads the target; a changed target returns `repository_revalidation_required` and cannot reuse stale authorization;
+- the existing core correlator extended to repository observations, with CVE/GHSA/OSV alias equivalence only when sources provide an explicit overlapping identifier;
+- one logical finding with preserved primary/supporting sources, confidence, rule IDs, and all evidence references;
+- supply-chain aggregation for missing/empty lockfiles, unsupported ecosystems, and unavailable vulnerability data without false critical-vulnerability claims;
+- technical license states `detected`, `unknown`, `conflicting`, and `policy_review`, including source metadata and no legal-compliance claim;
+- seven-phase repository progress (`inventory` through `reporting`) with no ETA, persisted partial coverage, and persisted cancellation without a final verdict;
+- completed findings filters, detailed evidence/remediation/limitation view, three report views, safe error states, and an explicit no-reveal secret presentation.
 
 ## Synthetically validated
 
-`tests/fixtures/synthetic-repository-a` contains harmless manifests, one fake credential, one unsafe configuration, one safe file, and an excluded `node_modules` payload. Typed E2E validates authorization, preview, explicit confirmation, one secret, one vulnerable dependency, one misconfiguration, one unavailable operational check, persistence, and redacted reporting. No malware, external repository, network provider, or real credential is used.
+`tests/fixtures/synthetic-repository-a` contains harmless manifests, one fake credential, one unsafe configuration, one safe file, and an excluded `node_modules` payload. Typed E2E validates authorization, preview, explicit confirmation, snapshot revalidation, one secret, one correlated OSV+Trivy vulnerable dependency, one misconfiguration, one supply-chain observation, one license observation, two unavailable operational constraints, evidence preservation, persistence, cancellation, and redacted reporting. No malware, external repository, network provider, or real credential is used.
 
 ## Real-target capable
 
@@ -68,11 +75,40 @@ Tauri remains pinned at `2.11.5`; the advisory gate still waits for an official 
 
 ## Final validation — 2026-09-02
 
-- Rust workspace: 159 passed, 0 failed, 2 deliberately ignored native credential tests;
+- Rust workspace: 175 passed, 0 failed, 2 deliberately ignored native credential tests;
 - Clippy `-D warnings`: pass;
 - rustfmt check: pass;
-- frontend: typecheck pass, lint pass, 38 tests pass, production build pass;
+- frontend: typecheck pass, lint pass, 41 tests pass, production build pass;
 - Cargo deny: five known upstream `unic-*` advisories, zero new advisories; licenses, sources, and bans pass;
-- visual QA: 1366×768, 1920×1080, and 2560×1440; no horizontal overflow, warning and repository authorization controls visible;
+- visual QA in the local browser: 1366×768, 1920×1080, and 2560×1440; no horizontal overflow, fail-closed error state and repository authorization controls visible; populated progress/findings/detail/coverage/report states are additionally covered by deterministic render tests;
 - exact full synthetic secret outside its authorized fixture: zero; persisted database/report/frontend payload occurrences: zero;
+- Rustup prevention tests: 7/7 pass; all project Rust commands use the project-local allowlisted wrapper; global inventory requires a neutral directory and explicit context;
+- global Rustup inventory, executed only from `C:\Windows\Temp`: global `1.98.0-x86_64-pc-windows-msvc` absent and global default unchanged at `stable-x86_64-pc-windows-msvc`;
 - production scans, downloads, packages, installers, deployments, pushes, and host changes: zero.
+
+## Freeze status
+
+```ini
+AUTHORIZATION = READY
+PATH_SECURITY = READY
+TOCTOU = READY
+INVENTORY = READY
+LIMITS = READY
+CORRELATION = READY
+MULTI_SOURCE = READY
+SUPPLY_CHAIN = READY
+LICENSE = READY
+STORAGE = READY
+REPORTING = READY
+IPC = READY
+UI = READY
+PROGRESS = PASS
+CANCELLATION = PASS
+SYNTHETIC_E2E = PASS
+REDACTION = PASS
+RUSTUP_PREVENTION = PASS
+SECURITY_REGRESSION = NO
+REAL_ENGINE_EXECUTION = POLICY_BLOCKED
+PRODUCTION_SCANNING_READINESS = NOT_CLAIMED
+LEVEL_2 = NOT_STARTED
+```
