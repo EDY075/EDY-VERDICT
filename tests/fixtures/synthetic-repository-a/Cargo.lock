@@ -1,0 +1,6 @@
+# Synthetic fixture; not a resolver input.
+version = 4
+
+[[package]]
+name = "synthetic-vulnerable"
+version = "0.1.0"

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/edy-core", "crates/edy-engine-manager", "crates/edy-providers", "crates/edy-storage", "crates/edy-reporting", "crates/edy-cli", "apps/desktop/src-tauri"]
+members = ["crates/edy-core", "crates/edy-repository", "crates/edy-engine-manager", "crates/edy-providers", "crates/edy-storage", "crates/edy-reporting", "crates/edy-cli", "apps/desktop/src-tauri"]
 
 [workspace.package]
 version = "0.1.0"
@@ -10,6 +10,7 @@ publish = false
 
 [workspace.dependencies]
 edy-core = { version = "=0.1.0", path = "crates/edy-core" }
+edy-repository = { version = "=0.1.0", path = "crates/edy-repository" }
 edy-engine-manager = { version = "=0.1.0", path = "crates/edy-engine-manager" }
 edy-providers = { version = "=0.1.0", path = "crates/edy-providers" }
 edy-storage = { version = "=0.1.0", path = "crates/edy-storage" }

@@ -6,3 +6,4 @@ pub mod manifest;
 #[cfg(windows)]
 pub mod process;
 pub mod receipt;
+pub mod repository;

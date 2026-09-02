@@ -794,6 +794,7 @@ dependencies = [
  "edy-engine-manager",
  "edy-providers",
  "edy-reporting",
+ "edy-repository",
  "edy-storage",
  "serde",
  "serde_json",
@@ -807,6 +808,7 @@ name = "edy-engine-manager"
 version = "0.1.0"
 dependencies = [
  "edy-core",
+ "edy-repository",
  "serde",
  "serde_json",
  "sha2",
@@ -825,8 +827,19 @@ name = "edy-reporting"
 version = "0.1.0"
 dependencies = [
  "edy-core",
+ "edy-repository",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "edy-repository"
+version = "0.1.0"
+dependencies = [
+ "edy-core",
+ "serde",
+ "sha2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
