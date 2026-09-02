@@ -7,15 +7,20 @@ const config = JSON.parse(read("../src-tauri/tauri.conf.json"));
 const capability = JSON.parse(read("../src-tauri/capabilities/main.json"));
 const manifest = read("../src-tauri/build.rs");
 
+const commands = [
+  "get_foundation_status", "get_engine_status", "create_synthetic_scan", "get_scan", "list_scans",
+  "get_scan_progress", "cancel_scan", "list_findings", "get_finding", "generate_report",
+];
+
 describe("Tauri security configuration", () => {
-  it("uses one local capability and explicitly manifests only foundation_status", () => {
+  it("uses one local capability and explicitly manifests only Level 0 commands", () => {
     expect(config.app.security.capabilities).toEqual(["main"]);
     expect(capability.local).toBe(true);
     expect(capability.windows).toEqual(["main"]);
     expect(capability.webviews).toEqual(["main"]);
     expect(capability.remote).toBeUndefined();
-    expect(capability.permissions).toEqual(["allow-foundation-status"]);
-    expect(manifest).toContain('AppManifest::new().commands(&["foundation_status"])');
+    expect(capability.permissions).toEqual(commands.map((command) => `allow-${command.replaceAll("_", "-")}`));
+    for (const command of commands) expect(manifest).toContain(`"${command}"`);
   });
 
   it("keeps runtime content bundled, disables dangerous defaults and forbids plugins", () => {
@@ -55,20 +60,26 @@ function isolationHook() {
 }
 
 describe("dependency-free Isolation hook", () => {
-  it("allows only the fixed command and strips additional envelope options", () => {
+  it("allows only closed Level 0 payloads and strips additional envelope options", () => {
     const hook = isolationHook();
-    const output = hook({ cmd: "foundation_status", payload: {}, callback: 1, error: 2, options: { headers: { secret: "not-forwarded" } } });
-    expect(output).toEqual({ cmd: "foundation_status", payload: {}, callback: 1, error: 2 });
+    const empty = hook({ cmd: "get_foundation_status", payload: {}, callback: 1, error: 2, options: { headers: { secret: "not-forwarded" } } });
+    expect(empty).toEqual({ cmd: "get_foundation_status", payload: {}, callback: 1, error: 2 });
+    const scan = hook({ cmd: "get_scan", payload: { request: { scan_id: "018f4c2a-1d3b-7abc-8def-0123456789ab" } }, callback: 3, error: 4 });
+    expect(scan.cmd).toBe("get_scan");
+    expect(scan.payload.request.scan_id).toMatch(/-7/);
   });
 
   it.each([
     null, [], {},
     { cmd: "plugin:shell|execute", payload: {}, callback: 1, error: 2 },
-    { cmd: "foundation_status", payload: { path: "C:/" }, callback: 1, error: 2 },
-    { cmd: "foundation_status", payload: [], callback: 1, error: 2 },
-    { cmd: "foundation_status", payload: null, callback: 1, error: 2 },
-    { cmd: "foundation_status", payload: {}, callback: "1", error: 2 },
-    { cmd: "foundation_status", payload: {}, callback: 1, error: -1 },
+    { cmd: "get_foundation_status", payload: { path: "C:/" }, callback: 1, error: 2 },
+    { cmd: "get_foundation_status", payload: [], callback: 1, error: 2 },
+    { cmd: "get_foundation_status", payload: null, callback: 1, error: 2 },
+    { cmd: "get_foundation_status", payload: {}, callback: "1", error: 2 },
+    { cmd: "get_foundation_status", payload: {}, callback: 1, error: -1 },
+    { cmd: "get_scan", payload: { request: { scan_id: "../../etc" } }, callback: 1, error: 2 },
+    { cmd: "list_scans", payload: { request: { offset: 0, limit: 1000 } }, callback: 1, error: 2 },
+    { cmd: "generate_report", payload: { request: { scan_id: "018f4c2a-1d3b-7abc-8def-0123456789ab", kind: "html" } }, callback: 1, error: 2 },
   ])("rejects malformed or forbidden IPC %# before encryption", (message) => {
     expect(() => isolationHook()(message)).toThrow("IPC denied");
   });

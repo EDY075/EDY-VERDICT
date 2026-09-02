@@ -159,8 +159,7 @@ where
             if request.cancellation.is_requested() {
                 self.persist_cancelled_remaining(&request.scan_id, &engines[index..], &mut runs)?;
                 let at = self.clock.now()?;
-                self.storage
-                    .transition(&request.scan_id, ScanState::CancellationRequested, &at)?;
+                self.ensure_cancellation_requested(&request.scan_id, &at)?;
                 return self.finish_without_result(
                     &request.scan_id,
                     ScanState::Cancelled,
@@ -355,11 +354,7 @@ where
                         &mut runs,
                     )?;
                     request.cancellation.request();
-                    self.storage.transition(
-                        &request.scan_id,
-                        ScanState::CancellationRequested,
-                        &completed_at,
-                    )?;
+                    self.ensure_cancellation_requested(&request.scan_id, &completed_at)?;
                     return if cleanup_confirmed {
                         self.finish_without_result(
                             &request.scan_id,
@@ -468,6 +463,18 @@ where
             report_json: Some(report_json),
             cleanup_confirmed,
         })
+    }
+
+    fn ensure_cancellation_requested(
+        &mut self,
+        scan_id: &edy_core::ScanId,
+        at: &edy_core::Timestamp,
+    ) -> Result<(), ServiceError> {
+        if self.storage.load(scan_id)?.state != ScanState::CancellationRequested {
+            self.storage
+                .transition(scan_id, ScanState::CancellationRequested, at)?;
+        }
+        Ok(())
     }
 
     fn persist_cancelled_remaining(

@@ -4,6 +4,11 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
+use edy_desktop::ipc::{
+    CreateSyntheticScanRequest, EngineStatusView, FindingRequest, FindingView,
+    GenerateReportRequest, Level0Backend, ListFindingsRequest, ListScansRequest, ReportView,
+    SafeIpcError, ScanProgressView, ScanRequest, ScanSummaryView,
+};
 use edy_storage::Storage;
 use serde::Serialize;
 use tauri::{Manager, WebviewWindow, WebviewWindowBuilder};
@@ -18,6 +23,7 @@ struct FoundationStatus {
 
 struct FoundationState {
     status: FoundationStatus,
+    backend: Level0Backend,
     smoke: bool,
     smoke_received: AtomicBool,
 }
@@ -32,24 +38,25 @@ fn allowed_navigation(url: &tauri::Url) -> bool {
             || (url.scheme() == "tauri" && url.host_str() == Some("localhost")))
 }
 
-fn empty_arguments(body: &tauri::ipc::InvokeBody) -> bool {
-    matches!(body, tauri::ipc::InvokeBody::Json(value) if value.as_object().is_some_and(serde_json::Map::is_empty))
+fn ipc_guard(window: &WebviewWindow) -> Result<(), SafeIpcError> {
+    if window.label() != "main" || !window.url().is_ok_and(|url| allowed_navigation(&url)) {
+        return Err(SafeIpcError {
+            code: "ipc_denied".into(),
+            message_safe: "IPC request was refused".into(),
+            correlation_id: uuid::Uuid::now_v7().to_string(),
+        });
+    }
+    Ok(())
 }
 
 #[tauri::command]
-fn foundation_status(
+fn get_foundation_status(
     app: tauri::AppHandle,
     window: WebviewWindow,
-    request: tauri::ipc::Request<'_>,
     state: tauri::State<'_, FoundationState>,
-) -> Result<FoundationStatus, &'static str> {
+) -> Result<FoundationStatus, SafeIpcError> {
     // Defense in depth in addition to AppManifest, capability and Isolation hook.
-    if window.label() != "main"
-        || !window.url().is_ok_and(|url| allowed_navigation(&url))
-        || !empty_arguments(request.body())
-    {
-        return Err("IPC denied");
-    }
+    ipc_guard(&window)?;
     if state.smoke && !state.smoke_received.swap(true, Ordering::SeqCst) {
         println!(
             "FOUNDATION_IPC_RECEIVED core=ready storage=ready ipc=restricted schema_version=1"
@@ -61,6 +68,95 @@ fn foundation_status(
         });
     }
     Ok(state.status.clone())
+}
+
+#[tauri::command]
+fn get_engine_status(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+) -> Result<Vec<EngineStatusView>, SafeIpcError> {
+    ipc_guard(&window)?;
+    Ok(state.backend.engine_status())
+}
+
+#[tauri::command]
+fn create_synthetic_scan(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: CreateSyntheticScanRequest,
+) -> Result<ScanSummaryView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.create_synthetic_scan(request)
+}
+
+#[tauri::command]
+fn get_scan(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: ScanRequest,
+) -> Result<ScanSummaryView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.get_scan(&request)
+}
+
+#[tauri::command]
+fn list_scans(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: ListScansRequest,
+) -> Result<Vec<ScanSummaryView>, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.list_scans(&request)
+}
+
+#[tauri::command]
+fn get_scan_progress(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: ScanRequest,
+) -> Result<ScanProgressView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.progress(&request)
+}
+
+#[tauri::command]
+fn cancel_scan(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: ScanRequest,
+) -> Result<ScanProgressView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.cancel(&request)
+}
+
+#[tauri::command]
+fn list_findings(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: ListFindingsRequest,
+) -> Result<Vec<FindingView>, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.list_findings(&request)
+}
+
+#[tauri::command]
+fn get_finding(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: FindingRequest,
+) -> Result<FindingView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.get_finding(&request)
+}
+
+#[tauri::command]
+fn generate_report(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: GenerateReportRequest,
+) -> Result<ReportView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.report(&request)
 }
 
 fn find_project_root(start: &Path) -> Option<PathBuf> {
@@ -131,6 +227,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         return Err(std::io::Error::other("Unexpected foundation storage schema").into());
     }
     drop(storage);
+    let backend = Level0Backend::open(&root, &data.join("level0.sqlite3"))?;
     let webview_data = local_directory(&root, "webview2")?;
     let state = FoundationState {
         status: FoundationStatus {
@@ -139,12 +236,24 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             ipc: "restricted",
             schema_version,
         },
+        backend,
         smoke,
         smoke_received: AtomicBool::new(false),
     };
     tauri::Builder::default()
         .manage(state)
-        .invoke_handler(tauri::generate_handler![foundation_status])
+        .invoke_handler(tauri::generate_handler![
+            get_foundation_status,
+            get_engine_status,
+            create_synthetic_scan,
+            get_scan,
+            list_scans,
+            get_scan_progress,
+            cancel_scan,
+            list_findings,
+            get_finding,
+            generate_report,
+        ])
         .setup(move |app| {
             let config = app
                 .config()
@@ -216,21 +325,6 @@ mod tests {
         ] {
             assert!(!allowed_navigation(&url.parse().unwrap()), "{url}");
         }
-    }
-
-    #[test]
-    fn arguments_reject_nonempty_json_and_binary_bodies() {
-        assert!(empty_arguments(&tauri::ipc::InvokeBody::Json(
-            serde_json::json!({})
-        )));
-        for value in [
-            serde_json::json!({"path":"C:/"}),
-            serde_json::json!([]),
-            serde_json::Value::Null,
-        ] {
-            assert!(!empty_arguments(&tauri::ipc::InvokeBody::Json(value)));
-        }
-        assert!(!empty_arguments(&tauri::ipc::InvokeBody::Raw(vec![])));
     }
 
     #[test]

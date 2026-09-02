@@ -285,6 +285,29 @@ impl ScanRepository for InMemoryScanRepository {
             .cloned()
             .ok_or_else(|| ServiceError::new("scan_not_found", "Scan was not found"))
     }
+
+    fn list(&self, offset: u32, limit: u32) -> Result<Vec<StoredScan>, ServiceError> {
+        if offset > 10_000 || !(1..=50).contains(&limit) {
+            return Err(ServiceError::new(
+                "pagination_invalid",
+                "Pagination was refused",
+            ));
+        }
+        let state = self.state()?;
+        Ok(state
+            .scans
+            .values()
+            .rev()
+            .skip(offset as usize)
+            .take(limit as usize)
+            .cloned()
+            .collect())
+    }
+
+    fn count(&self) -> Result<u32, ServiceError> {
+        u32::try_from(self.state()?.scans.len())
+            .map_err(|_| ServiceError::new("storage_unavailable", "Scan storage is unavailable"))
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -216,6 +216,27 @@ impl ScanRepository for SqliteScanRepository {
         }
         Ok(scan)
     }
+
+    fn list(&self, offset: u32, limit: u32) -> Result<Vec<StoredScan>, ServiceError> {
+        self.store
+            .list_ids(offset, limit)
+            .map_err(storage_error)?
+            .into_iter()
+            .map(|id| {
+                let id = ScanId::new(id).map_err(|_| {
+                    ServiceError::new(
+                        "storage_snapshot_invalid",
+                        "Persisted scan identifier is invalid",
+                    )
+                })?;
+                self.load(&id)
+            })
+            .collect()
+    }
+
+    fn count(&self) -> Result<u32, ServiceError> {
+        self.store.count().map_err(storage_error)
+    }
 }
 
 fn storage_error(_: edy_storage::level0_snapshot::SnapshotError) -> ServiceError {

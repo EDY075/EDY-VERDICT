@@ -310,6 +310,8 @@ pub trait ScanRepository {
         finalization: FinalSnapshot,
     ) -> Result<(), ServiceError>;
     fn load(&self, scan_id: &ScanId) -> Result<StoredScan, ServiceError>;
+    fn list(&self, offset: u32, limit: u32) -> Result<Vec<StoredScan>, ServiceError>;
+    fn count(&self) -> Result<u32, ServiceError>;
 }
 
 pub struct StorageEventSink<R> {

@@ -1,9 +1,19 @@
 fn main() {
     generate_foundation_icon().expect("Foundation build icon must be generated");
-    tauri_build::try_build(
-        tauri_build::Attributes::new()
-            .app_manifest(tauri_build::AppManifest::new().commands(&["foundation_status"])),
-    )
+    tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
+        tauri_build::AppManifest::new().commands(&[
+            "get_foundation_status",
+            "get_engine_status",
+            "create_synthetic_scan",
+            "get_scan",
+            "list_scans",
+            "get_scan_progress",
+            "cancel_scan",
+            "list_findings",
+            "get_finding",
+            "generate_report",
+        ]),
+    ))
     .expect("Foundation Tauri configuration must be valid");
 }
 

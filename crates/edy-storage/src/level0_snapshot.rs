@@ -148,6 +148,32 @@ impl Level0SnapshotStore {
         let revision = u64::try_from(revision).map_err(|_| SnapshotError::Integrity)?;
         Ok(SnapshotBlob { revision, payload })
     }
+
+    pub fn list_ids(&self, offset: u32, limit: u32) -> Result<Vec<String>, SnapshotError> {
+        if offset > 10_000 || !(1..=50).contains(&limit) {
+            return Err(SnapshotError::InvalidInput);
+        }
+        let mut statement = self.connection.prepare(
+            "SELECT scan_id FROM level0_snapshots ORDER BY scan_id DESC LIMIT ?1 OFFSET ?2",
+        )?;
+        let rows = statement.query_map(params![limit, offset], |row| row.get::<_, String>(0))?;
+        let mut ids = Vec::with_capacity(limit as usize);
+        for row in rows {
+            let id = row?;
+            validate_scan_id(&id)?;
+            ids.push(id);
+        }
+        Ok(ids)
+    }
+
+    pub fn count(&self) -> Result<u32, SnapshotError> {
+        let count: i64 =
+            self.connection
+                .query_row("SELECT count(*) FROM level0_snapshots", [], |row| {
+                    row.get(0)
+                })?;
+        u32::try_from(count).map_err(|_| SnapshotError::Integrity)
+    }
 }
 
 fn validate(scan_id: &str, payload: &[u8]) -> Result<(), SnapshotError> {
@@ -223,6 +249,8 @@ mod tests {
         store.create(scan, br#"{"state":"queued"}"#).unwrap();
         let first = store.load(scan).unwrap();
         assert_eq!(first.revision, 1);
+        assert_eq!(store.list_ids(0, 10).unwrap(), vec![scan]);
+        assert_eq!(store.count().unwrap(), 1);
         assert_eq!(
             store
                 .replace(scan, first.revision, br#"{"state":"running"}"#)

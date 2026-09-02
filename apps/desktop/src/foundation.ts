@@ -25,7 +25,7 @@ export function parseFoundationStatus(value: unknown): FoundationStatus {
 }
 
 export async function readFoundationStatus(
-  transport: () => Promise<unknown> = () => invoke("foundation_status"),
+  transport: () => Promise<unknown> = () => invoke("get_foundation_status"),
 ): Promise<FoundationStatus> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {

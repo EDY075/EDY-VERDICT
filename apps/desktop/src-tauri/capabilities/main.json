@@ -1,9 +1,20 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main",
-  "description": "Read-only infrastructure status from the local main webview only.",
+  "description": "Specific Level 0 synthetic workflow commands from the local main webview only.",
   "local": true,
   "windows": ["main"],
   "webviews": ["main"],
-  "permissions": ["allow-foundation-status"]
+  "permissions": [
+    "allow-get-foundation-status",
+    "allow-get-engine-status",
+    "allow-create-synthetic-scan",
+    "allow-get-scan",
+    "allow-list-scans",
+    "allow-get-scan-progress",
+    "allow-cancel-scan",
+    "allow-list-findings",
+    "allow-get-finding",
+    "allow-generate-report"
+  ]
 }
