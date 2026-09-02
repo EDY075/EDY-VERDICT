@@ -12,12 +12,14 @@ use edy_engine_manager::repository::{
 use edy_reporting::repository::RepositoryReport;
 use edy_reporting::{REPORT_SCHEMA, ReportDocument, ReportEvidence, ReportKind, ReportSnapshot};
 use edy_repository::{
-    AuthorizedRepositoryTarget, RepositoryInventory, RepositoryLimits, RepositoryObservation,
-    inspect,
+    AuthorizedRepositoryTarget, CorrelatedRepositoryFinding, LicenseState,
+    RepositoryEvidenceReference, RepositoryInventory, RepositoryLimits, RepositoryObservation,
+    aggregate_repository_posture, correlate_repository_observations, inspect, inspect_revalidated,
+    normalize_license_state,
 };
 use edy_storage::level0_snapshot::Level1SnapshotStore;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::Duration;
@@ -135,11 +137,10 @@ pub struct AuthorizedRepositoryTargetView {
     pub readiness: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(deny_unknown_fields)]
-struct Level1Finding {
-    id: String,
-    observation: RepositoryObservation,
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct RepositoryAuthorizationSession {
+    target: AuthorizedRepositoryTarget,
+    preview_fingerprint: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -148,8 +149,12 @@ struct Level1StoredScan {
     scan_id: String,
     target_id: String,
     authorization_id: String,
+    state: String,
+    progress: ScanProgressView,
     inventory: RepositoryInventory,
-    findings: Vec<Level1Finding>,
+    observations: Vec<RepositoryObservation>,
+    findings: Vec<CorrelatedRepositoryFinding>,
+    evidence: Vec<RepositoryEvidenceReference>,
     unavailable_checks: Vec<String>,
 }
 
@@ -189,7 +194,7 @@ pub struct ScanSummaryView {
     pub coverage: CoverageView,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ScanProgressView {
     pub scan_id: String,
     pub phase: String,
@@ -212,6 +217,11 @@ pub struct FindingView {
     pub confidence: String,
     pub status: String,
     pub sources: Vec<String>,
+    pub affected_component: String,
+    pub rule_ids: Vec<String>,
+    pub evidence_ids: Vec<String>,
+    pub remediation_guidance: String,
+    pub limitations: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -228,7 +238,7 @@ pub struct Level0Backend {
     database: PathBuf,
     jobs: Arc<Mutex<BTreeMap<String, CancellationToken>>>,
     reader: Arc<Mutex<SqliteScanRepository>>,
-    repository_targets: Arc<Mutex<BTreeMap<String, AuthorizedRepositoryTarget>>>,
+    repository_targets: Arc<Mutex<BTreeMap<String, RepositoryAuthorizationSession>>>,
     level1: Arc<Mutex<Level1SnapshotStore>>,
 }
 
@@ -298,7 +308,13 @@ impl Level0Backend {
                     "Repository authorization is unavailable",
                 )
             })?
-            .insert(authorization_id, target);
+            .insert(
+                authorization_id,
+                RepositoryAuthorizationSession {
+                    target,
+                    preview_fingerprint: inventory.structural_fingerprint.clone(),
+                },
+            );
         Ok(view)
     }
 
@@ -312,17 +328,24 @@ impl Level0Backend {
                 "Repository authorization is unavailable",
             )
         })?;
-        let target = targets.get(&request.authorization_id).ok_or_else(|| {
+        let session = targets.get(&request.authorization_id).ok_or_else(|| {
             SafeIpcError::new(
                 "authorization_not_found",
                 "Repository authorization is unavailable",
             )
         })?;
-        inspect(target).map_err(|_| {
-            SafeIpcError::new(
-                "repository_inventory_failed",
-                "Repository inventory could not be completed",
-            )
+        inspect_revalidated(&session.target, &session.preview_fingerprint).map_err(|error| {
+            if error.code() == "revalidation_required" {
+                SafeIpcError::new(
+                    "repository_revalidation_required",
+                    "Repository changed; authorization must be renewed",
+                )
+            } else {
+                SafeIpcError::new(
+                    "repository_inventory_failed",
+                    "Repository inventory could not be completed",
+                )
+            }
         })
     }
 
@@ -336,7 +359,7 @@ impl Level0Backend {
                 "Explicit repository confirmation is required",
             ));
         }
-        let target = self
+        let session = self
             .repository_targets
             .lock()
             .map_err(|_| {
@@ -353,39 +376,45 @@ impl Level0Backend {
                     "Repository authorization is unavailable",
                 )
             })?;
-        let inventory = inspect(&target).map_err(|_| {
-            SafeIpcError::new(
-                "repository_inventory_failed",
-                "Repository inventory could not be completed",
-            )
-        })?;
-        let observations = if target
-            .canonical_root()
-            .replace('\\', "/")
-            .ends_with("tests/fixtures/synthetic-repository-a")
-        {
-            synthetic_repository_observations(&target)?
-        } else {
-            Vec::new()
-        };
+        let inventory = inspect_revalidated(&session.target, &session.preview_fingerprint)
+            .map_err(|error| {
+                if error.code() == "revalidation_required" {
+                    SafeIpcError::new(
+                        "repository_revalidation_required",
+                        "Repository changed; authorization must be renewed",
+                    )
+                } else {
+                    SafeIpcError::new(
+                        "repository_inventory_failed",
+                        "Repository inventory could not be completed",
+                    )
+                }
+            })?;
         let scan_id = new_uuid_v7();
-        let findings = observations
-            .into_iter()
-            .map(|observation| Level1Finding {
-                id: new_uuid_v7(),
-                observation,
-            })
-            .collect();
+        let unavailable_checks = vec![
+            "real_engine_execution_policy_blocked".into(),
+            "network_isolation_unavailable_with_current_policy".into(),
+        ];
         let stored = Level1StoredScan {
             scan_id: scan_id.clone(),
-            target_id: target.target().id().to_string(),
+            target_id: session.target.target().id().to_string(),
             authorization_id: request.authorization_id,
+            state: "preparing".into(),
+            progress: ScanProgressView {
+                scan_id: scan_id.clone(),
+                phase: "inventory".into(),
+                completed_tasks: 0,
+                total_tasks: 7,
+                percent: Some(0),
+                elapsed_ms: 0,
+                current_engine: None,
+                status: "preparing".into(),
+            },
             inventory,
-            findings,
-            unavailable_checks: vec![
-                "real_engine_execution_policy_blocked".into(),
-                "network_isolation_unavailable_with_current_policy".into(),
-            ],
+            observations: Vec::new(),
+            findings: Vec::new(),
+            evidence: Vec::new(),
+            unavailable_checks,
         };
         let payload = serde_json::to_vec(&stored).map_err(|_| {
             SafeIpcError::new(
@@ -410,7 +439,27 @@ impl Level0Backend {
                     "Repository scan could not be stored",
                 )
             })?;
-        Ok(level1_summary(&stored))
+        let cancellation = CancellationToken::default();
+        self.jobs
+            .lock()
+            .map_err(|_| SafeIpcError::new("scan_busy", "Scan scheduler is unavailable"))?
+            .insert(scan_id.clone(), cancellation.clone());
+        let level1 = Arc::clone(&self.level1);
+        let jobs = Arc::clone(&self.jobs);
+        let worker_scan_id = scan_id.clone();
+        std::thread::spawn(move || {
+            let mut worker_scan = stored;
+            if run_repository_fixture(&level1, session, &mut worker_scan, cancellation).is_err() {
+                worker_scan.state = "failed".into();
+                worker_scan.progress.status = "failed".into();
+                worker_scan.progress.current_engine = None;
+                let _ = replace_level1_snapshot(&level1, &worker_scan);
+            }
+            if let Ok(mut active) = jobs.lock() {
+                active.remove(&worker_scan_id);
+            }
+        });
+        self.get_scan(&ScanRequest { scan_id })
     }
 
     pub fn get_repository_inventory(
@@ -588,16 +637,7 @@ impl Level0Backend {
             return Ok(progress(&scan));
         }
         let scan = self.load_level1(&request.scan_id)?;
-        Ok(ScanProgressView {
-            scan_id: scan.scan_id,
-            phase: "repository_security".into(),
-            completed_tasks: 3,
-            total_tasks: 4,
-            percent: Some(75),
-            elapsed_ms: 0,
-            current_engine: None,
-            status: "partial".into(),
-        })
+        Ok(scan.progress)
     }
 
     pub fn cancel(&self, request: &ScanRequest) -> Result<ScanProgressView, SafeIpcError> {
@@ -624,6 +664,13 @@ impl Level0Backend {
                     "No active synthetic executor is attached",
                 )
             })?;
+        if let Ok(mut level1) = self.load_level1(&request.scan_id) {
+            level1.state = "cancellation_requested".into();
+            level1.progress.status = "cancellation_requested".into();
+            replace_level1_snapshot(&self.level1, &level1)?;
+            token.request();
+            return Ok(level1.progress);
+        }
         if current.status != "cancellation_requested" {
             let mut clock = SystemClock;
             let mut persisted = false;
@@ -738,16 +785,17 @@ impl Level0Backend {
         let id = parse_scan_id(&request.scan_id)?;
         let Ok(scan) = self.repository()?.load(&id) else {
             let stored = self.load_level1(&request.scan_id)?;
-            let observations = stored
-                .findings
-                .iter()
-                .map(|f| f.observation.clone())
-                .collect::<Vec<_>>();
+            if stored.state != "partial" && stored.state != "completed" {
+                return Err(SafeIpcError::new(
+                    "report_unavailable",
+                    "Report is unavailable until repository processing reaches a reportable terminal state",
+                ));
+            }
             let report = RepositoryReport::capture(
                 request.kind,
                 &stored.scan_id,
                 &stored.inventory,
-                &observations,
+                &stored.findings,
                 &stored.unavailable_checks,
             );
             return Ok(ReportView {
@@ -826,38 +874,60 @@ fn level1_summary(scan: &Level1StoredScan) -> ScanSummaryView {
     let high = scan
         .findings
         .iter()
-        .any(|f| matches!(f.observation.severity.as_str(), "high" | "critical"));
+        .any(|finding| matches!(finding.severity.as_str(), "high" | "critical"));
     ScanSummaryView {
         id: scan.scan_id.clone(),
-        state: "partial".into(),
-        verdict: Some("inconclusive".into()),
-        risk: Some(if high { "high" } else { "medium" }.into()),
-        confidence: Some("medium".into()),
+        state: scan.state.clone(),
+        verdict: if scan.state == "partial" {
+            Some("inconclusive".into())
+        } else {
+            None
+        },
+        risk: if scan.state == "partial" {
+            Some(if high { "high" } else { "medium" }.into())
+        } else {
+            None
+        },
+        confidence: if scan.state == "partial" {
+            Some("medium".into())
+        } else {
+            None
+        },
         coverage: CoverageView {
-            total: 4,
-            completed: 3,
-            unavailable: 1,
+            total: 7,
+            completed: if scan.state == "partial" {
+                5
+            } else {
+                scan.progress.completed_tasks
+            },
+            unavailable: if scan.state == "partial" { 2 } else { 0 },
             ..CoverageView::default()
         },
     }
 }
 
-fn level1_finding_view(scan_id: &str, finding: &Level1Finding) -> FindingView {
+fn level1_finding_view(scan_id: &str, finding: &CorrelatedRepositoryFinding) -> FindingView {
     FindingView {
         id: finding.id.clone(),
         scan_id: scan_id.into(),
-        title: finding.observation.description.clone(),
-        category: finding.observation.category.token().into(),
-        severity: finding.observation.severity.clone(),
-        risk: finding.observation.severity.clone(),
-        confidence: finding.observation.confidence.clone(),
-        status: "open".into(),
-        sources: vec![finding.observation.engine_id.clone()],
+        title: finding.description.clone(),
+        category: finding.category.clone(),
+        severity: finding.severity.clone(),
+        risk: finding.severity.clone(),
+        confidence: finding.confidence.clone(),
+        status: finding.status.clone(),
+        sources: finding.supporting_sources.clone(),
+        affected_component: finding.affected_component.clone(),
+        rule_ids: finding.rule_ids.clone(),
+        evidence_ids: finding.evidence_ids.clone(),
+        remediation_guidance: finding.remediation_guidance.clone(),
+        limitations: finding.limitations.clone(),
     }
 }
 
 fn synthetic_repository_observations(
     target: &AuthorizedRepositoryTarget,
+    inventory: &RepositoryInventory,
 ) -> Result<Vec<RepositoryObservation>, SafeIpcError> {
     let secret_path = target.root_path().join("config/test-secret.env");
     let value = std::fs::read_to_string(secret_path).map_err(|_| {
@@ -878,7 +948,7 @@ fn synthetic_repository_observations(
         })?;
     let gitleaks = serde_json::to_vec(&serde_json::json!([{"RuleID":"generic-api-key","Description":"Synthetic credential","File":"config/test-secret.env","StartLine":1,"Fingerprint":"fixture:1","Secret":secret,"Entropy":4.2}])).unwrap_or_default();
     let osv = br#"{"results":[{"source":{"path":"Cargo.lock","type":"lockfile"},"packages":[{"package":{"name":"synthetic-vulnerable","version":"0.1.0","ecosystem":"crates.io"},"vulnerabilities":[{"id":"GHSA-TEST-0001","aliases":["CVE-2099-0001"],"affected_range":"<1.0.0","database_specific":{"severity":"HIGH"}}]}]}]}"#;
-    let trivy = br#"{"SchemaVersion":2,"Results":[{"Target":"config/bad-config.json","Misconfigurations":[{"ID":"CFG-001","Title":"Unsafe synthetic configuration","Severity":"MEDIUM"}]}]}"#;
+    let trivy = br#"{"SchemaVersion":2,"Results":[{"Target":"Cargo.lock","Vulnerabilities":[{"VulnerabilityID":"CVE-2099-0001","PkgName":"crates.io:synthetic-vulnerable","InstalledVersion":"0.1.0","FixedVersion":"1.0.0","Severity":"HIGH"}],"Licenses":[{"Name":"MIT","PkgName":"crates.io:synthetic-vulnerable","Category":"detected"}]},{"Target":"config/bad-config.json","Misconfigurations":[{"ID":"CFG-001","Title":"Unsafe synthetic configuration","Severity":"MEDIUM"}]}]}"#;
     let mut observations = GitleaksRepositoryAdapter
         .parse(target, &gitleaks)
         .map_err(|_| SafeIpcError::new("fixture_invalid", "Synthetic adapter fixture failed"))?;
@@ -892,7 +962,135 @@ fn synthetic_repository_observations(
             SafeIpcError::new("fixture_invalid", "Synthetic adapter fixture failed")
         })?,
     );
+    for observation in observations
+        .iter_mut()
+        .filter(|item| item.category == edy_repository::RepositoryFindingCategory::License)
+    {
+        normalize_license_state(
+            observation,
+            LicenseState::Detected,
+            &["engine observation", "package metadata"],
+        );
+    }
+    observations.extend(aggregate_repository_posture(
+        target,
+        inventory,
+        &BTreeSet::from(["rust".into()]),
+        true,
+    ));
     Ok(observations)
+}
+
+fn run_repository_fixture(
+    store: &Arc<Mutex<Level1SnapshotStore>>,
+    session: RepositoryAuthorizationSession,
+    scan: &mut Level1StoredScan,
+    cancellation: CancellationToken,
+) -> Result<(), SafeIpcError> {
+    let phases = [
+        ("inventory", None),
+        ("planning", None),
+        ("secret_checks", Some("fake-gitleaks")),
+        ("dependency_checks", Some("fake-osv-trivy")),
+        ("config_checks", Some("fake-trivy")),
+        ("correlation", None),
+        ("reporting", None),
+    ];
+    for (index, (phase, engine)) in phases.iter().enumerate() {
+        for _ in 0..8 {
+            if cancellation.is_requested() {
+                scan.state = "cancelled".into();
+                scan.progress.status = "cancelled".into();
+                scan.progress.current_engine = None;
+                replace_level1_snapshot(store, scan)?;
+                return Ok(());
+            }
+            std::thread::sleep(Duration::from_millis(3));
+        }
+        if *phase == "correlation" {
+            let current = match inspect_revalidated(&session.target, &session.preview_fingerprint) {
+                Ok(current) => current,
+                Err(_) => {
+                    scan.state = "failed".into();
+                    scan.progress.phase = "revalidation_required".into();
+                    scan.progress.status = "failed".into();
+                    scan.progress.current_engine = None;
+                    replace_level1_snapshot(store, scan)?;
+                    return Ok(());
+                }
+            };
+            scan.inventory = current;
+            scan.observations = if session
+                .target
+                .canonical_root()
+                .replace('\\', "/")
+                .ends_with("tests/fixtures/synthetic-repository-a")
+            {
+                synthetic_repository_observations(&session.target, &scan.inventory)?
+            } else {
+                Vec::new()
+            };
+            let correlation = correlate_repository_observations(
+                ScanId::new(&scan.scan_id).map_err(|_| {
+                    SafeIpcError::new("id_unavailable", "Scan identifier is unavailable")
+                })?,
+                &session.target,
+                &scan.observations,
+                &scan.unavailable_checks,
+                Timestamp::new("2026-09-02T13:00:01Z").map_err(|_| {
+                    SafeIpcError::new("timestamp_unavailable", "Scan timestamp is unavailable")
+                })?,
+            )
+            .map_err(|_| {
+                SafeIpcError::new(
+                    "repository_correlation_failed",
+                    "Repository observations could not be correlated safely",
+                )
+            })?;
+            scan.findings = correlation.findings;
+            scan.evidence = correlation.evidence;
+            scan.unavailable_checks = correlation.unavailable_sources;
+        }
+        scan.progress.phase = (*phase).into();
+        scan.progress.completed_tasks = (index + 1) as u32;
+        scan.progress.percent = Some(((index + 1) as u32 * 100) / phases.len() as u32);
+        scan.progress.elapsed_ms = ((index + 1) as u64) * 24;
+        scan.progress.current_engine = engine.map(str::to_owned);
+        scan.state = if index + 1 == phases.len() {
+            "partial"
+        } else {
+            "running"
+        }
+        .into();
+        scan.progress.status = scan.state.clone();
+        replace_level1_snapshot(store, scan)?;
+    }
+    Ok(())
+}
+
+fn replace_level1_snapshot(
+    store: &Arc<Mutex<Level1SnapshotStore>>,
+    scan: &Level1StoredScan,
+) -> Result<(), SafeIpcError> {
+    let payload = serde_json::to_vec(scan).map_err(|_| {
+        SafeIpcError::new(
+            "repository_storage_failed",
+            "Repository scan could not be stored",
+        )
+    })?;
+    let mut store = store.lock().map_err(|_| {
+        SafeIpcError::new("storage_unavailable", "Repository storage is unavailable")
+    })?;
+    let revision = store
+        .load(&scan.scan_id)
+        .map_err(|_| SafeIpcError::new("storage_unavailable", "Repository storage is unavailable"))?
+        .revision;
+    store
+        .replace(&scan.scan_id, revision, &payload)
+        .map_err(|_| {
+            SafeIpcError::new("storage_unavailable", "Repository storage is unavailable")
+        })?;
+    Ok(())
 }
 
 fn parse_scan_id(value: &str) -> Result<ScanId, SafeIpcError> {
@@ -1210,6 +1408,11 @@ fn progress(scan: &StoredScan) -> ScanProgressView {
 }
 
 fn finding_view(finding: &edy_core::Finding) -> FindingView {
+    let sources = finding
+        .source_engines()
+        .iter()
+        .map(|engine| engine.as_str().into())
+        .collect::<Vec<_>>();
     FindingView {
         id: finding.id().as_str().into(),
         scan_id: finding.scan_id().as_str().into(),
@@ -1219,11 +1422,19 @@ fn finding_view(finding: &edy_core::Finding) -> FindingView {
         risk: label(finding.severity()),
         confidence: label(finding.confidence()),
         status: label(finding.status()),
-        sources: finding
-            .source_engines()
+        sources,
+        affected_component: finding.target_id().to_string(),
+        rule_ids: finding.rule_ids().to_vec(),
+        evidence_ids: finding
+            .evidence_ids()
             .iter()
-            .map(|engine| engine.as_str().into())
+            .map(ToString::to_string)
             .collect(),
+        remediation_guidance:
+            "Review the evidence, apply the smallest safe change, and verify by rescanning.".into(),
+        limitations: vec![
+            "Synthetic Level 0 evidence does not claim production scanning readiness.".into(),
+        ],
     }
 }
 
@@ -1416,7 +1627,7 @@ mod tests {
 
     #[test]
     fn repository_e2e_requires_authorization_and_preserves_redaction() {
-        let (_temp, backend) = backend();
+        let (temp, backend) = backend();
         let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../../tests/fixtures/synthetic-repository-a")
             .canonicalize()
@@ -1438,14 +1649,16 @@ mod tests {
                 })
                 .is_err()
         );
-        let scan = backend
+        let started = backend
             .create_repository_scan(CreateRepositoryScanRequest {
                 authorization_id: authorization.authorization_id,
                 confirmed: true,
             })
             .unwrap();
+        assert!(matches!(started.state.as_str(), "preparing" | "running"));
+        let scan = wait_terminal(&backend, &started.id);
         assert_eq!(scan.state, "partial");
-        assert_eq!(scan.coverage.unavailable, 1);
+        assert_eq!(scan.coverage.unavailable, 2);
         let findings = backend
             .list_findings(&ListFindingsRequest {
                 scan_id: scan.id.clone(),
@@ -1453,20 +1666,35 @@ mod tests {
                 limit: 100,
             })
             .unwrap();
-        assert_eq!(findings.len(), 3);
+        assert_eq!(findings.len(), 5);
         assert_eq!(
             findings
                 .iter()
                 .map(|f| f.category.as_str())
                 .collect::<BTreeSet<_>>(),
-            BTreeSet::from(["misconfiguration", "secret", "vulnerable_dependency"])
+            BTreeSet::from([
+                "license",
+                "misconfiguration",
+                "secret",
+                "supply_chain",
+                "vulnerable_dependency",
+            ])
         );
+        let vulnerability = findings
+            .iter()
+            .find(|finding| finding.category == "vulnerable_dependency")
+            .unwrap();
+        assert_eq!(vulnerability.sources, vec!["osv-scanner", "trivy"]);
+        assert_eq!(vulnerability.evidence_ids.len(), 2);
         let report = backend
             .report(&GenerateReportRequest {
                 scan_id: scan.id.clone(),
                 kind: ReportKind::Technical,
             })
             .unwrap();
+        let report_json: serde_json::Value = serde_json::from_str(&report.json).unwrap();
+        assert_eq!(report_json["vulnerable_dependency_count"], 1);
+        assert_eq!(report_json["findings"].as_array().unwrap().len(), 5);
         let full_secret = std::fs::read_to_string(fixture.join("config/test-secret.env"))
             .unwrap()
             .trim()
@@ -1475,6 +1703,17 @@ mod tests {
             .1
             .to_owned();
         assert!(!report.json.contains(&full_secret));
+        assert!(
+            !serde_json::to_string(&findings)
+                .unwrap()
+                .contains(&full_secret)
+        );
+        let database_bytes = std::fs::read(temp.0.join("level0.sqlite3")).unwrap();
+        assert!(
+            !database_bytes
+                .windows(full_secret.len())
+                .any(|window| window == full_secret.as_bytes())
+        );
         let inventory = backend
             .get_repository_inventory(&ScanRequest { scan_id: scan.id })
             .unwrap();
@@ -1483,6 +1722,77 @@ mod tests {
                 .documents
                 .iter()
                 .any(|d| d.relative_path == "Cargo.lock")
+        );
+    }
+
+    #[test]
+    fn repository_change_after_preview_requires_fresh_authorization() {
+        let (temp, backend) = backend();
+        let repository = temp.0.join("mutable-repository");
+        std::fs::create_dir_all(&repository).unwrap();
+        std::fs::write(repository.join("safe.txt"), "before").unwrap();
+        let repository_text = repository.to_string_lossy();
+        let repository_text = repository_text
+            .strip_prefix(r"\\?\")
+            .unwrap_or(&repository_text)
+            .to_owned();
+        let authorization = backend
+            .authorize_repository_target(AuthorizeRepositoryTargetRequest {
+                path: repository_text,
+            })
+            .unwrap();
+        std::fs::write(repository.join("safe.txt"), "after-and-different-size").unwrap();
+        let error = backend
+            .create_repository_scan(CreateRepositoryScanRequest {
+                authorization_id: authorization.authorization_id,
+                confirmed: true,
+            })
+            .unwrap_err();
+        assert_eq!(error.code, "repository_revalidation_required");
+        assert_eq!(
+            error.message_safe,
+            "Repository changed; authorization must be renewed"
+        );
+    }
+
+    #[test]
+    fn repository_cancellation_is_persisted_without_a_final_verdict() {
+        let (_temp, backend) = backend();
+        let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../tests/fixtures/synthetic-repository-a")
+            .canonicalize()
+            .unwrap();
+        let fixture_text = fixture.to_string_lossy();
+        let authorization = backend
+            .authorize_repository_target(AuthorizeRepositoryTargetRequest {
+                path: fixture_text
+                    .strip_prefix(r"\\?\")
+                    .unwrap_or(&fixture_text)
+                    .into(),
+            })
+            .unwrap();
+        let started = backend
+            .create_repository_scan(CreateRepositoryScanRequest {
+                authorization_id: authorization.authorization_id,
+                confirmed: true,
+            })
+            .unwrap();
+        let requested = backend
+            .cancel(&ScanRequest {
+                scan_id: started.id.clone(),
+            })
+            .unwrap();
+        assert_eq!(requested.status, "cancellation_requested");
+        let cancelled = wait_terminal(&backend, &started.id);
+        assert_eq!(cancelled.state, "cancelled");
+        assert!(cancelled.verdict.is_none());
+        assert!(
+            backend
+                .report(&GenerateReportRequest {
+                    scan_id: started.id,
+                    kind: ReportKind::Executive,
+                })
+                .is_err()
         );
     }
 }

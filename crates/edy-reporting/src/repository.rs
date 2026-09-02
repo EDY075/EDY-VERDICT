@@ -1,7 +1,7 @@
 //! Secret-safe Level 1 repository reports in deterministic JSON and HTML.
 
 use crate::ReportKind;
-use edy_repository::{RepositoryFindingCategory, RepositoryInventory, RepositoryObservation};
+use edy_repository::{CorrelatedRepositoryFinding, RepositoryInventory};
 use serde::Serialize;
 
 pub const LEVEL1_REPORT_SCHEMA: &str = "LEVEL1_REPOSITORY_REPORT_V1";
@@ -17,7 +17,7 @@ pub struct RepositoryReport {
     pub confidence: String,
     pub coverage_complete: bool,
     pub inventory: RepositoryInventory,
-    pub findings: Vec<RepositoryObservation>,
+    pub findings: Vec<CorrelatedRepositoryFinding>,
     pub secret_count: u32,
     pub vulnerable_dependency_count: u32,
     pub unavailable_checks: Vec<String>,
@@ -29,30 +29,15 @@ impl RepositoryReport {
         kind: ReportKind,
         scan_id: &str,
         inventory: &RepositoryInventory,
-        observations: &[RepositoryObservation],
+        correlated_findings: &[CorrelatedRepositoryFinding],
         unavailable_checks: &[String],
     ) -> Self {
-        let mut findings = observations.to_vec();
+        let mut findings = correlated_findings.to_vec();
         findings.sort_by(|a, b| a.fingerprint.cmp(&b.fingerprint));
-        for finding in &mut findings {
-            if finding.category == RepositoryFindingCategory::Secret {
-                finding.description =
-                    "Potential secret detected; plaintext permanently omitted".into();
-                finding.secret_preview = Some(
-                    finding
-                        .secret_preview
-                        .clone()
-                        .unwrap_or_else(|| "[REDACTED]".into()),
-                );
-            }
-        }
-        let secret_count = findings
-            .iter()
-            .filter(|f| f.category == RepositoryFindingCategory::Secret)
-            .count() as u32;
+        let secret_count = findings.iter().filter(|f| f.category == "secret").count() as u32;
         let vulnerable_dependency_count = findings
             .iter()
-            .filter(|f| f.category == RepositoryFindingCategory::VulnerableDependency)
+            .filter(|f| f.category == "vulnerable_dependency")
             .count() as u32;
         let coverage_complete = unavailable_checks.is_empty()
             && matches!(inventory.status, edy_repository::InventoryStatus::Complete);
@@ -100,10 +85,10 @@ impl RepositoryReport {
             .map(|finding| {
                 format!(
                     "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
-                    escape(finding.category.token()),
+                    escape(&finding.category),
                     escape(&finding.severity),
-                    escape(&finding.location),
-                    escape(&finding.rule_id),
+                    escape(&finding.affected_component),
+                    escape(&finding.rule_ids.join(", ")),
                 )
             })
             .collect::<String>();
@@ -153,36 +138,28 @@ mod tests {
 
     #[test]
     fn html_escapes_and_reports_never_contain_fixture_secret() {
-        let observation = RepositoryObservation {
-            engine_id: "gitleaks".into(),
-            engine_version: "8.30.0".into(),
-            category: RepositoryFindingCategory::Secret,
-            rule_id: "<script>".into(),
+        let finding = CorrelatedRepositoryFinding {
+            id: "018f4c2a-1d3b-7abc-8def-0123456789ac".into(),
+            fingerprint: "secret-fp".into(),
+            title: "Potential secret detected; plaintext permanently omitted".into(),
             description: "safe".into(),
-            location: "a<&.env".into(),
-            line: Some(1),
+            category: "secret".into(),
             severity: "high".into(),
             confidence: "high".into(),
-            fingerprint_version: "SECRET_FINDING_V1".into(),
-            fingerprint: "secret-fp".into(),
-            package: None,
-            installed_version: None,
-            vulnerability_id: None,
-            aliases: vec![],
-            affected_range: None,
-            fixed_version: None,
-            source: None,
-            secret_class: Some("token".into()),
-            secret_preview: Some("EDY_************".into()),
-            secret_digest: Some("digest".into()),
-            license: None,
-            metadata: BTreeMap::new(),
+            status: "open".into(),
+            affected_component: "a<&.env".into(),
+            primary_source: "gitleaks".into(),
+            supporting_sources: vec!["gitleaks".into()],
+            rule_ids: vec!["<script>".into()],
+            evidence_ids: vec!["018f4c2a-1d3b-7abc-8def-0123456789ad".into()],
+            remediation_guidance: "Revoke if real and rescan".into(),
+            limitations: vec!["Synthetic only".into()],
         };
         let report = RepositoryReport::capture(
             ReportKind::Technical,
             "scan",
             &inventory(),
-            &[observation],
+            &[finding],
             &["real_engine_execution_policy_blocked".into()],
         );
         let json = report.json().unwrap();

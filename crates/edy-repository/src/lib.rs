@@ -10,6 +10,13 @@ use std::fmt;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
+mod correlation;
+pub use correlation::*;
+mod aggregation;
+pub use aggregation::*;
+mod pipeline;
+pub use pipeline::*;
+
 pub const REPOSITORY_SNAPSHOT_VERSION: &str = "REPOSITORY_SNAPSHOT_V1";
 pub const BUILT_IN_EXCLUSIONS: &[&str] = &[
     ".git",
@@ -190,11 +197,11 @@ impl AuthorizedRepositoryTarget {
         }
         let metadata =
             fs::symlink_metadata(raw).map_err(|_| RepositoryError::new("path_missing"))?;
-        if !metadata.is_dir() {
-            return Err(RepositoryError::new("path_not_directory"));
-        }
         if is_link_or_reparse(&metadata) {
             return Err(RepositoryError::new("path_reparse_denied"));
+        }
+        if !metadata.is_dir() {
+            return Err(RepositoryError::new("path_not_directory"));
         }
         reject_reparse_ancestors(raw)?;
         let canonical = fs::canonicalize(raw).map_err(|_| RepositoryError::new("path_invalid"))?;
@@ -418,6 +425,20 @@ pub fn inspect(
         security_events: state.security_events,
         gitignore_support: "deferred_builtin_exclusions_only".into(),
     })
+}
+
+pub fn inspect_revalidated(
+    target: &AuthorizedRepositoryTarget,
+    expected_fingerprint: &str,
+) -> Result<RepositoryInventory, RepositoryError> {
+    if !expected_fingerprint.starts_with("rsv1-") || expected_fingerprint.len() != 69 {
+        return Err(RepositoryError::new("snapshot_invalid"));
+    }
+    let inventory = inspect(target)?;
+    if inventory.structural_fingerprint != expected_fingerprint {
+        return Err(RepositoryError::new("revalidation_required"));
+    }
+    Ok(inventory)
 }
 
 #[derive(Default)]
@@ -749,6 +770,100 @@ mod tests {
         assert!(call("Z:/definitely/missing/edy").is_err());
         #[cfg(windows)]
         assert_eq!(call(r"C:\").unwrap_err().code(), "broad_root_denied");
+    }
+
+    #[test]
+    fn changed_repository_requires_revalidation_before_scan() {
+        let root = temporary("toctou");
+        fs::write(root.join("safe.txt"), "before").unwrap();
+        let target = authorized(&root, RepositoryLimits::default());
+        let preview = inspect(&target).unwrap();
+        fs::write(root.join("safe.txt"), "after-and-different-size").unwrap();
+        assert_eq!(
+            inspect_revalidated(&target, &preview.structural_fingerprint)
+                .unwrap_err()
+                .code(),
+            "revalidation_required"
+        );
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn nested_reparse_is_skipped_with_security_event() {
+        let root = temporary("nested-reparse");
+        let outside = temporary("outside");
+        fs::write(outside.join("escape.txt"), "must-not-be-read").unwrap();
+        let link = root.join("nested-link");
+        if std::os::windows::fs::symlink_dir(&outside, &link).is_err() {
+            eprintln!(
+                "SKIP_PLATFORM_REASON=Windows symlink privilege unavailable; junction and mount-point safety remains enforced by the reparse attribute policy"
+            );
+            fs::remove_dir_all(root).unwrap();
+            fs::remove_dir_all(outside).unwrap();
+            return;
+        }
+        let inventory = inspect(&authorized(&root, RepositoryLimits::default())).unwrap();
+        assert_eq!(inventory.file_count, 0);
+        assert!(
+            inventory
+                .security_events
+                .iter()
+                .any(|event| event.code == "reparse_point_skipped")
+        );
+        fs::remove_dir(&link).unwrap();
+        fs::remove_dir_all(root).unwrap();
+        fs::remove_dir_all(outside).unwrap();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn junction_root_is_denied_and_nested_junction_is_never_traversed() {
+        use std::process::Command;
+
+        let root = temporary("junction-root");
+        let outside = temporary("junction-outside");
+        fs::write(outside.join("escape.txt"), "must-not-be-read").unwrap();
+        let junction = root.join("nested-junction");
+        let status = Command::new("cmd.exe")
+            .args([
+                "/d",
+                "/c",
+                "mklink",
+                "/J",
+                junction.to_str().unwrap(),
+                outside.to_str().unwrap(),
+            ])
+            .status();
+        if !status.is_ok_and(|status| status.success()) {
+            eprintln!(
+                "SKIP_PLATFORM_REASON=Windows junction creation unavailable; no host setting was changed"
+            );
+            fs::remove_dir_all(root).unwrap();
+            fs::remove_dir_all(outside).unwrap();
+            return;
+        }
+        let id = TargetId::new("018f4c2a-1d3b-7abc-8def-0123456789b1").unwrap();
+        let root_error = AuthorizedRepositoryTarget::authorize(
+            junction.to_str().unwrap(),
+            id,
+            "018f4c2a-1d3b-7abc-8def-0123456789b2",
+            "2026-09-02T13:00:00Z",
+            RepositoryLimits::default(),
+        )
+        .unwrap_err();
+        assert_eq!(root_error.code(), "path_reparse_denied");
+        let inventory = inspect(&authorized(&root, RepositoryLimits::default())).unwrap();
+        assert_eq!(inventory.file_count, 0);
+        assert!(
+            inventory
+                .security_events
+                .iter()
+                .any(|event| event.code == "reparse_point_skipped")
+        );
+        fs::remove_dir(&junction).unwrap();
+        fs::remove_dir_all(root).unwrap();
+        fs::remove_dir_all(outside).unwrap();
     }
 
     #[cfg(windows)]

@@ -265,6 +265,29 @@ impl Level1SnapshotStore {
         })
     }
 
+    pub fn replace(
+        &mut self,
+        scan_id: &str,
+        expected_revision: u64,
+        payload: &[u8],
+    ) -> Result<u64, SnapshotError> {
+        validate(scan_id, payload)?;
+        reject_fixture_secret(payload)?;
+        if expected_revision == 0 || expected_revision >= i64::MAX as u64 {
+            return Err(SnapshotError::InvalidInput);
+        }
+        let transaction = self.connection.transaction()?;
+        let changed = transaction.execute(
+            "UPDATE level1_repository_snapshots SET revision=revision+1,payload=?3,payload_sha256=?4 WHERE scan_id=?1 AND revision=?2",
+            params![scan_id, expected_revision as i64, payload, digest(payload)],
+        )?;
+        if changed != 1 {
+            return Err(SnapshotError::Conflict);
+        }
+        transaction.commit()?;
+        Ok(expected_revision + 1)
+    }
+
     pub fn contains_bytes(&self, needle: &[u8]) -> Result<bool, SnapshotError> {
         if needle.is_empty() || needle.len() > 4096 {
             return Err(SnapshotError::InvalidInput);
