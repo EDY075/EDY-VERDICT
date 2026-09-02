@@ -27,9 +27,20 @@ fn expired_deadline_never_launches() {
 }
 fn request(mode: &str) -> ProcessRequest {
     let path = PathBuf::from(env!("CARGO_BIN_EXE_benign-fixture"));
+    let bytes = std::fs::read(&path).unwrap();
+    let hash = format!("{:x}", Sha256::digest(&bytes));
+    let artifacts = vec![ProcessArtifact {
+        relative_path: "benign-fixture.exe".into(),
+        path: path.clone(),
+        sha256: hash.clone(),
+        size: bytes.len() as u64,
+    }];
+    let artifact_set_sha256 = declared_process_artifact_set_sha256(&artifacts).unwrap();
     ProcessRequest {
         approved_root: path.parent().unwrap().to_path_buf(),
-        sha256: format!("{:x}", Sha256::digest(std::fs::read(&path).unwrap())),
+        sha256: hash.clone(),
+        artifact_set_sha256,
+        artifacts,
         executable: path,
         arguments: vec![mode.into()],
         environment: Vec::new(),

@@ -89,6 +89,15 @@ pub struct VerifiedEngine {
     pub receipt: EngineReceipt,
     pub root: PathBuf,
     pub executable: PathBuf,
+    pub artifacts: Vec<VerifiedArtifact>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VerifiedArtifact {
+    pub relative_path: String,
+    pub path: PathBuf,
+    pub sha256: String,
+    pub size: u64,
 }
 
 impl VerifiedEngine {
@@ -102,6 +111,17 @@ impl VerifiedEngine {
             approved_root: self.root.clone(),
             executable: self.executable.clone(),
             sha256: self.manifest.artifact.executable_sha256.clone(),
+            artifact_set_sha256: self.receipt.artifact_set_sha256.clone(),
+            artifacts: self
+                .artifacts
+                .iter()
+                .map(|artifact| crate::process::ProcessArtifact {
+                    relative_path: artifact.relative_path.clone(),
+                    path: artifact.path.clone(),
+                    sha256: artifact.sha256.clone(),
+                    size: artifact.size,
+                })
+                .collect(),
             arguments,
             environment,
             working_directory: self.root.clone(),
@@ -164,6 +184,7 @@ pub fn verify_engine(
     }
 
     let mut records = Vec::with_capacity(expected.len());
+    let mut verified_artifacts = Vec::with_capacity(expected.len());
     for (relative, (expected_hash, expected_size)) in &expected {
         let observed_file = observed
             .get(relative)
@@ -176,6 +197,12 @@ pub fn verify_engine(
         }
         records.push(ArtifactSetRecord {
             relative_path: observed_file.relative_path.clone(),
+            sha256: observed_file.sha256.clone(),
+            size: observed_file.size,
+        });
+        verified_artifacts.push(VerifiedArtifact {
+            relative_path: observed_file.relative_path.clone(),
+            path: observed_file.path.clone(),
             sha256: observed_file.sha256.clone(),
             size: observed_file.size,
         });
@@ -200,6 +227,7 @@ pub fn verify_engine(
         receipt,
         root,
         executable,
+        artifacts: verified_artifacts,
     })
 }
 
@@ -367,6 +395,7 @@ pub fn verify_data_trust(
 #[derive(Debug)]
 struct ObservedFile {
     relative_path: String,
+    path: PathBuf,
     sha256: String,
     size: u64,
 }
@@ -408,6 +437,7 @@ fn observe_directory(
                     key,
                     ObservedFile {
                         relative_path: relative,
+                        path,
                         sha256: observed.sha256,
                         size: observed.size,
                     },

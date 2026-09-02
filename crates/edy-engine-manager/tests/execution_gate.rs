@@ -1,13 +1,15 @@
 #![cfg(windows)]
 
 use edy_engine_manager::execution::*;
-use edy_engine_manager::manifest::{EngineManifest, EngineTrustPolicy, ProvenanceType};
+use edy_engine_manager::manifest::{
+    AuxiliaryHash, EngineManifest, EngineTrustPolicy, ProvenanceType,
+};
 use edy_engine_manager::receipt::{EngineReceipt, NullableTimestamp, ReceiptState};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Duration, SystemTime};
 
 static NEXT: AtomicU64 = AtomicU64::new(1);
@@ -53,6 +55,7 @@ struct Fixture {
     receipt: PathBuf,
     root: PathBuf,
     executable: PathBuf,
+    auxiliary: PathBuf,
 }
 
 impl Fixture {
@@ -63,6 +66,9 @@ impl Fixture {
         let executable = root.join("fixture.exe");
         fs::copy(env!("CARGO_BIN_EXE_benign-fixture"), &executable).unwrap();
         let bytes = fs::read(&executable).unwrap();
+        let auxiliary = root.join("fixture-support.dll");
+        let auxiliary_bytes = b"synthetic auxiliary payload";
+        fs::write(&auxiliary, auxiliary_bytes).unwrap();
 
         let source_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../tools/engines/yara-x/1.20.0/manifest.json");
@@ -72,7 +78,11 @@ impl Fixture {
         manifest.artifact.entrypoint = "fixture.exe".into();
         manifest.artifact.entrypoint_size = bytes.len() as u64;
         manifest.artifact.executable_sha256 = sha(&bytes);
-        manifest.artifact.auxiliary_hashes.clear();
+        manifest.artifact.auxiliary_hashes = vec![AuxiliaryHash {
+            relative_path: "fixture-support.dll".into(),
+            sha256: sha(auxiliary_bytes),
+            size: auxiliary_bytes.len() as u64,
+        }];
         let receipt = EngineReceipt {
             schema_version: 2,
             engine_id: manifest.identity.id.clone(),
@@ -93,6 +103,7 @@ impl Fixture {
             receipt: receipt_path,
             root,
             executable,
+            auxiliary,
         }
     }
 
@@ -117,6 +128,62 @@ fn valid_engine_binds_manifest_receipt_and_closed_artifact_set() {
         fixture.executable.canonicalize().unwrap()
     );
     assert_eq!(verified.root, fixture.root.canonicalize().unwrap());
+    assert_eq!(verified.artifacts.len(), 2);
+}
+
+#[test]
+fn auxiliary_tamper_after_gate_is_denied_immediately_before_spawn() {
+    let fixture = Fixture::new();
+    let verified = verify_engine(&fixture.request(&policy())).unwrap();
+    let request = verified.process_request(vec!["success".into()], Vec::new());
+
+    fs::write(&fixture.auxiliary, b"post-gate replacement attempt").unwrap();
+    let result = edy_engine_manager::process::execute(&request, &AtomicBool::new(false));
+    assert!(result.is_err());
+}
+
+#[test]
+fn omitting_auxiliary_from_process_request_breaks_receipt_bound_artifact_set() {
+    let fixture = Fixture::new();
+    let verified = verify_engine(&fixture.request(&policy())).unwrap();
+    let mut request = verified.process_request(vec!["success".into()], Vec::new());
+    request.artifacts.retain(|artifact| {
+        artifact.path.extension().and_then(|value| value.to_str()) == Some("exe")
+    });
+    let result = edy_engine_manager::process::execute(&request, &AtomicBool::new(false));
+    assert!(result.is_err());
+}
+
+#[test]
+fn artifact_handles_deny_replacement_until_process_tree_is_reaped() {
+    let fixture = Fixture::new();
+    let verified = verify_engine(&fixture.request(&policy())).unwrap();
+    let mut request = verified.process_request(vec!["sleep".into()], Vec::new());
+    request.timeout = Duration::from_millis(500);
+    let cancel = AtomicBool::new(false);
+
+    std::thread::scope(|scope| {
+        let execution = scope.spawn(|| edy_engine_manager::process::execute(&request, &cancel));
+        let locked = (0..40).any(|_| {
+            let denied = fs::OpenOptions::new()
+                .write(true)
+                .open(&fixture.auxiliary)
+                .is_err();
+            if !denied {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            denied
+        });
+        assert!(locked, "auxiliary was never protected by a held handle");
+        assert!(fs::write(&fixture.auxiliary, b"replacement while running").is_err());
+        let result = execution.join().unwrap().unwrap();
+        assert_eq!(
+            result.outcome,
+            edy_engine_manager::process::Outcome::TimedOut
+        );
+    });
+
+    fs::write(&fixture.auxiliary, b"handle released after cleanup").unwrap();
 }
 
 #[test]

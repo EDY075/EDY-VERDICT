@@ -3,11 +3,14 @@
 use sha2::{Digest, Sha256};
 use std::{
     ffi::OsStr,
-    fs::OpenOptions,
+    fs::{File, OpenOptions},
     io::{self, Read},
     mem::{size_of, zeroed},
-    os::windows::{ffi::OsStrExt, fs::OpenOptionsExt},
-    path::PathBuf,
+    os::windows::{
+        ffi::OsStrExt,
+        fs::{MetadataExt, OpenOptionsExt},
+    },
+    path::{Path, PathBuf},
     ptr::{null, null_mut},
     sync::atomic::{AtomicBool, Ordering},
     thread,
@@ -16,7 +19,9 @@ use std::{
 use windows_sys::Win32::{
     Foundation::*,
     Security::SECURITY_ATTRIBUTES,
-    Storage::FileSystem::ReadFile,
+    Storage::FileSystem::{
+        FILE_ATTRIBUTE_REPARSE_POINT, FILE_FLAG_OPEN_REPARSE_POINT, FILE_SHARE_READ, ReadFile,
+    },
     System::{
         JobObjects::*,
         Pipes::{CreatePipe, PeekNamedPipe},
@@ -28,12 +33,22 @@ pub struct ProcessRequest {
     pub approved_root: PathBuf,
     pub executable: PathBuf,
     pub sha256: String,
+    pub artifact_set_sha256: String,
+    pub artifacts: Vec<ProcessArtifact>,
     pub arguments: Vec<String>,
     pub environment: Vec<(String, String)>,
     pub working_directory: PathBuf,
     pub timeout: Duration,
     pub stdout_limit: usize,
     pub stderr_limit: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProcessArtifact {
+    pub relative_path: String,
+    pub path: PathBuf,
+    pub sha256: String,
+    pub size: u64,
 }
 #[derive(Debug, PartialEq, Eq)]
 pub enum Outcome {
@@ -184,6 +199,148 @@ fn drain(pipe: &Handle, output: &mut Vec<u8>, limit: usize) -> io::Result<bool> 
     }
     Ok(false)
 }
+
+fn fixed_disk_path(path: &Path) -> bool {
+    use std::path::{Component, Prefix};
+    let drive = match path.components().next() {
+        Some(Component::Prefix(prefix)) => match prefix.kind() {
+            Prefix::Disk(drive) | Prefix::VerbatimDisk(drive) => drive,
+            _ => return false,
+        },
+        _ => return false,
+    };
+    let root = [drive as u16, b':' as u16, b'\\' as u16, 0];
+    unsafe { windows_sys::Win32::Storage::FileSystem::GetDriveTypeW(root.as_ptr()) == 3 }
+}
+
+fn hash_locked_file(
+    file: &mut File,
+    cancel: &AtomicBool,
+    start: Instant,
+    timeout: Duration,
+) -> io::Result<String> {
+    let mut digest = Sha256::new();
+    let mut buffer = [0u8; 65_536];
+    loop {
+        if interruption(cancel, start, timeout).is_some() {
+            return Err(io::Error::new(
+                io::ErrorKind::Interrupted,
+                "artifact validation interrupted",
+            ));
+        }
+        let read = file.read(&mut buffer)?;
+        if read == 0 {
+            break;
+        }
+        digest.update(&buffer[..read]);
+    }
+    Ok(format!("{:x}", digest.finalize()))
+}
+
+fn lock_and_verify_artifacts(
+    request: &ProcessRequest,
+    approved_root: &Path,
+    executable: &Path,
+    cancel: &AtomicBool,
+    start: Instant,
+) -> io::Result<Vec<File>> {
+    if request.artifacts.is_empty() || request.artifacts.len() > 4096 {
+        return Err(io::Error::other("Complete verified artifact set required"));
+    }
+    let executable_key = executable
+        .to_str()
+        .ok_or_else(|| io::Error::other("Non-Unicode executable path"))?
+        .replace('/', "\\")
+        .to_ascii_lowercase();
+    let mut seen = std::collections::BTreeSet::new();
+    let mut relative_paths = std::collections::BTreeSet::new();
+    let mut executable_bound = false;
+    let mut locked = Vec::with_capacity(request.artifacts.len());
+    let mut records = Vec::with_capacity(request.artifacts.len());
+    for artifact in &request.artifacts {
+        if !artifact.path.is_absolute()
+            || !crate::manifest::safe_relative(&artifact.relative_path)
+            || !fixed_disk_path(&artifact.path)
+            || artifact.size == 0
+            || artifact.size > 512 * 1024 * 1024
+            || artifact.sha256.len() != 64
+            || !artifact.sha256.bytes().all(|byte| byte.is_ascii_hexdigit())
+        {
+            return Err(io::Error::other("Unsafe verified artifact declaration"));
+        }
+        let path = crate::execution::revalidate_canonical_regular_file(&artifact.path)
+            .map_err(|error| io::Error::other(error.to_string()))?;
+        crate::execution::ensure_contained(approved_root, &path)
+            .map_err(|error| io::Error::other(error.to_string()))?;
+        let key = path
+            .to_str()
+            .ok_or_else(|| io::Error::other("Non-Unicode artifact path"))?
+            .replace('/', "\\")
+            .to_ascii_lowercase();
+        if !seen.insert(key.clone()) {
+            return Err(io::Error::other("Duplicate verified artifact"));
+        }
+        if !relative_paths.insert(artifact.relative_path.to_ascii_lowercase()) {
+            return Err(io::Error::other("Duplicate verified artifact path"));
+        }
+        if key == executable_key {
+            if !artifact.sha256.eq_ignore_ascii_case(&request.sha256) {
+                return Err(io::Error::other("Executable artifact declaration mismatch"));
+            }
+            executable_bound = true;
+        }
+
+        // FILE_SHARE_READ denies write/delete sharing. OPEN_REPARSE_POINT prevents the
+        // final component from being followed if it is replaced by a redirecting object.
+        let mut file = OpenOptions::new()
+            .read(true)
+            .share_mode(FILE_SHARE_READ)
+            .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT)
+            .open(&path)?;
+        let metadata = file.metadata()?;
+        if metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
+            || !metadata.is_file()
+            || metadata.len() != artifact.size
+        {
+            return Err(io::Error::other("Verified artifact type or size changed"));
+        }
+        let actual = hash_locked_file(&mut file, cancel, start, request.timeout)?;
+        if actual != artifact.sha256.to_ascii_lowercase() {
+            return Err(io::Error::other("Verified artifact hash changed"));
+        }
+        records.push(crate::manifest::ArtifactSetRecord {
+            relative_path: artifact.relative_path.clone(),
+            sha256: actual,
+            size: metadata.len(),
+        });
+        locked.push(file);
+    }
+    if !executable_bound {
+        return Err(io::Error::other(
+            "Executable absent from verified artifact set",
+        ));
+    }
+    let observed_set = crate::manifest::artifact_set_sha256(records)
+        .map_err(|_| io::Error::other("Artifact-set serialization failed"))?;
+    if !observed_set.eq_ignore_ascii_case(&request.artifact_set_sha256) {
+        return Err(io::Error::other("Verified artifact set changed"));
+    }
+    Ok(locked)
+}
+
+pub fn declared_process_artifact_set_sha256(artifacts: &[ProcessArtifact]) -> io::Result<String> {
+    let records = artifacts
+        .iter()
+        .map(|artifact| crate::manifest::ArtifactSetRecord {
+            relative_path: artifact.relative_path.clone(),
+            sha256: artifact.sha256.to_ascii_lowercase(),
+            size: artifact.size,
+        })
+        .collect();
+    crate::manifest::artifact_set_sha256(records)
+        .map_err(|_| io::Error::other("Artifact-set serialization failed"))
+}
+
 pub fn execute(request: &ProcessRequest, cancel: &AtomicBool) -> io::Result<ProcessResult> {
     let start = Instant::now();
     if let Some(reason) = interruption(cancel, start, request.timeout) {
@@ -204,18 +361,6 @@ pub fn execute(request: &ProcessRequest, cancel: &AtomicBool) -> io::Result<Proc
         return Err(io::Error::other("Unsafe process request"));
     }
     // Reject network/device paths before potentially blocking canonicalization.
-    fn fixed_disk_path(path: &std::path::Path) -> bool {
-        use std::path::{Component, Prefix};
-        let drive = match path.components().next() {
-            Some(Component::Prefix(p)) => match p.kind() {
-                Prefix::Disk(d) | Prefix::VerbatimDisk(d) => d,
-                _ => return false,
-            },
-            _ => return false,
-        };
-        let root = [drive as u16, b':' as u16, b'\\' as u16, 0];
-        unsafe { windows_sys::Win32::Storage::FileSystem::GetDriveTypeW(root.as_ptr()) == 3 }
-    }
     if !fixed_disk_path(&request.approved_root)
         || !fixed_disk_path(&request.executable)
         || !fixed_disk_path(&request.working_directory)
@@ -256,30 +401,6 @@ pub fn execute(request: &ProcessRequest, cancel: &AtomicBool) -> io::Result<Proc
         != Some("exe")
     {
         return Err(io::Error::other("Only approved native executables"));
-    }
-    // Deny write/delete sharing for the verified image through completion.
-    let mut image = OpenOptions::new()
-        .read(true)
-        .share_mode(1)
-        .open(&executable)?;
-    let metadata = image.metadata()?;
-    if !metadata.is_file() || metadata.len() > 512 * 1024 * 1024 {
-        return Err(io::Error::other("Image is not regular or exceeds 512 MiB"));
-    }
-    let mut digest = Sha256::new();
-    let mut buffer = [0u8; 65536];
-    loop {
-        if let Some(reason) = interruption(cancel, start, request.timeout) {
-            return Ok(stopped_before_spawn(reason));
-        }
-        let n = image.read(&mut buffer)?;
-        if n == 0 {
-            break;
-        }
-        digest.update(&buffer[..n]);
-    }
-    if format!("{:x}", digest.finalize()) != request.sha256.to_ascii_lowercase() {
-        return Err(io::Error::other("Executable hash mismatch"));
     }
     let application = wide(executable.as_os_str())?;
     let directory = wide(working_directory.as_os_str())?;
@@ -352,6 +473,19 @@ pub fn execute(request: &ProcessRequest, cancel: &AtomicBool) -> io::Result<Proc
     startup.lpAttributeList = attributes_ptr;
     let mut info: PROCESS_INFORMATION = unsafe { zeroed() };
     let environment = environment_block(&request.environment)?;
+    // Last mutable-input gate before CreateProcessW. All handles remain open until
+    // the process tree has terminated, so payload DLLs/assets cannot be replaced.
+    let artifact_locks =
+        match lock_and_verify_artifacts(request, &approved_root, &executable, cancel, start) {
+            Ok(locks) => locks,
+            Err(error) if error.kind() == io::ErrorKind::Interrupted => {
+                if let Some(reason) = interruption(cancel, start, request.timeout) {
+                    return Ok(stopped_before_spawn(reason));
+                }
+                return Err(error);
+            }
+            Err(error) => return Err(error),
+        };
     if let Some(reason) = interruption(cancel, start, request.timeout) {
         return Ok(stopped_before_spawn(reason));
     }
@@ -447,6 +581,7 @@ pub fn execute(request: &ProcessRequest, cancel: &AtomicBool) -> io::Result<Proc
     } else {
         outcome
     };
+    drop(artifact_locks);
     Ok(ProcessResult {
         outcome,
         stdout,
