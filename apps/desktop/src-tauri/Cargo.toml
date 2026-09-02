@@ -13,6 +13,7 @@ edy-storage.workspace = true
 edy-reporting.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 tauri.workspace = true
 uuid.workspace = true
 [build-dependencies]

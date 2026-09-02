@@ -29,7 +29,20 @@ CREATE TABLE IF NOT EXISTS level1_repository_snapshots (
   UNIQUE(target_id, authorization_id)
 );
 CREATE INDEX IF NOT EXISTS idx_level1_target ON level1_repository_snapshots(target_id);
-PRAGMA user_version=2;
+";
+
+const LEVEL2_SCHEMA: &str = "
+CREATE TABLE IF NOT EXISTS level2_file_snapshots (
+  scan_id TEXT PRIMARY KEY CHECK(length(scan_id) = 36),
+  target_id TEXT NOT NULL CHECK(length(target_id) = 36),
+  authorization_id TEXT NOT NULL CHECK(length(authorization_id) = 36),
+  canonical_target_id TEXT NOT NULL CHECK(length(canonical_target_id) = 64 AND canonical_target_id = lower(canonical_target_id) AND canonical_target_id NOT GLOB '*[^0-9a-f]*'),
+  revision INTEGER NOT NULL CHECK(revision >= 1),
+  payload BLOB NOT NULL CHECK(length(payload) BETWEEN 2 AND 8388608),
+  payload_sha256 TEXT NOT NULL CHECK(length(payload_sha256) = 64),
+  UNIQUE(target_id, authorization_id)
+);
+CREATE INDEX IF NOT EXISTS idx_level2_file_target ON level2_file_snapshots(target_id);
 ";
 
 #[derive(Debug)]
@@ -100,7 +113,7 @@ impl Level0SnapshotStore {
             "PRAGMA trusted_schema=OFF; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;",
         )?;
         let version: u32 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
-        if version > 2 {
+        if version > 3 {
             return Err(SnapshotError::Integrity);
         }
         connection.execute_batch(LEVEL0_SCHEMA)?;
@@ -213,12 +226,15 @@ impl Level1SnapshotStore {
             "PRAGMA trusted_schema=OFF; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;",
         )?;
         let version: u32 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
-        if version > 2 {
+        if version > 3 {
             return Err(SnapshotError::Integrity);
         }
         let transaction = connection.unchecked_transaction()?;
         transaction.execute_batch(LEVEL0_SCHEMA)?;
         transaction.execute_batch(LEVEL1_SCHEMA)?;
+        if version < 2 {
+            transaction.execute_batch("PRAGMA user_version=2;")?;
+        }
         transaction.commit()?;
         verify_schema(&connection)?;
         verify_level1_schema(&connection)?;
@@ -317,6 +333,150 @@ impl Level1SnapshotStore {
     }
 }
 
+/// Forward-only Level 2 file-analysis snapshots. Payloads are sanitized summaries only: file
+/// bytes, certificate blobs, raw engine output and provider credentials are outside the contract.
+pub struct Level2SnapshotStore {
+    connection: Connection,
+}
+
+impl Level2SnapshotStore {
+    pub fn open(path: &Path) -> Result<Self, SnapshotError> {
+        if !path.is_absolute() || path.parent().is_some_and(|parent| !parent.is_dir()) {
+            return Err(SnapshotError::InvalidInput);
+        }
+        let connection = Connection::open_with_flags(
+            path,
+            OpenFlags::SQLITE_OPEN_READ_WRITE
+                | OpenFlags::SQLITE_OPEN_CREATE
+                | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        )?;
+        connection.busy_timeout(Duration::from_secs(5))?;
+        connection.execute_batch(
+            "PRAGMA trusted_schema=OFF; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;",
+        )?;
+        let version: u32 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+        if version > 3 {
+            return Err(SnapshotError::Integrity);
+        }
+        let transaction = connection.unchecked_transaction()?;
+        transaction.execute_batch(LEVEL0_SCHEMA)?;
+        transaction.execute_batch(LEVEL1_SCHEMA)?;
+        transaction.execute_batch(LEVEL2_SCHEMA)?;
+        if version < 3 {
+            transaction.execute_batch("PRAGMA user_version=3;")?;
+        }
+        transaction.commit()?;
+        verify_schema(&connection)?;
+        verify_level1_schema(&connection)?;
+        verify_level2_schema(&connection)?;
+        Ok(Self { connection })
+    }
+
+    pub fn create(
+        &mut self,
+        scan_id: &str,
+        target_id: &str,
+        authorization_id: &str,
+        canonical_target_id: &str,
+        payload: &[u8],
+    ) -> Result<(), SnapshotError> {
+        validate(scan_id, payload)?;
+        validate_uuid(target_id)?;
+        validate_uuid(authorization_id)?;
+        validate_digest(canonical_target_id)?;
+        reject_fixture_secret(payload)?;
+        let transaction = self.connection.transaction()?;
+        let count: u32 =
+            transaction.query_row("SELECT count(*) FROM level2_file_snapshots", [], |row| {
+                row.get(0)
+            })?;
+        if count >= 256 {
+            return Err(SnapshotError::InvalidInput);
+        }
+        transaction.execute(
+            "INSERT INTO level2_file_snapshots(scan_id,target_id,authorization_id,canonical_target_id,revision,payload,payload_sha256) VALUES(?1,?2,?3,?4,1,?5,?6)",
+            params![scan_id, target_id, authorization_id, canonical_target_id, payload, digest(payload)],
+        )?;
+        transaction.commit()?;
+        Ok(())
+    }
+
+    pub fn replace(
+        &mut self,
+        scan_id: &str,
+        expected_revision: u64,
+        payload: &[u8],
+    ) -> Result<u64, SnapshotError> {
+        validate(scan_id, payload)?;
+        reject_fixture_secret(payload)?;
+        if expected_revision == 0 || expected_revision >= i64::MAX as u64 {
+            return Err(SnapshotError::InvalidInput);
+        }
+        let transaction = self.connection.transaction()?;
+        let changed = transaction.execute(
+            "UPDATE level2_file_snapshots SET revision=revision+1,payload=?3,payload_sha256=?4 WHERE scan_id=?1 AND revision=?2",
+            params![scan_id, expected_revision as i64, payload, digest(payload)],
+        )?;
+        if changed != 1 {
+            return Err(SnapshotError::Conflict);
+        }
+        transaction.commit()?;
+        Ok(expected_revision + 1)
+    }
+
+    pub fn load(&self, scan_id: &str) -> Result<SnapshotBlob, SnapshotError> {
+        validate_scan_id(scan_id)?;
+        let (revision, payload, expected): (i64, Vec<u8>, String) = self
+            .connection
+            .query_row(
+                "SELECT revision,payload,payload_sha256 FROM level2_file_snapshots WHERE scan_id=?1",
+                [scan_id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .map_err(|error| match error {
+                rusqlite::Error::QueryReturnedNoRows => SnapshotError::NotFound,
+                other => SnapshotError::Sql(other),
+            })?;
+        validate(scan_id, &payload)?;
+        reject_fixture_secret(&payload)?;
+        if digest(&payload) != expected {
+            return Err(SnapshotError::Integrity);
+        }
+        Ok(SnapshotBlob {
+            revision: revision.try_into().map_err(|_| SnapshotError::Integrity)?,
+            payload,
+        })
+    }
+
+    pub fn contains_bytes(&self, needle: &[u8]) -> Result<bool, SnapshotError> {
+        if needle.is_empty() || needle.len() > 4096 {
+            return Err(SnapshotError::InvalidInput);
+        }
+        let mut statement = self
+            .connection
+            .prepare("SELECT payload FROM level2_file_snapshots")?;
+        let rows = statement.query_map([], |row| row.get::<_, Vec<u8>>(0))?;
+        for row in rows {
+            if row?.windows(needle.len()).any(|window| window == needle) {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
+    pub fn list_ids(&self, offset: u32, limit: u32) -> Result<Vec<String>, SnapshotError> {
+        if offset > 10_000 || !(1..=50).contains(&limit) {
+            return Err(SnapshotError::InvalidInput);
+        }
+        let mut statement = self.connection.prepare(
+            "SELECT scan_id FROM level2_file_snapshots ORDER BY scan_id DESC LIMIT ?1 OFFSET ?2",
+        )?;
+        let rows = statement.query_map(params![limit, offset], |row| row.get::<_, String>(0))?;
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(SnapshotError::Sql)
+    }
+}
+
 fn validate(scan_id: &str, payload: &[u8]) -> Result<(), SnapshotError> {
     validate_scan_id(scan_id)?;
     if payload.len() < 2 || payload.len() > MAX_SNAPSHOT_BYTES {
@@ -335,6 +495,17 @@ fn validate_uuid(value: &str) -> Result<(), SnapshotError> {
     edy_core::TargetId::new(value)
         .map(|_| ())
         .map_err(|_| SnapshotError::InvalidInput)
+}
+
+fn validate_digest(value: &str) -> Result<(), SnapshotError> {
+    if value.len() != 64
+        || value
+            .bytes()
+            .any(|byte| !byte.is_ascii_hexdigit() || byte.is_ascii_uppercase())
+    {
+        return Err(SnapshotError::InvalidInput);
+    }
+    Ok(())
 }
 
 fn reject_fixture_secret(payload: &[u8]) -> Result<(), SnapshotError> {
@@ -378,6 +549,18 @@ fn verify_level1_schema(connection: &Connection) -> Result<(), SnapshotError> {
         [], |row| row.get(0),
     )?;
     if !sql.contains("authorization_id") || !sql.contains("payload_sha256") {
+        return Err(SnapshotError::Integrity);
+    }
+    Ok(())
+}
+
+fn verify_level2_schema(connection: &Connection) -> Result<(), SnapshotError> {
+    let sql: String = connection.query_row(
+        "SELECT coalesce(sql,'') FROM sqlite_schema WHERE type='table' AND name='level2_file_snapshots'",
+        [],
+        |row| row.get(0),
+    )?;
+    if !sql.contains("canonical_target_id") || !sql.contains("payload_sha256") {
         return Err(SnapshotError::Integrity);
     }
     Ok(())
@@ -506,5 +689,83 @@ mod tests {
             .create(scan, target, auth, br#"{"value":"EDY_************"}"#)
             .unwrap();
         assert!(!store.contains_bytes(b"EDY_FAKE_TEST_TOKEN_").unwrap());
+    }
+
+    #[test]
+    fn level2_migrates_fresh_level0_and_level1_databases_and_reloads_safely() {
+        for seed in [0_u8, 1, 2] {
+            let directory = TempDir::new();
+            let path = directory.0.join(format!("upgrade-{seed}.sqlite3"));
+            let scan0 = "018f4c2a-1d3b-7abc-8def-0123456789a1";
+            let scan1 = "018f4c2a-1d3b-7abc-8def-0123456789a2";
+            let scan2 = "018f4c2a-1d3b-7abc-8def-0123456789a3";
+            let target = "018f4c2a-1d3b-7abc-8def-0123456789a4";
+            let auth = "018f4c2a-1d3b-7abc-8def-0123456789a5";
+            if seed >= 1 {
+                let mut level0 = Level0SnapshotStore::open(&path).unwrap();
+                level0.create(scan0, br#"{"state":"completed"}"#).unwrap();
+            }
+            if seed >= 2 {
+                let mut level1 = Level1SnapshotStore::open(&path).unwrap();
+                level1
+                    .create(scan1, target, auth, br#"{"state":"partial"}"#)
+                    .unwrap();
+            }
+            let mut level2 = Level2SnapshotStore::open(&path).unwrap();
+            level2
+                .create(
+                    scan2,
+                    target,
+                    auth,
+                    &"a".repeat(64),
+                    br#"{"state":"partial","hashes":{"sha256":"safe"}}"#,
+                )
+                .unwrap();
+            assert_eq!(level2.load(scan2).unwrap().revision, 1);
+            drop(level2);
+            assert_eq!(
+                Level2SnapshotStore::open(&path)
+                    .unwrap()
+                    .load(scan2)
+                    .unwrap()
+                    .revision,
+                1
+            );
+            assert_eq!(
+                Connection::open(&path)
+                    .unwrap()
+                    .query_row("PRAGMA user_version", [], |row| row.get::<_, u32>(0))
+                    .unwrap(),
+                3
+            );
+        }
+    }
+
+    #[test]
+    fn level2_snapshot_contains_no_raw_file_bytes_or_fixture_secrets() {
+        let directory = TempDir::new();
+        let path = directory.0.join("level2.sqlite3");
+        let mut store = Level2SnapshotStore::open(&path).unwrap();
+        store
+            .create(
+                "018f4c2a-1d3b-7abc-8def-0123456789a1",
+                "018f4c2a-1d3b-7abc-8def-0123456789a2",
+                "018f4c2a-1d3b-7abc-8def-0123456789a3",
+                &"b".repeat(64),
+                br#"{"classification":"generic_file","bytes_persisted":false}"#,
+            )
+            .unwrap();
+        assert!(!store.contains_bytes(b"EDY_LEVEL2_RAW_FILE_BYTES").unwrap());
+        assert!(
+            store
+                .create(
+                    "018f4c2a-1d3b-7abc-8def-0123456789a4",
+                    "018f4c2a-1d3b-7abc-8def-0123456789a5",
+                    "018f4c2a-1d3b-7abc-8def-0123456789a6",
+                    &"c".repeat(64),
+                    br#"{"raw":"EDY_FAKE_TEST_TOKEN_FORBIDDEN"}"#,
+                )
+                .is_err()
+        );
     }
 }

@@ -798,6 +798,7 @@ dependencies = [
  "edy-storage",
  "serde",
  "serde_json",
+ "sha2",
  "tauri",
  "tauri-build",
  "uuid",
@@ -827,6 +828,7 @@ name = "edy-reporting"
 version = "0.1.0"
 dependencies = [
  "edy-core",
+ "edy-engine-manager",
  "edy-repository",
  "serde",
  "serde_json",

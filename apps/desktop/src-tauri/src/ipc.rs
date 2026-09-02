@@ -6,9 +6,15 @@ use edy_core::{
     EvidenceProvenance, EvidenceStrength, ObservationSignal, ScanId, ScanResult, ScanState,
     Severity, Sha256Digest, StructuredFact, TargetId, Timestamp,
 };
+use edy_engine_manager::file_security::{
+    AuthorizedFileTarget, DEFAULT_MAX_FILE_SIZE, FileAnalysis, FileSecurityErrorKind,
+    FileTargetPreview, analyze_authorized_file, authorize_file_target, inspect_file_target,
+    normalize_file_analysis,
+};
 use edy_engine_manager::repository::{
     GitleaksRepositoryAdapter, OsvRepositoryAdapter, TrivyRepositoryAdapter,
 };
+use edy_reporting::file::FileReport;
 use edy_reporting::repository::RepositoryReport;
 use edy_reporting::{REPORT_SCHEMA, ReportDocument, ReportEvidence, ReportKind, ReportSnapshot};
 use edy_repository::{
@@ -17,8 +23,9 @@ use edy_repository::{
     aggregate_repository_posture, correlate_repository_observations, inspect, inspect_revalidated,
     normalize_license_state,
 };
-use edy_storage::level0_snapshot::Level1SnapshotStore;
+use edy_storage::level0_snapshot::{Level1SnapshotStore, Level2SnapshotStore};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, mpsc};
@@ -124,6 +131,54 @@ pub struct CreateRepositoryScanRequest {
     pub confirmed: bool,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct InspectFileTargetRequest {
+    pub path: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AuthorizeFileTargetRequest {
+    pub preview_id: String,
+    pub confirmed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct FileTargetPreviewView {
+    pub preview_id: String,
+    #[serde(flatten)]
+    pub preview: FileTargetPreview,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CreateFileScanRequest {
+    pub authorization_id: String,
+    pub confirmed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct AuthorizedFileTargetView {
+    pub authorization_id: String,
+    pub canonical_path: String,
+    pub size: u64,
+    pub detected_type: String,
+    pub proposed_checks: Vec<String>,
+    pub policy_limitations: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct FileAnalysisView {
+    pub scan_id: String,
+    pub state: String,
+    pub progress: ScanProgressView,
+    pub analysis: Option<FileAnalysis>,
+    pub terminal_error: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct AuthorizedRepositoryTargetView {
@@ -141,6 +196,25 @@ pub struct AuthorizedRepositoryTargetView {
 struct RepositoryAuthorizationSession {
     target: AuthorizedRepositoryTarget,
     preview_fingerprint: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct FileAuthorizationSession {
+    target: AuthorizedFileTarget,
+    preview: FileTargetPreview,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct Level2StoredScan {
+    scan_id: String,
+    target_id: String,
+    authorization_id: String,
+    canonical_target_id: String,
+    state: String,
+    progress: ScanProgressView,
+    analysis: Option<FileAnalysis>,
+    terminal_error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -239,7 +313,10 @@ pub struct Level0Backend {
     jobs: Arc<Mutex<BTreeMap<String, CancellationToken>>>,
     reader: Arc<Mutex<SqliteScanRepository>>,
     repository_targets: Arc<Mutex<BTreeMap<String, RepositoryAuthorizationSession>>>,
+    file_targets: Arc<Mutex<BTreeMap<String, FileAuthorizationSession>>>,
+    file_previews: Arc<Mutex<BTreeMap<String, FileTargetPreview>>>,
     level1: Arc<Mutex<Level1SnapshotStore>>,
+    level2: Arc<Mutex<Level2SnapshotStore>>,
 }
 
 impl Level0Backend {
@@ -255,15 +332,25 @@ impl Level0Backend {
         let project_text = project_root.to_string_lossy();
         let project_root =
             PathBuf::from(project_text.strip_prefix(r"\\?\").unwrap_or(&project_text));
+        let mut level2 = Level2SnapshotStore::open(database).map_err(|_| {
+            SafeIpcError::new(
+                "storage_unavailable",
+                "File analysis storage is unavailable",
+            )
+        })?;
+        reconcile_interrupted_level2(&mut level2)?;
         Ok(Self {
             project_root,
             database: database.to_path_buf(),
             jobs: Arc::new(Mutex::new(BTreeMap::new())),
             reader: Arc::new(Mutex::new(reader)),
             repository_targets: Arc::new(Mutex::new(BTreeMap::new())),
+            file_targets: Arc::new(Mutex::new(BTreeMap::new())),
+            file_previews: Arc::new(Mutex::new(BTreeMap::new())),
             level1: Arc::new(Mutex::new(Level1SnapshotStore::open(database).map_err(
                 |_| SafeIpcError::new("storage_unavailable", "Repository storage is unavailable"),
             )?)),
+            level2: Arc::new(Mutex::new(level2)),
         })
     }
 
@@ -462,6 +549,245 @@ impl Level0Backend {
         self.get_scan(&ScanRequest { scan_id })
     }
 
+    pub fn inspect_file_target(
+        &self,
+        request: InspectFileTargetRequest,
+    ) -> Result<FileTargetPreviewView, SafeIpcError> {
+        if request.path.len() > 4096 {
+            return Err(SafeIpcError::new(
+                "file_path_invalid",
+                "File path was refused",
+            ));
+        }
+        let preview = inspect_file_target(&request.path, DEFAULT_MAX_FILE_SIZE)
+            .map_err(file_security_error)?;
+        let preview_id = new_uuid_v7();
+        let mut previews = self
+            .file_previews
+            .lock()
+            .map_err(|_| SafeIpcError::new("preview_unavailable", "File preview is unavailable"))?;
+        // Keep only a bounded, process-local set. No preview survives an application restart.
+        if previews.len() >= 64 {
+            return Err(SafeIpcError::new(
+                "preview_limit",
+                "File preview session limit reached",
+            ));
+        }
+        previews.insert(preview_id.clone(), preview.clone());
+        Ok(FileTargetPreviewView {
+            preview_id,
+            preview,
+        })
+    }
+
+    pub fn authorize_file_target(
+        &self,
+        request: AuthorizeFileTargetRequest,
+    ) -> Result<AuthorizedFileTargetView, SafeIpcError> {
+        if !request.confirmed {
+            return Err(SafeIpcError::new(
+                "confirmation_required",
+                "Explicit file authorization is required",
+            ));
+        }
+        parse_scan_id(&request.preview_id)?;
+        let preview = self
+            .file_previews
+            .lock()
+            .map_err(|_| SafeIpcError::new("preview_unavailable", "File preview is unavailable"))?
+            .remove(&request.preview_id)
+            .ok_or_else(|| {
+                SafeIpcError::new("preview_not_found", "A fresh file preview is required")
+            })?;
+        let authorization_id = new_uuid_v7();
+        let target = authorize_file_target(
+            authorization_id.clone(),
+            &preview.requested_path,
+            SystemClock.now()?.to_string(),
+            DEFAULT_MAX_FILE_SIZE,
+        )
+        .map_err(file_security_error)?;
+        if preview.identity != target.identity || preview.canonical_path != target.canonical_path {
+            return Err(SafeIpcError::new(
+                "target_changed",
+                "File changed; authorization must be renewed",
+            ));
+        }
+        let view = AuthorizedFileTargetView {
+            authorization_id: authorization_id.clone(),
+            canonical_path: target.canonical_path.clone(),
+            size: target.identity.size,
+            detected_type: label(preview.detected_type),
+            proposed_checks: preview.proposed_checks.clone(),
+            policy_limitations: preview.policy_limitations.clone(),
+        };
+        let mut targets = self.file_targets.lock().map_err(|_| {
+            SafeIpcError::new(
+                "authorization_unavailable",
+                "File authorization is unavailable",
+            )
+        })?;
+        if targets.len() >= 64 {
+            return Err(SafeIpcError::new(
+                "authorization_limit",
+                "File authorization session limit reached",
+            ));
+        }
+        targets.insert(
+            authorization_id,
+            FileAuthorizationSession { target, preview },
+        );
+        Ok(view)
+    }
+
+    pub fn create_file_scan(
+        &self,
+        request: CreateFileScanRequest,
+    ) -> Result<ScanSummaryView, SafeIpcError> {
+        if !request.confirmed {
+            return Err(SafeIpcError::new(
+                "confirmation_required",
+                "Explicit file scan confirmation is required",
+            ));
+        }
+        parse_scan_id(&request.authorization_id)?;
+        let session = self
+            .file_targets
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new(
+                    "authorization_unavailable",
+                    "File authorization is unavailable",
+                )
+            })?
+            .remove(&request.authorization_id)
+            .ok_or_else(|| {
+                SafeIpcError::new(
+                    "authorization_not_found",
+                    "File authorization is unavailable",
+                )
+            })?;
+        if session.preview.identity != session.target.identity {
+            return Err(SafeIpcError::new(
+                "target_changed",
+                "File changed; authorization must be renewed",
+            ));
+        }
+        let scan_id = new_uuid_v7();
+        let target_id = new_uuid_v7();
+        let canonical_target_id = format!(
+            "{:x}",
+            Sha256::digest(
+                session
+                    .target
+                    .canonical_path
+                    .to_ascii_lowercase()
+                    .as_bytes()
+            )
+        );
+        let stored = Level2StoredScan {
+            scan_id: scan_id.clone(),
+            target_id: target_id.clone(),
+            authorization_id: request.authorization_id,
+            canonical_target_id: canonical_target_id.clone(),
+            state: "preparing".into(),
+            progress: ScanProgressView {
+                scan_id: scan_id.clone(),
+                phase: "authorization_revalidation".into(),
+                completed_tasks: 0,
+                total_tasks: 8,
+                percent: Some(0),
+                elapsed_ms: 0,
+                current_engine: None,
+                status: "preparing".into(),
+            },
+            analysis: None,
+            terminal_error: None,
+        };
+        let payload = serde_json::to_vec(&stored).map_err(|_| {
+            SafeIpcError::new("file_storage_failed", "File scan could not be stored")
+        })?;
+        self.level2
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new(
+                    "storage_unavailable",
+                    "File analysis storage is unavailable",
+                )
+            })?
+            .create(
+                &scan_id,
+                &target_id,
+                &stored.authorization_id,
+                &canonical_target_id,
+                &payload,
+            )
+            .map_err(|_| {
+                SafeIpcError::new("file_storage_failed", "File scan could not be stored")
+            })?;
+        let cancellation = CancellationToken::default();
+        self.jobs
+            .lock()
+            .map_err(|_| SafeIpcError::new("scan_busy", "Scan scheduler is unavailable"))?
+            .insert(scan_id.clone(), cancellation.clone());
+        let store = Arc::clone(&self.level2);
+        let jobs = Arc::clone(&self.jobs);
+        let worker_id = scan_id.clone();
+        std::thread::spawn(move || {
+            let mut worker = stored;
+            if run_file_analysis(&store, &session.target, &mut worker, cancellation).is_err() {
+                worker.analysis = None;
+                worker.state = "failed".into();
+                worker.progress.status = "failed".into();
+                worker.progress.phase = "persistence_or_correlation_failed".into();
+                worker.progress.percent = None;
+                worker.progress.current_engine = None;
+                worker.terminal_error = Some("FILE_ANALYSIS_NOT_COMMITTED".into());
+                // Best effort only when storage itself is unavailable; never publish a verdict.
+                let _ = replace_level2_snapshot(&store, &worker);
+            }
+            if let Ok(mut active) = jobs.lock() {
+                active.remove(&worker_id);
+            }
+        });
+        self.get_scan(&ScanRequest { scan_id })
+    }
+
+    pub fn get_file_analysis(
+        &self,
+        request: &ScanRequest,
+    ) -> Result<FileAnalysisView, SafeIpcError> {
+        let stored = self.load_level2(&request.scan_id)?;
+        Ok(FileAnalysisView {
+            scan_id: stored.scan_id,
+            state: stored.state,
+            progress: stored.progress,
+            analysis: stored.analysis,
+            terminal_error: stored.terminal_error,
+        })
+    }
+
+    fn load_level2(&self, scan_id: &str) -> Result<Level2StoredScan, SafeIpcError> {
+        let id = parse_scan_id(scan_id)?;
+        let blob = self
+            .level2
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new(
+                    "storage_unavailable",
+                    "File analysis storage is unavailable",
+                )
+            })?
+            .load(id.as_str())
+            .map_err(|_| SafeIpcError::new("scan_not_found", "Scan was not found"))?;
+        serde_json::from_slice(&blob.payload).map_err(|_| {
+            SafeIpcError::new(
+                "storage_integrity",
+                "File analysis integrity validation failed",
+            )
+        })
+    }
+
     pub fn get_repository_inventory(
         &self,
         request: &ScanRequest,
@@ -598,7 +924,10 @@ impl Level0Backend {
         if let Ok(scan) = self.repository()?.load(&id) {
             return Ok(summary(&scan));
         }
-        Ok(level1_summary(&self.load_level1(&request.scan_id)?))
+        if let Ok(scan) = self.load_level1(&request.scan_id) {
+            return Ok(level1_summary(&scan));
+        }
+        Ok(level2_summary(&self.load_level2(&request.scan_id)?))
     }
 
     pub fn list_scans(
@@ -626,6 +955,25 @@ impl Level0Backend {
             for id in ids {
                 scans.push(level1_summary(&self.load_level1(&id)?));
             }
+            let ids = self
+                .level2
+                .lock()
+                .map_err(|_| {
+                    SafeIpcError::new(
+                        "storage_unavailable",
+                        "File analysis storage is unavailable",
+                    )
+                })?
+                .list_ids(0, request.limit)
+                .map_err(|_| {
+                    SafeIpcError::new(
+                        "storage_unavailable",
+                        "File analysis storage is unavailable",
+                    )
+                })?;
+            for id in ids {
+                scans.push(level2_summary(&self.load_level2(&id)?));
+            }
             scans.truncate(request.limit as usize);
         }
         Ok(scans)
@@ -636,8 +984,10 @@ impl Level0Backend {
         if let Ok(scan) = self.repository()?.load(&id) {
             return Ok(progress(&scan));
         }
-        let scan = self.load_level1(&request.scan_id)?;
-        Ok(scan.progress)
+        if let Ok(scan) = self.load_level1(&request.scan_id) {
+            return Ok(scan.progress);
+        }
+        Ok(self.load_level2(&request.scan_id)?.progress)
     }
 
     pub fn cancel(&self, request: &ScanRequest) -> Result<ScanProgressView, SafeIpcError> {
@@ -670,6 +1020,13 @@ impl Level0Backend {
             replace_level1_snapshot(&self.level1, &level1)?;
             token.request();
             return Ok(level1.progress);
+        }
+        if let Ok(mut level2) = self.load_level2(&request.scan_id) {
+            level2.state = "cancellation_requested".into();
+            level2.progress.status = "cancellation_requested".into();
+            replace_level2_snapshot(&self.level2, &level2)?;
+            token.request();
+            return Ok(level2.progress);
         }
         if current.status != "cancellation_requested" {
             let mut clock = SystemClock;
@@ -721,14 +1078,29 @@ impl Level0Backend {
         validate_page(request.offset, request.limit, 100)?;
         let id = parse_scan_id(&request.scan_id)?;
         let Ok(scan) = self.repository()?.load(&id) else {
-            let scan = self.load_level1(&request.scan_id)?;
+            if let Ok(scan) = self.load_level1(&request.scan_id) {
+                return Ok(scan
+                    .findings
+                    .iter()
+                    .skip(request.offset as usize)
+                    .take(request.limit as usize)
+                    .map(|finding| level1_finding_view(&scan.scan_id, finding))
+                    .collect());
+            }
+            let scan = self.load_level2(&request.scan_id)?;
             return Ok(scan
-                .findings
-                .iter()
-                .skip(request.offset as usize)
-                .take(request.limit as usize)
-                .map(|finding| level1_finding_view(&scan.scan_id, finding))
-                .collect());
+                .analysis
+                .as_ref()
+                .map(|analysis| {
+                    analysis
+                        .findings
+                        .iter()
+                        .skip(request.offset as usize)
+                        .take(request.limit as usize)
+                        .map(|finding| level2_finding_view(&scan.scan_id, finding))
+                        .collect()
+                })
+                .unwrap_or_default());
         };
         Ok(scan
             .findings
@@ -740,6 +1112,33 @@ impl Level0Backend {
     }
 
     pub fn get_finding(&self, request: &FindingRequest) -> Result<FindingView, SafeIpcError> {
+        let level2_ids = self
+            .level2
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new(
+                    "storage_unavailable",
+                    "File analysis storage is unavailable",
+                )
+            })?
+            .list_ids(0, 50)
+            .map_err(|_| {
+                SafeIpcError::new(
+                    "storage_unavailable",
+                    "File analysis storage is unavailable",
+                )
+            })?;
+        for id in level2_ids {
+            let scan = self.load_level2(&id)?;
+            if let Some(finding) = scan.analysis.as_ref().and_then(|analysis| {
+                analysis
+                    .findings
+                    .iter()
+                    .find(|finding| finding.fingerprint == request.finding_id)
+            }) {
+                return Ok(level2_finding_view(&scan.scan_id, finding));
+            }
+        }
         let wanted = edy_core::FindingId::new(&request.finding_id).map_err(|_| {
             SafeIpcError::new("finding_id_invalid", "Finding identifier was refused")
         })?;
@@ -784,20 +1183,37 @@ impl Level0Backend {
     pub fn report(&self, request: &GenerateReportRequest) -> Result<ReportView, SafeIpcError> {
         let id = parse_scan_id(&request.scan_id)?;
         let Ok(scan) = self.repository()?.load(&id) else {
-            let stored = self.load_level1(&request.scan_id)?;
-            if stored.state != "partial" && stored.state != "completed" {
-                return Err(SafeIpcError::new(
-                    "report_unavailable",
-                    "Report is unavailable until repository processing reaches a reportable terminal state",
-                ));
+            if let Ok(stored) = self.load_level1(&request.scan_id) {
+                if stored.state != "partial" && stored.state != "completed" {
+                    return Err(SafeIpcError::new(
+                        "report_unavailable",
+                        "Report is unavailable until repository processing reaches a reportable terminal state",
+                    ));
+                }
+                let report = RepositoryReport::capture(
+                    request.kind,
+                    &stored.scan_id,
+                    &stored.inventory,
+                    &stored.findings,
+                    &stored.unavailable_checks,
+                );
+                return Ok(ReportView {
+                    scan_id: stored.scan_id,
+                    kind: request.kind,
+                    schema: REPORT_SCHEMA,
+                    json: report.json().map_err(|_| {
+                        SafeIpcError::new("report_failed", "Report could not be rendered")
+                    })?,
+                });
             }
-            let report = RepositoryReport::capture(
-                request.kind,
-                &stored.scan_id,
-                &stored.inventory,
-                &stored.findings,
-                &stored.unavailable_checks,
-            );
+            let stored = self.load_level2(&request.scan_id)?;
+            let analysis = stored.analysis.as_ref().ok_or_else(|| {
+                SafeIpcError::new(
+                    "report_unavailable",
+                    "Report is unavailable until file analysis reaches a reportable terminal state",
+                )
+            })?;
+            let report = FileReport::capture(request.kind, &stored.scan_id, analysis);
             return Ok(ReportView {
                 scan_id: stored.scan_id,
                 kind: request.kind,
@@ -923,6 +1339,119 @@ fn level1_finding_view(scan_id: &str, finding: &CorrelatedRepositoryFinding) -> 
         remediation_guidance: finding.remediation_guidance.clone(),
         limitations: finding.limitations.clone(),
     }
+}
+
+fn level2_summary(scan: &Level2StoredScan) -> ScanSummaryView {
+    let Some(analysis) = &scan.analysis else {
+        return ScanSummaryView {
+            id: scan.scan_id.clone(),
+            state: scan.state.clone(),
+            verdict: None,
+            risk: None,
+            confidence: None,
+            coverage: CoverageView {
+                total: 6,
+                completed: 0,
+                failed: u32::from(scan.state == "failed"),
+                unavailable: 0,
+                skipped: if scan.state == "cancelled" { 6 } else { 0 },
+            },
+        };
+    };
+    use edy_engine_manager::file_security::CheckState;
+    let checks = [
+        analysis.coverage.hashing,
+        analysis.coverage.classification,
+        analysis.coverage.pe_inspection,
+        analysis.coverage.authenticode,
+        analysis.coverage.yara,
+        analysis.coverage.reputation,
+    ];
+    ScanSummaryView {
+        id: scan.scan_id.clone(),
+        state: scan.state.clone(),
+        verdict: Some(analysis.verdict.disposition.clone()),
+        risk: Some(label(analysis.verdict.risk)),
+        confidence: Some(label(analysis.verdict.confidence)),
+        coverage: CoverageView {
+            total: 6,
+            completed: checks
+                .iter()
+                .filter(|state| **state == CheckState::Completed)
+                .count() as u32,
+            failed: checks
+                .iter()
+                .filter(|state| **state == CheckState::Failed)
+                .count() as u32,
+            unavailable: checks
+                .iter()
+                .filter(|state| matches!(state, CheckState::PolicyBlocked | CheckState::NotChecked))
+                .count() as u32,
+            skipped: checks
+                .iter()
+                .filter(|state| **state == CheckState::NotApplicable)
+                .count() as u32,
+        },
+    }
+}
+
+fn level2_finding_view(
+    scan_id: &str,
+    finding: &edy_engine_manager::file_security::FileSecurityFinding,
+) -> FindingView {
+    FindingView {
+        id: finding.fingerprint.clone(),
+        scan_id: scan_id.into(),
+        title: finding.title.clone(),
+        category: label(finding.category),
+        severity: label(finding.severity),
+        risk: label(finding.severity),
+        confidence: label(finding.confidence),
+        status: "open".into(),
+        sources: vec![finding.source.clone()],
+        affected_component: "authorized_file_identity".into(),
+        rule_ids: vec![finding.rule_id.clone()],
+        evidence_ids: finding.evidence.clone(),
+        remediation_guidance:
+            "Review the evidence and re-authorize the explicit file before verification.".into(),
+        limitations: vec![
+            "A signature is evidence, not a safety guarantee.".into(),
+            "YARA-X real execution is unavailable by execution policy.".into(),
+            "Reputation was not checked.".into(),
+        ],
+    }
+}
+
+fn file_security_error(
+    error: edy_engine_manager::file_security::FileSecurityError,
+) -> SafeIpcError {
+    let (code, message) = match error.kind() {
+        FileSecurityErrorKind::InvalidPath => ("file_path_invalid", "File path was refused"),
+        FileSecurityErrorKind::Missing => ("file_not_found", "File was not found"),
+        FileSecurityErrorKind::NotRegularFile => (
+            "not_regular_file",
+            "Only one explicit regular file is accepted",
+        ),
+        FileSecurityErrorKind::NotLocalFixedFilesystem => (
+            "not_local_fixed_filesystem",
+            "Only a local fixed filesystem file is accepted",
+        ),
+        FileSecurityErrorKind::LimitExceeded => {
+            ("limit_exceeded", "File exceeds the configured size policy")
+        }
+        FileSecurityErrorKind::NotReadable => ("file_not_readable", "File is not readable"),
+        FileSecurityErrorKind::ReparsePoint => (
+            "reparse_point_refused",
+            "Linked or reparse targets are refused",
+        ),
+        FileSecurityErrorKind::TargetChanged => (
+            "target_changed",
+            "File changed; authorization must be renewed",
+        ),
+        FileSecurityErrorKind::Cancelled => ("cancelled", "File analysis was cancelled"),
+        FileSecurityErrorKind::Io => ("file_io_failed", "File analysis failed safely"),
+    };
+    SafeIpcError::new(code, message)
 }
 
 fn synthetic_repository_observations(
@@ -1093,6 +1622,101 @@ fn replace_level1_snapshot(
     Ok(())
 }
 
+struct FileFindingIds;
+
+impl edy_core::FindingIdSource for FileFindingIds {
+    fn next_id(&mut self) -> edy_core::FindingId {
+        edy_core::FindingId::new(new_uuid_v7()).expect("application generates UUID v7")
+    }
+}
+
+fn run_file_analysis(
+    store: &Arc<Mutex<Level2SnapshotStore>>,
+    target: &AuthorizedFileTarget,
+    scan: &mut Level2StoredScan,
+    cancellation: CancellationToken,
+) -> Result<(), SafeIpcError> {
+    let started_at = std::time::Instant::now();
+    scan.state = "running".into();
+    scan.progress.phase = "secure_open".into();
+    scan.progress.status = "running".into();
+    scan.progress.completed_tasks = 1;
+    scan.progress.percent = Some(12);
+    replace_level2_snapshot(store, scan)?;
+    scan.progress.phase = "streaming_hashes".into();
+    scan.progress.completed_tasks = 2;
+    scan.progress.percent = Some(25);
+    replace_level2_snapshot(store, scan)?;
+    match analyze_authorized_file(target, || cancellation.is_requested()) {
+        Ok(mut analysis) => {
+            normalize_file_analysis(
+                &mut analysis,
+                &parse_scan_id(&scan.scan_id)?,
+                &SystemClock.now()?,
+                &mut FileFindingIds,
+            )
+            .map_err(|_| {
+                SafeIpcError::new("correlation_failed", "File evidence was not accepted")
+            })?;
+            scan.analysis = Some(analysis);
+            scan.state = "partial".into();
+            scan.progress.phase = "reporting".into();
+            scan.progress.completed_tasks = 8;
+            scan.progress.percent = Some(100);
+            scan.progress.status = "partial".into();
+            scan.progress.current_engine = None;
+            scan.terminal_error = None;
+        }
+        Err(error) if error.kind() == FileSecurityErrorKind::Cancelled => {
+            scan.state = "cancelled".into();
+            scan.progress.phase = "cancelled".into();
+            scan.progress.status = "cancelled".into();
+            scan.progress.percent = None;
+            scan.progress.current_engine = None;
+            scan.terminal_error = Some("CANCELLED".into());
+        }
+        Err(error) if error.kind() == FileSecurityErrorKind::TargetChanged => {
+            scan.state = "failed".into();
+            scan.progress.phase = "target_changed".into();
+            scan.progress.status = "failed".into();
+            scan.progress.percent = None;
+            scan.progress.current_engine = None;
+            scan.terminal_error = Some("TARGET_CHANGED".into());
+        }
+        Err(_) => {
+            scan.state = "failed".into();
+            scan.progress.phase = "analysis_failed".into();
+            scan.progress.status = "failed".into();
+            scan.progress.percent = None;
+            scan.progress.current_engine = None;
+            scan.terminal_error = Some("FILE_ANALYSIS_FAILED".into());
+        }
+    }
+    scan.progress.elapsed_ms = u64::try_from(started_at.elapsed().as_millis()).unwrap_or(u64::MAX);
+    replace_level2_snapshot(store, scan)
+}
+
+fn replace_level2_snapshot(
+    store: &Arc<Mutex<Level2SnapshotStore>>,
+    scan: &Level2StoredScan,
+) -> Result<(), SafeIpcError> {
+    let payload = serde_json::to_vec(scan)
+        .map_err(|_| SafeIpcError::new("file_storage_failed", "File scan could not be stored"))?;
+    let mut store = store.lock().map_err(|_| {
+        SafeIpcError::new(
+            "storage_unavailable",
+            "File analysis storage is unavailable",
+        )
+    })?;
+    let current = store
+        .load(&scan.scan_id)
+        .map_err(|_| SafeIpcError::new("file_storage_failed", "File scan could not be stored"))?;
+    store
+        .replace(&scan.scan_id, current.revision, &payload)
+        .map_err(|_| SafeIpcError::new("file_storage_failed", "File scan could not be stored"))?;
+    Ok(())
+}
+
 fn parse_scan_id(value: &str) -> Result<ScanId, SafeIpcError> {
     ScanId::new(value)
         .map_err(|_| SafeIpcError::new("scan_id_invalid", "Scan identifier was refused"))
@@ -1107,6 +1731,38 @@ fn validate_page(offset: u32, limit: u32, maximum: u32) -> Result<(), SafeIpcErr
     } else {
         Ok(())
     }
+}
+
+fn reconcile_interrupted_level2(store: &mut Level2SnapshotStore) -> Result<(), SafeIpcError> {
+    let failure = || SafeIpcError::new("storage_integrity", "File scan recovery failed closed");
+    for offset in (0..MAX_STORED_SYNTHETIC_SCANS).step_by(50) {
+        let page = store.list_ids(offset, 50).map_err(|_| failure())?;
+        for id in &page {
+            let blob = store.load(id).map_err(|_| failure())?;
+            let mut scan: Level2StoredScan =
+                serde_json::from_slice(&blob.payload).map_err(|_| failure())?;
+            if matches!(
+                scan.state.as_str(),
+                "preparing" | "queued" | "running" | "cancellation_requested"
+            ) {
+                scan.state = "failed".into();
+                scan.analysis = None;
+                scan.progress.status = "failed".into();
+                scan.progress.phase = "interrupted".into();
+                scan.progress.percent = None;
+                scan.progress.current_engine = None;
+                scan.terminal_error = Some("INTERRUPTED_REAUTHORIZE_REQUIRED".into());
+                let payload = serde_json::to_vec(&scan).map_err(|_| failure())?;
+                store
+                    .replace(id, blob.revision, &payload)
+                    .map_err(|_| failure())?;
+            }
+        }
+        if page.len() < 50 {
+            break;
+        }
+    }
+    Ok(())
 }
 
 fn reconcile_interrupted(repository: &mut SqliteScanRepository) -> Result<(), SafeIpcError> {
@@ -1794,5 +2450,362 @@ mod tests {
                 })
                 .is_err()
         );
+    }
+
+    #[test]
+    fn level2_preview_is_required_single_use_and_bound_to_identity() {
+        let (temp, backend) = backend();
+        let file = temp.0.join("preview-bound.bin");
+        std::fs::write(&file, b"before").unwrap();
+        assert!(
+            serde_json::from_str::<AuthorizeFileTargetRequest>(
+                r#"{"path":"D:/anything.bin","confirmed":true}"#
+            )
+            .is_err()
+        );
+        let unknown = backend
+            .authorize_file_target(AuthorizeFileTargetRequest {
+                preview_id: new_uuid_v7(),
+                confirmed: true,
+            })
+            .unwrap_err();
+        assert_eq!(unknown.code, "preview_not_found");
+        let preview = backend
+            .inspect_file_target(InspectFileTargetRequest {
+                path: display_test_path(&file),
+            })
+            .unwrap();
+        std::fs::write(&file, b"changed-after-displayed-preview").unwrap();
+        let request = AuthorizeFileTargetRequest {
+            preview_id: preview.preview_id,
+            confirmed: true,
+        };
+        assert_eq!(
+            backend
+                .authorize_file_target(request.clone())
+                .unwrap_err()
+                .code,
+            "target_changed"
+        );
+        assert_eq!(
+            backend.authorize_file_target(request).unwrap_err().code,
+            "preview_not_found"
+        );
+        let fresh = backend
+            .inspect_file_target(InspectFileTargetRequest {
+                path: display_test_path(&file),
+            })
+            .unwrap();
+        let request = AuthorizeFileTargetRequest {
+            preview_id: fresh.preview_id,
+            confirmed: true,
+        };
+        let authorization = backend.authorize_file_target(request.clone()).unwrap();
+        assert_eq!(
+            backend.authorize_file_target(request).unwrap_err().code,
+            "preview_not_found"
+        );
+        let scan_request = CreateFileScanRequest {
+            authorization_id: authorization.authorization_id,
+            confirmed: true,
+        };
+        let scan = backend.create_file_scan(scan_request.clone()).unwrap();
+        assert_eq!(
+            backend.create_file_scan(scan_request).unwrap_err().code,
+            "authorization_not_found"
+        );
+        wait_terminal(&backend, &scan.id);
+    }
+
+    #[test]
+    fn level2_file_e2e_requires_preview_authorization_and_preserves_partial_coverage() {
+        let (temp, backend) = backend();
+        let file = temp.0.join("benign-text.txt");
+        let contents = b"EDY_LEVEL2_RAW_FILE_BYTES benign text only";
+        std::fs::write(&file, contents).unwrap();
+        let path = display_test_path(&file);
+        let preview = backend
+            .inspect_file_target(InspectFileTargetRequest { path: path.clone() })
+            .unwrap();
+        assert_eq!(preview.preview.identity.size, contents.len() as u64);
+        assert_eq!(
+            preview.preview.detected_type,
+            edy_engine_manager::file_security::FileClassification::GenericFile
+        );
+        assert!(
+            backend
+                .authorize_file_target(AuthorizeFileTargetRequest {
+                    preview_id: preview.preview_id.clone(),
+                    confirmed: false,
+                })
+                .is_err()
+        );
+        let authorization = backend
+            .authorize_file_target(AuthorizeFileTargetRequest {
+                preview_id: preview.preview_id,
+                confirmed: true,
+            })
+            .unwrap();
+        assert!(
+            backend
+                .create_file_scan(CreateFileScanRequest {
+                    authorization_id: authorization.authorization_id.clone(),
+                    confirmed: false,
+                })
+                .is_err()
+        );
+        let started = backend
+            .create_file_scan(CreateFileScanRequest {
+                authorization_id: authorization.authorization_id,
+                confirmed: true,
+            })
+            .unwrap();
+        let completed = wait_terminal(&backend, &started.id);
+        assert_eq!(completed.state, "partial");
+        assert_eq!(completed.verdict.as_deref(), Some("insufficient_coverage"));
+        assert_eq!(completed.coverage.unavailable, 2);
+        let view = backend
+            .get_file_analysis(&ScanRequest {
+                scan_id: completed.id.clone(),
+            })
+            .unwrap();
+        let analysis = view.analysis.unwrap();
+        assert_eq!(analysis.hashes.bytes_hashed, contents.len() as u64);
+        assert_eq!(
+            analysis.classification,
+            edy_engine_manager::file_security::FileClassification::GenericFile
+        );
+        assert_eq!(
+            analysis.authenticode.cryptographic_status,
+            edy_engine_manager::file_security::AuthenticodeStatus::Unsigned
+        );
+        assert!(analysis.findings.is_empty());
+        assert_eq!(analysis.reputation.status, "not_checked");
+        let report = backend
+            .report(&GenerateReportRequest {
+                scan_id: completed.id,
+                kind: ReportKind::Technical,
+            })
+            .unwrap();
+        assert!(report.json.contains("unavailable_by_execution_policy"));
+        assert!(!report.json.contains("EDY_LEVEL2_RAW_FILE_BYTES"));
+        let database = std::fs::read(temp.0.join("level0.sqlite3")).unwrap();
+        let marker = b"EDY_LEVEL2_RAW_FILE_BYTES";
+        assert!(
+            !database
+                .windows(marker.len())
+                .any(|window| window == marker)
+        );
+    }
+
+    #[test]
+    fn level2_target_change_invalidates_analysis_without_a_verdict() {
+        let (temp, backend) = backend();
+        let file = temp.0.join("changed-target.bin");
+        std::fs::write(&file, b"before").unwrap();
+        let authorization = backend
+            .authorize_file_target(AuthorizeFileTargetRequest {
+                preview_id: backend
+                    .inspect_file_target(InspectFileTargetRequest {
+                        path: display_test_path(&file),
+                    })
+                    .unwrap()
+                    .preview_id,
+                confirmed: true,
+            })
+            .unwrap();
+        std::fs::write(&file, b"after-and-different-size").unwrap();
+        let started = backend
+            .create_file_scan(CreateFileScanRequest {
+                authorization_id: authorization.authorization_id,
+                confirmed: true,
+            })
+            .unwrap();
+        let terminal = wait_terminal(&backend, &started.id);
+        assert_eq!(terminal.state, "failed");
+        assert!(terminal.verdict.is_none());
+        let view = backend
+            .get_file_analysis(&ScanRequest {
+                scan_id: started.id,
+            })
+            .unwrap();
+        assert_eq!(view.terminal_error.as_deref(), Some("TARGET_CHANGED"));
+        assert!(view.analysis.is_none());
+    }
+
+    #[test]
+    fn level2_streaming_cancellation_persists_no_final_verdict() {
+        let (temp, backend) = backend();
+        let file = temp.0.join("cancel-target.bin");
+        std::fs::write(&file, vec![7_u8; 8 * 1024 * 1024]).unwrap();
+        let authorization = backend
+            .authorize_file_target(AuthorizeFileTargetRequest {
+                preview_id: backend
+                    .inspect_file_target(InspectFileTargetRequest {
+                        path: display_test_path(&file),
+                    })
+                    .unwrap()
+                    .preview_id,
+                confirmed: true,
+            })
+            .unwrap();
+        let started = backend
+            .create_file_scan(CreateFileScanRequest {
+                authorization_id: authorization.authorization_id,
+                confirmed: true,
+            })
+            .unwrap();
+        let request = ScanRequest {
+            scan_id: started.id,
+        };
+        assert_eq!(
+            backend.cancel(&request).unwrap().status,
+            "cancellation_requested"
+        );
+        let terminal = wait_terminal(&backend, &request.scan_id);
+        assert_eq!(terminal.state, "cancelled");
+        assert!(terminal.verdict.is_none());
+        assert!(
+            backend
+                .get_file_analysis(&request)
+                .unwrap()
+                .analysis
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn level2_synthetic_pe_and_malformed_binary_flow_through_core_storage_and_reports() {
+        let (temp, backend) = backend();
+        let mut pe = vec![0_u8; 512];
+        pe[..2].copy_from_slice(b"MZ");
+        pe[0x3c..0x40].copy_from_slice(&128_u32.to_le_bytes());
+        pe[128..132].copy_from_slice(b"PE\0\0");
+        pe[132..134].copy_from_slice(&0x8664_u16.to_le_bytes());
+        pe[148..150].copy_from_slice(&240_u16.to_le_bytes());
+        pe[150..152].copy_from_slice(&0x22_u16.to_le_bytes());
+        pe[152..154].copy_from_slice(&0x20b_u16.to_le_bytes());
+        for (name, bytes, malformed) in [
+            ("minimal-pe-synthetic.bin", pe, false),
+            (
+                "malformed-pe.bin",
+                b"MZ malformed synthetic fixture".to_vec(),
+                true,
+            ),
+            ("benign-binary.dat", vec![0, 1, 2, 3, 0xff], false),
+        ] {
+            let path = temp.0.join(name);
+            std::fs::write(&path, bytes).unwrap();
+            let preview = backend
+                .inspect_file_target(InspectFileTargetRequest {
+                    path: display_test_path(&path),
+                })
+                .unwrap();
+            let auth = backend
+                .authorize_file_target(AuthorizeFileTargetRequest {
+                    preview_id: preview.preview_id,
+                    confirmed: true,
+                })
+                .unwrap();
+            let scan = backend
+                .create_file_scan(CreateFileScanRequest {
+                    authorization_id: auth.authorization_id,
+                    confirmed: true,
+                })
+                .unwrap();
+            let terminal = wait_terminal(&backend, &scan.id);
+            assert_eq!(terminal.state, "partial");
+            assert_eq!(
+                terminal.coverage.completed
+                    + terminal.coverage.failed
+                    + terminal.coverage.unavailable
+                    + terminal.coverage.skipped,
+                6
+            );
+            let stored = backend
+                .get_file_analysis(&ScanRequest {
+                    scan_id: scan.id.clone(),
+                })
+                .unwrap();
+            let analysis = stored.analysis.unwrap();
+            assert_ne!(analysis.verdict.disposition, "malicious");
+            assert!(analysis.verdict.confidence_score < 75);
+            if malformed {
+                assert!(analysis.pe_error.is_some());
+                assert_eq!(analysis.findings.len(), 1);
+                assert_eq!(terminal.coverage.failed, 1);
+            }
+            for kind in [
+                ReportKind::Executive,
+                ReportKind::Technical,
+                ReportKind::Developer,
+            ] {
+                let report = backend
+                    .report(&GenerateReportRequest {
+                        scan_id: scan.id.clone(),
+                        kind,
+                    })
+                    .unwrap();
+                assert!(report.json.contains("not_checked"));
+                assert!(!report.json.contains("MZ malformed synthetic fixture"));
+            }
+        }
+    }
+
+    #[test]
+    fn interrupted_file_scan_fails_closed_on_reopen() {
+        let (temp, backend) = backend();
+        let id = new_uuid_v7();
+        let target_id = new_uuid_v7();
+        let authorization_id = new_uuid_v7();
+        let scan = Level2StoredScan {
+            scan_id: id.clone(),
+            target_id: target_id.clone(),
+            authorization_id: authorization_id.clone(),
+            canonical_target_id: "a".repeat(64),
+            state: "preparing".into(),
+            analysis: None,
+            terminal_error: None,
+            progress: ScanProgressView {
+                scan_id: id.clone(),
+                phase: "secure_open".into(),
+                completed_tasks: 0,
+                total_tasks: 8,
+                percent: Some(0),
+                elapsed_ms: 0,
+                current_engine: None,
+                status: "preparing".into(),
+            },
+        };
+        backend
+            .level2
+            .lock()
+            .unwrap()
+            .create(
+                &id,
+                &target_id,
+                &authorization_id,
+                &scan.canonical_target_id,
+                &serde_json::to_vec(&scan).unwrap(),
+            )
+            .unwrap();
+        let project = backend.project_root.clone();
+        drop(backend);
+        let reopened = Level0Backend::open(&project, &temp.0.join("level0.sqlite3")).unwrap();
+        let result = reopened
+            .get_file_analysis(&ScanRequest { scan_id: id })
+            .unwrap();
+        assert_eq!(result.state, "failed");
+        assert!(result.analysis.is_none());
+        assert_eq!(
+            result.terminal_error.as_deref(),
+            Some("INTERRUPTED_REAUTHORIZE_REQUIRED")
+        );
+    }
+
+    fn display_test_path(path: &Path) -> String {
+        let canonical = path.canonicalize().unwrap();
+        let value = canonical.to_string_lossy();
+        value.strip_prefix(r"\\?\").unwrap_or(&value).into()
     }
 }

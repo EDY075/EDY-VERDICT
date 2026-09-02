@@ -9,6 +9,7 @@ use edy_core::{
 };
 use serde::{Deserialize, Serialize};
 
+pub mod file;
 pub mod repository;
 
 pub const REPORT_SCHEMA: &str = "REPORT_SCHEMA_V2";

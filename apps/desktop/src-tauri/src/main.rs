@@ -5,10 +5,12 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use edy_desktop::ipc::{
-    AuthorizeRepositoryTargetRequest, AuthorizedRepositoryTargetView, CreateRepositoryScanRequest,
-    CreateSyntheticScanRequest, EngineStatusView, FindingRequest, FindingView,
-    GenerateReportRequest, Level0Backend, ListFindingsRequest, ListScansRequest, ReportView,
-    RepositoryAuthorizationRequest, SafeIpcError, ScanProgressView, ScanRequest, ScanSummaryView,
+    AuthorizeFileTargetRequest, AuthorizeRepositoryTargetRequest, AuthorizedFileTargetView,
+    AuthorizedRepositoryTargetView, CreateFileScanRequest, CreateRepositoryScanRequest,
+    CreateSyntheticScanRequest, EngineStatusView, FileAnalysisView, FileTargetPreviewView,
+    FindingRequest, FindingView, GenerateReportRequest, InspectFileTargetRequest, Level0Backend,
+    ListFindingsRequest, ListScansRequest, ReportView, RepositoryAuthorizationRequest,
+    SafeIpcError, ScanProgressView, ScanRequest, ScanSummaryView,
 };
 use edy_repository::RepositoryInventory;
 use edy_storage::Storage;
@@ -119,6 +121,46 @@ fn get_repository_inventory(
 ) -> Result<RepositoryInventory, SafeIpcError> {
     ipc_guard(&window)?;
     state.backend.get_repository_inventory(&request)
+}
+
+#[tauri::command]
+fn inspect_file_target(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: InspectFileTargetRequest,
+) -> Result<FileTargetPreviewView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.inspect_file_target(request)
+}
+
+#[tauri::command]
+fn authorize_file_target(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: AuthorizeFileTargetRequest,
+) -> Result<AuthorizedFileTargetView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.authorize_file_target(request)
+}
+
+#[tauri::command]
+fn create_file_scan(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: CreateFileScanRequest,
+) -> Result<ScanSummaryView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.create_file_scan(request)
+}
+
+#[tauri::command]
+fn get_file_analysis(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: ScanRequest,
+) -> Result<FileAnalysisView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.get_file_analysis(&request)
 }
 
 #[tauri::command]
@@ -291,6 +333,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             inspect_repository_target,
             create_repository_scan,
             get_repository_inventory,
+            inspect_file_target,
+            authorize_file_target,
+            create_file_scan,
+            get_file_analysis,
             create_synthetic_scan,
             get_scan,
             list_scans,
