@@ -10,6 +10,20 @@ type Page = "overview" | "new-scan" | "progress" | "findings" | "history" | "eng
 const pages: readonly Page[] = ["overview", "new-scan", "progress", "findings", "history", "engines", "reports", "settings"];
 const terminalStates = new Set(["cancelled", "completed", "partial", "failed"]);
 
+function safeUiError(error: unknown, fallback: string): string {
+  const code = typeof error === "object" && error !== null && "code" in error && typeof error.code === "string" ? error.code : "";
+  const messages: Readonly<Record<string,string>> = {
+    repository_path_refused: "Authorization rejected: the repository path did not satisfy local path policy.",
+    repository_revalidation_required: "Path changed: renew authorization before scanning.",
+    scan_quota_reached: "Limit reached: remove an older local synthetic scan before retrying.",
+    repository_inventory_failed: "Repository inventory failed safely.",
+    scan_not_cancellable: "Cancellation is unavailable because the scan is already terminal.",
+    report_failed: "Report generation failed safely.",
+    report_unavailable: "Report generation is unavailable for this scan.",
+  };
+  return messages[code] ?? fallback;
+}
+
 const copy = {
   "pt-BR": {
     product: "EDY VERDICT", edition: "Centro de segurança local", overview: "Visão geral", "new-scan": "Nova análise",
@@ -38,6 +52,7 @@ const copy = {
 } as const;
 
 interface ProductViewProps {
+  readonly initialPage?: Page;
   readonly status: FoundationStatus | null;
   readonly failed: boolean;
   readonly engines?: readonly EngineStatus[];
@@ -63,16 +78,27 @@ function EmptyState({ title, detail }: { readonly title: string; readonly detail
 
 export function FoundationView({
   status, failed, engines = [], scans = [], selected = null, progress = null, findings = [], report = null,
-  error = null, busy = false, onStart, onCancel, onSelect, onReport, repositoryAuthorization = null, onAuthorizeRepository, onStartRepository,
+  error = null, busy = false, onStart, onCancel, onSelect, onReport, repositoryAuthorization = null, onAuthorizeRepository, onStartRepository, initialPage = "overview",
 }: ProductViewProps) {
-  const [page, setPage] = useState<Page>("overview");
+  const [page, setPage] = useState<Page>(initialPage);
   const [locale, setLocale] = useState<Locale>("pt-BR");
   const [theme, setTheme] = useState<Theme>("professional");
   const [repositoryPath, setRepositoryPath] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [severityFilter, setSeverityFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [confidenceFilter, setConfidenceFilter] = useState("all");
+  const [selectedFindingId, setSelectedFindingId] = useState<string | null>(null);
   const text = copy[locale];
   const ready = status !== null;
   const scan = selected ?? scans[0] ?? null;
   const coverage = scan === null || scan.coverage.total === 0 ? "—" : `${scan.coverage.completed}/${scan.coverage.total}`;
+  const visibleFindings = findings.filter((finding) =>
+    (categoryFilter === "all" || finding.category === categoryFilter)
+    && (severityFilter === "all" || finding.severity === severityFilter)
+    && (statusFilter === "all" || finding.status === statusFilter)
+    && (confidenceFilter === "all" || finding.confidence === confidenceFilter));
+  const findingDetail = findings.find((finding) => finding.id === selectedFindingId) ?? visibleFindings[0] ?? null;
 
   const content = (() => {
     if (page === "new-scan") return <section className="action-panel"><h2>Repository Security</h2><p>Repository inventory available. Some security checks are unavailable until execution policy requirements are satisfied.</p><label>Repository path<input aria-label="Repository path" value={repositoryPath} onChange={(event)=>setRepositoryPath(event.target.value)} /></label><button className="secondary" disabled={!ready||busy||repositoryPath.length===0||onAuthorizeRepository===undefined} onClick={()=>onAuthorizeRepository?.(repositoryPath)}>Authorize and inspect</button>{repositoryAuthorization && <div className="data-panel"><h3>Authorization preview</h3><code>{repositoryAuthorization.canonical_root}</code><dl><dt>Estimated files</dt><dd>{repositoryAuthorization.estimated_files}</dd><dt>Estimated bytes</dt><dd>{repositoryAuthorization.estimated_bytes}</dd><dt>Exclusions</dt><dd>{repositoryAuthorization.exclusions.join(", ")}</dd><dt>Readiness</dt><dd>{repositoryAuthorization.readiness}</dd></dl><button className="primary" disabled={busy||onStartRepository===undefined} onClick={onStartRepository}>Confirm repository scan</button></div>}<hr/><h2>{text.synthetic}</h2><p>{text.syntheticNote}</p><button className="primary" disabled={!ready || busy || onStart === undefined} onClick={onStart}>{busy ? "…" : text.synthetic}</button></section>;
@@ -81,7 +107,7 @@ export function FoundationView({
       : <section className="data-panel"><div className="panel-heading"><div><h2>{progress.phase}</h2><code>{progress.scan_id}</code></div><strong>{progress.percent === null ? "—" : `${progress.percent}%`}</strong></div><progress max="100" value={progress.percent ?? 0} /><dl><dt>{text.status}</dt><dd>{progress.status}</dd><dt>Engine</dt><dd>{progress.current_engine ?? "—"}</dd><dt>Tasks</dt><dd>{progress.completed_tasks}/{progress.total_tasks}</dd><dt>Elapsed</dt><dd>{progress.elapsed_ms} ms</dd></dl>{!terminalStates.has(progress.status) && <button className="secondary" onClick={onCancel} disabled={busy || onCancel === undefined}>{text.cancel}</button>}</section>;
     if (page === "findings") return findings.length === 0
       ? <EmptyState title={text.noData} detail={text.noDataDetail} />
-      : <section className="card-list">{findings.map((finding) => <article key={finding.id}><div><span className={`severity severity-${finding.severity}`}>{finding.severity}</span><h2>{finding.title}</h2><p>{finding.category} · {finding.status}</p></div><dl><dt>{text.risk}</dt><dd>{finding.risk}</dd><dt>{text.confidence}</dt><dd>{finding.confidence}</dd><dt>Sources</dt><dd>{finding.sources.join(", ")}</dd></dl></article>)}</section>;
+      : <section className="findings-workspace"><div className="filter-bar" aria-label="Finding filters"><label>Category<select aria-label="Category filter" value={categoryFilter} onChange={(event)=>setCategoryFilter(event.target.value)}><option value="all">All</option><option value="secret">Secrets</option><option value="vulnerable_dependency">Vulnerabilities</option><option value="misconfiguration">Misconfiguration</option><option value="supply_chain">Supply Chain</option><option value="license">License</option></select></label><label>Severity<select aria-label="Severity filter" value={severityFilter} onChange={(event)=>setSeverityFilter(event.target.value)}><option value="all">All</option>{["info","low","medium","high","critical"].map(value=><option key={value} value={value}>{value}</option>)}</select></label><label>Status<select aria-label="Status filter" value={statusFilter} onChange={(event)=>setStatusFilter(event.target.value)}><option value="all">All</option><option value="open">open</option><option value="resolved">resolved</option></select></label><label>Confidence<select aria-label="Confidence filter" value={confidenceFilter} onChange={(event)=>setConfidenceFilter(event.target.value)}><option value="all">All</option>{["low","medium","high"].map(value=><option key={value} value={value}>{value}</option>)}</select></label></div><div className="finding-layout"><div className="card-list">{visibleFindings.map((finding) => <button className="finding-card" key={finding.id} onClick={()=>setSelectedFindingId(finding.id)}><span className={`severity severity-${finding.severity}`}>{finding.severity}</span><strong>{finding.title}</strong><small>{finding.category} · {finding.status}</small></button>)}</div>{findingDetail && <article className="data-panel finding-detail" aria-label="Finding detail"><h2>{findingDetail.title}</h2><dl><dt>Category</dt><dd>{findingDetail.category}</dd><dt>Severity</dt><dd>{findingDetail.severity}</dd><dt>{text.risk}</dt><dd>{findingDetail.risk}</dd><dt>{text.confidence}</dt><dd>{findingDetail.confidence}</dd><dt>{text.status}</dt><dd>{findingDetail.status}</dd><dt>Affected component</dt><dd><code>{findingDetail.affected_component}</code></dd><dt>Rule / ID</dt><dd>{findingDetail.rule_ids.join(", ")}</dd><dt>Evidence</dt><dd>{findingDetail.evidence_ids.join(", ")}</dd><dt>Supporting sources</dt><dd>{findingDetail.sources.join(", ")}</dd><dt>Remediation guidance</dt><dd>{findingDetail.remediation_guidance}</dd><dt>Limitations</dt><dd>{findingDetail.limitations.join(" ")}</dd></dl>{findingDetail.category === "secret" && <p className="redaction-notice">Secret value: [REDACTED] · reveal is unavailable</p>}</article>}</div></section>;
     if (page === "history") return scans.length === 0
       ? <EmptyState title={text.noData} detail={text.noDataDetail} />
       : <section className="table-wrap"><table><thead><tr><th>ID</th><th>{text.status}</th><th>{text.risk}</th><th>{text.confidence}</th><th>{text.coverage}</th></tr></thead><tbody>{scans.map((item) => <tr key={item.id} onClick={() => onSelect?.(item)}><td><code>{item.id}</code></td><td>{item.state}</td><td>{item.risk ?? "—"}</td><td>{item.confidence ?? "—"}</td><td>{item.coverage.completed}/{item.coverage.total}</td></tr>)}</tbody></table></section>;
@@ -92,7 +118,7 @@ export function FoundationView({
       ? <EmptyState title={text.noData} detail={text.noDataDetail} />
       : <section className="data-panel"><div className="report-actions">{(["executive", "technical", "developer"] as const).map((kind) => <button className="secondary" disabled={busy || onReport === undefined} key={kind} onClick={() => onReport?.(kind)}>{text.generate}: {text[kind]}</button>)}</div>{report && <pre className="report-json" aria-label="JSON report">{report.json}</pre>}</section>;
     if (page === "settings") return <section className="data-panel"><h2>Local-first</h2><p>{text.syntheticNote}</p><dl><dt>Operating system</dt><dd>Windows 10</dd><dt>Network providers</dt><dd>Disabled by default</dd><dt>Defender provider</dt><dd>Optional / disabled</dd></dl></section>;
-    return scan === null ? <EmptyState title={text.noData} detail={text.noDataDetail} /> : <section className="data-panel"><div className="panel-heading"><div><h2>{scan.verdict ?? scan.state}</h2><code>{scan.id}</code></div><span className={`severity severity-${scan.risk ?? "info"}`}>{scan.risk ?? "pending"}</span></div><dl><dt>{text.status}</dt><dd>{scan.state}</dd><dt>{text.coverage}</dt><dd>{coverage}</dd><dt>{text.risk}</dt><dd>{scan.risk ?? "—"}</dd><dt>{text.confidence}</dt><dd>{scan.confidence ?? "—"}</dd></dl></section>;
+    return scan === null ? <EmptyState title={text.noData} detail={text.noDataDetail} /> : <section className="data-panel"><div className="panel-heading"><div><h2>{scan.verdict ?? scan.state}</h2><code>{scan.id}</code></div><span className={`severity severity-${scan.risk ?? "info"}`}>{scan.risk ?? "pending"}</span></div><dl><dt>{text.status}</dt><dd>{scan.state}</dd><dt>{text.coverage}</dt><dd>{coverage}</dd><dt>Planned</dt><dd>{scan.coverage.total}</dd><dt>Executed / passed</dt><dd>{scan.coverage.completed}</dd><dt>Failed</dt><dd>{scan.coverage.failed}</dd><dt>Unavailable</dt><dd>{scan.coverage.unavailable}</dd><dt>Skipped</dt><dd>{scan.coverage.skipped}</dd><dt>{text.risk}</dt><dd>{scan.risk ?? "—"}</dd><dt>{text.confidence}</dt><dd>{scan.confidence ?? "—"}</dd></dl>{scan.state === "partial" && <p className="coverage-warning">Partial coverage: unavailable checks are recorded and are not treated as a security pass.</p>}{scan.state === "cancelled" && <p className="coverage-warning">Cancelled: no final verdict was generated.</p>}</section>;
   })();
 
   return <div className={`app-shell theme-${theme}`} lang={locale}>
@@ -152,7 +178,7 @@ export default function App() {
         } else {
           timer = setTimeout(() => { void poll(); }, 750);
         }
-      } catch { if (active) setError("Backend response rejected or unavailable"); }
+      } catch (cause) { if (active) setError(safeUiError(cause, "Backend response rejected or unavailable")); }
     };
     void poll();
     return () => { active = false; clearTimeout(timer); };
@@ -161,7 +187,7 @@ export default function App() {
   const start = async () => {
     setBusy(true); setError(null); setReport(null); setFindings([]);
     try { const scan = await level0Api.createSyntheticScan(); setSelected(scan); setScans((current) => [scan, ...current]); }
-    catch { setError("Synthetic scan could not be created safely"); }
+    catch (cause) { setError(safeUiError(cause, "Synthetic scan could not be created safely")); }
     finally { setBusy(false); }
   };
   const cancel = async () => {
@@ -169,16 +195,16 @@ export default function App() {
     const scanId = selected.id;
     setBusy(true);
     try { const result = await level0Api.cancel(scanId); if (selectedId.current === scanId) setProgress(result); }
-    catch { setError("Cancellation request failed safely"); } finally { setBusy(false); }
+    catch (cause) { setError(safeUiError(cause, "Cancellation request failed safely")); } finally { setBusy(false); }
   };
-  const authorizeRepository = async(path:string)=>{setBusy(true);setError(null);try{setRepositoryAuthorization(await level0Api.authorizeRepository(path));}catch{setError("Repository path was refused safely");}finally{setBusy(false);}};
-  const startRepository = async()=>{if(!repositoryAuthorization)return;setBusy(true);setError(null);try{const scan=await level0Api.createRepositoryScan(repositoryAuthorization.authorization_id);setSelected(scan);setScans(current=>[scan,...current]);}catch{setError("Repository scan could not be created safely");}finally{setBusy(false);}};
+  const authorizeRepository = async(path:string)=>{setBusy(true);setError(null);try{setRepositoryAuthorization(await level0Api.authorizeRepository(path));}catch(cause){setError(safeUiError(cause,"Repository path was refused safely"));}finally{setBusy(false);}};
+  const startRepository = async()=>{if(!repositoryAuthorization)return;setBusy(true);setError(null);try{const scan=await level0Api.createRepositoryScan(repositoryAuthorization.authorization_id);setSelected(scan);setScans(current=>[scan,...current]);}catch(cause){setError(safeUiError(cause,"Repository scan could not be created safely"));}finally{setBusy(false);}};
   const generateReport = async (kind: ReportView["kind"]) => {
     if (selected === null) return;
     const scanId = selected.id;
     setBusy(true);
     try { const result = await level0Api.report(scanId, kind); if (selectedId.current === scanId) setReport(result); }
-    catch { setError("Report generation failed safely"); } finally { setBusy(false); }
+    catch (cause) { setError(safeUiError(cause, "Report generation failed safely")); } finally { setBusy(false); }
   };
   return <FoundationView status={status} failed={failed} engines={engines} scans={scans} selected={selected} progress={progress} findings={findings} report={report} error={error} busy={busy} repositoryAuthorization={repositoryAuthorization} onAuthorizeRepository={(path)=>{void authorizeRepository(path);}} onStartRepository={()=>{void startRepository();}} onStart={() => { void start(); }} onCancel={() => { void cancel(); }} onSelect={(scan) => { if (!busy) setSelected(scan); }} onReport={(kind) => { void generateReport(kind); }} />;
 }

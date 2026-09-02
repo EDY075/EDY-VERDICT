@@ -77,8 +77,18 @@ tbody tr { cursor: pointer; }
 tbody tr:hover { background: var(--accent-soft); }
 .report-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .report-json { max-height: 420px; overflow: auto; margin: 18px 0 0; padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: #070b10; color: #dce8e5; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .72rem; }
+.findings-workspace { margin-top: 18px; }
+.filter-bar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; border: 1px solid var(--border); border-radius: 10px; padding: 14px; background: var(--panel); }
+.filter-bar label { display: grid; gap: 5px; color: var(--muted); font-size: .72rem; }
+.finding-layout { display: grid; grid-template-columns: minmax(250px, .8fr) minmax(0, 1.4fr); gap: 14px; align-items: start; }
+.finding-card { display: grid; justify-items: start; gap: 8px; width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 16px; color: #e9eef5; background: var(--panel); text-align: left; cursor: pointer; }
+.finding-card:hover, .finding-card:focus-visible { border-color: var(--accent); background: var(--accent-soft); }
+.finding-card small { color: var(--muted); }
+.finding-detail { position: sticky; top: 18px; }
+.redaction-notice, .coverage-warning { border-left: 3px solid var(--accent); padding: 9px 12px; background: var(--accent-soft); }
 @media (max-width: 900px) { .app-shell { grid-template-columns: 190px minmax(0,1fr); } .metric-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } .controls { flex-direction: column; } .engine-grid { grid-template-columns: 1fr; } }
-@media (max-width: 640px) { .app-shell { display: block; } .sidebar { border-right: 0; border-bottom: 1px solid var(--border); } nav { grid-template-columns: repeat(3, minmax(0,1fr)); } nav button { text-align: center; font-size: .72rem; padding: 8px 4px; } .sidebar-footer { display: none; } main { padding: 24px 16px; } .topbar { display: block; } .controls { flex-direction: row; margin-top: 18px; } .empty-state { align-items: flex-start; gap: 18px; padding: 24px; } .radar { width: 72px; height: 72px; } }
+@media (max-width: 900px) { .filter-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); } .finding-layout { grid-template-columns: 1fr; } .finding-detail { position: static; } }
+@media (max-width: 640px) { .app-shell { display: block; } .sidebar { border-right: 0; border-bottom: 1px solid var(--border); } nav { grid-template-columns: repeat(3, minmax(0,1fr)); } nav button { text-align: center; font-size: .72rem; padding: 8px 4px; } .sidebar-footer { display: none; } main { padding: 24px 16px; } .topbar { display: block; } .controls { flex-direction: row; margin-top: 18px; } .empty-state { align-items: flex-start; gap: 18px; padding: 24px; } .radar { width: 72px; height: 72px; } .filter-bar { grid-template-columns: 1fr; } }
 @media (max-width: 420px) { .metric-grid { grid-template-columns: 1fr; } .empty-state { display: block; } .radar { margin-bottom: 18px; } .card-list article { display: block; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
 @media (forced-colors: active) { .app-shell, .sidebar, .status-strip, .metric-grid article, .empty-state { border-color: CanvasText; background: Canvas; color: CanvasText; } .status-dot, .radar span { background: CanvasText; } }

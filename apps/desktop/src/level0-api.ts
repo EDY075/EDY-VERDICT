@@ -52,6 +52,11 @@ export interface FindingView {
   readonly confidence: Confidence;
   readonly status: string;
   readonly sources: readonly string[];
+  readonly affected_component: string;
+  readonly rule_ids: readonly string[];
+  readonly evidence_ids: readonly string[];
+  readonly remediation_guidance: string;
+  readonly limitations: readonly string[];
 }
 
 export interface ReportView {
@@ -169,13 +174,18 @@ export function parseScanProgress(value: unknown): ScanProgress {
 
 export function parseFinding(value: unknown): FindingView {
   const item = record(value);
-  exact(item, ["id", "scan_id", "title", "category", "severity", "risk", "confidence", "status", "sources"]);
-  if (!Array.isArray(item.sources) || item.sources.length > 16) throw new Error("Backend response rejected");
+  exact(item, ["id", "scan_id", "title", "category", "severity", "risk", "confidence", "status", "sources", "affected_component", "rule_ids", "evidence_ids", "remediation_guidance", "limitations"]);
+  if (!Array.isArray(item.sources) || item.sources.length > 16 || !Array.isArray(item.rule_ids) || !Array.isArray(item.evidence_ids) || !Array.isArray(item.limitations)) throw new Error("Backend response rejected");
   return Object.freeze({
     id: uuid(item.id), scan_id: uuid(item.scan_id), title: text(item.title, 256),
     category: text(item.category, 64), severity: member(item.severity, SEVERITIES),
     risk: member(item.risk, SEVERITIES), confidence: member(item.confidence, CONFIDENCES),
     status: text(item.status, 64), sources: Object.freeze(item.sources.map((source) => text(source, 64))),
+    affected_component: text(item.affected_component, 4096),
+    rule_ids: Object.freeze(item.rule_ids.map((rule) => text(rule, 256))),
+    evidence_ids: Object.freeze(item.evidence_ids.map((evidence) => uuid(evidence))),
+    remediation_guidance: text(item.remediation_guidance, 2048),
+    limitations: Object.freeze(item.limitations.map((limitation) => text(limitation, 2048))),
   });
 }
 

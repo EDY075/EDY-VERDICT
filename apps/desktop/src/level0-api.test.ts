@@ -8,7 +8,7 @@ describe("Level 0 IPC response validation", () => {
     expect(parseEngineStatus({ id: "yara-x", version: "1.20.0", state: "ready", detail_safe: "Integrity verified" }).state).toBe("ready");
     expect(parseScanSummary({ id: scanId, state: "partial", verdict: "needs_review", risk: "high", confidence: "low", coverage: { total: 4, completed: 2, failed: 1, unavailable: 1, skipped: 0 } }).confidence).toBe("low");
     expect(parseScanProgress({ scan_id: scanId, phase: "engine", completed_tasks: 1, total_tasks: 4, percent: 25, elapsed_ms: 10, current_engine: "yara-x", status: "running" }).percent).toBe(25);
-    expect(parseFinding({ id: "018f4c2a-1d3b-7abc-8def-0123456789ac", scan_id: scanId, title: "Synthetic", category: "fixture", severity: "high", risk: "high", confidence: "medium", status: "open", sources: ["yara-x"] }).sources).toEqual(["yara-x"]);
+    expect(parseFinding({ id: "018f4c2a-1d3b-7abc-8def-0123456789ac", scan_id: scanId, title: "Synthetic", category: "fixture", severity: "high", risk: "high", confidence: "medium", status: "open", sources: ["yara-x"], affected_component: "fixture.bin", rule_ids: ["RULE-1"], evidence_ids: ["018f4c2a-1d3b-7abc-8def-0123456789ad"], remediation_guidance: "Review safely", limitations: ["Synthetic only"] }).sources).toEqual(["yara-x"]);
     expect(parseReport({ scan_id: scanId, kind: "technical", schema: "REPORT_SCHEMA_V2", json: "{}" }).kind).toBe("technical");
   });
 
