@@ -4,6 +4,7 @@
 mod correlation;
 mod domain;
 mod events;
+mod file_reputation;
 mod fingerprint;
 mod ids;
 mod lifecycle;
@@ -14,6 +15,7 @@ mod validation;
 pub use correlation::*;
 pub use domain::*;
 pub use events::*;
+pub use file_reputation::*;
 pub use fingerprint::*;
 pub use ids::*;
 pub use lifecycle::*;

@@ -1,10 +1,35 @@
 #![forbid(unsafe_code)]
-//! No real providers or networking. Infrastructure fakes only.
-use edy_core::{Availability, Coverage, ProviderPort, ProviderStatus};
+//! No real providers or networking. Infrastructure fakes and hash-only contracts only.
+use edy_core::{
+    Availability, Coverage, FilePrivacyMode, FileReputationPort, FileReputationQuery,
+    FileReputationResult, ProviderPort, ProviderStatus,
+};
 
 pub struct FakeProvider {
     pub id: String,
     pub availability: Availability,
+}
+
+/// Level 2 provider boundary. It never accepts file bytes or a file path.
+pub struct DisabledHashReputationProvider {
+    pub id: String,
+    pub availability: Availability,
+}
+
+impl FileReputationPort for DisabledHashReputationProvider {
+    fn status(&self) -> Availability {
+        self.availability
+    }
+
+    fn lookup_hash(
+        &self,
+        query: &FileReputationQuery,
+    ) -> Result<FileReputationResult, &'static str> {
+        if query.privacy_mode != FilePrivacyMode::HashLookup {
+            return Err("hash lookup requires explicit privacy mode");
+        }
+        Err("network reputation lookup is disabled")
+    }
 }
 impl ProviderPort for FakeProvider {
     fn status(&self) -> ProviderStatus {
@@ -39,5 +64,22 @@ mod tests {
             assert_eq!(provider.status().availability, availability);
             assert_ne!(provider.status().coverage, Coverage::Complete);
         }
+    }
+
+    #[test]
+    fn reputation_contract_never_accepts_or_uploads_file_bytes() {
+        let provider = DisabledHashReputationProvider {
+            id: "fixture".into(),
+            availability: Availability::NotConfigured,
+        };
+        let query = FileReputationQuery {
+            sha256: edy_core::Sha256Digest::new("b".repeat(64)).unwrap(),
+            privacy_mode: FilePrivacyMode::HashLookup,
+        };
+        assert_eq!(provider.status(), Availability::NotConfigured);
+        assert_eq!(
+            provider.lookup_hash(&query),
+            Err("network reputation lookup is disabled")
+        );
     }
 }

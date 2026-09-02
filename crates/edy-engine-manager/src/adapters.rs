@@ -204,6 +204,27 @@ pub struct GitleaksAdapter;
 pub struct TrivyAdapter;
 pub struct OsvScannerAdapter;
 
+impl YaraXAdapter {
+    /// File-specific Level 2 argument planning. The target path can only originate from an
+    /// immutable authorization snapshot; this function never accepts a raw frontend path.
+    pub fn prepare_authorized_file_arguments(
+        &self,
+        target: &crate::file_security::AuthorizedFileTarget,
+        project_root: ApprovedLocalPath<'_>,
+        rules_path: ApprovedLocalPath<'_>,
+    ) -> Result<Vec<String>, AdapterError> {
+        let target_path = checked_path_argument(&target.canonical_path)?;
+        let rules = checked_project_path(project_root, rules_path)?;
+        Ok(vec![
+            "scan".into(),
+            "--output-format=json".into(),
+            "--no-mmap".into(),
+            rules.into(),
+            target_path.into(),
+        ])
+    }
+}
+
 impl EngineAdapter for YaraXAdapter {
     fn engine_id(&self) -> &'static str {
         "yara-x"

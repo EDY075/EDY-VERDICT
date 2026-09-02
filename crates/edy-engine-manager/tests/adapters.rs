@@ -1,5 +1,8 @@
 use edy_core::{Target, TargetId, TargetKind, TargetLocator};
 use edy_engine_manager::adapters::*;
+use edy_engine_manager::file_security::{
+    AuthorizedFileTarget, DEFAULT_MAX_FILE_SIZE, FILE_SNAPSHOT_VERSION, FileIdentity,
+};
 
 fn output(exit_code: u32, stdout: &[u8]) -> CapturedOutput<'_> {
     CapturedOutput {
@@ -311,6 +314,43 @@ fn preparation_is_pure_offline_and_redacted_by_default() {
             "D:/fixture/Cargo.lock",
         ]
     );
+}
+
+#[test]
+fn level2_yara_planning_requires_an_authorized_file_and_never_recurses() {
+    let target = AuthorizedFileTarget {
+        authorization_id: "018f4c2a-1d3b-7abc-8def-0123456789ad".into(),
+        requested_path: "D:/fixture/benign.bin".into(),
+        canonical_path: "D:/fixture/benign.bin".into(),
+        identity: FileIdentity {
+            volume_id: "123".into(),
+            file_id: "456".into(),
+            size: 7,
+            last_write_time: "134000000000000000".into(),
+            attributes: 32,
+        },
+        authorized_at_utc: "2026-09-02T00:00:00Z".into(),
+        snapshot_version: FILE_SNAPSHOT_VERSION.into(),
+        max_file_size: DEFAULT_MAX_FILE_SIZE,
+    };
+    let arguments = YaraXAdapter
+        .prepare_authorized_file_arguments(
+            &target,
+            approved("D:/EDY-Projects/EDY-VERDICT"),
+            approved("D:/EDY-Projects/EDY-VERDICT/.local/engine-config/yara/level2.yar"),
+        )
+        .unwrap();
+    assert_eq!(
+        arguments,
+        [
+            "scan",
+            "--output-format=json",
+            "--no-mmap",
+            "D:/EDY-Projects/EDY-VERDICT/.local/engine-config/yara/level2.yar",
+            "D:/fixture/benign.bin",
+        ]
+    );
+    assert!(!arguments.iter().any(|argument| argument == "--recursive"));
 }
 
 #[test]
