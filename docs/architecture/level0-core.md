@@ -1,6 +1,7 @@
 # EDY VERDICT Level 0 core
 
-Status: implemented as a pure, testable domain foundation. This is not a production scanner.
+Status: implemented and integrated for the controlled synthetic Level 0 workflow. This is not
+a production scanner.
 
 ## Boundary
 
@@ -45,7 +46,13 @@ cross-field invariants rather than trusting serialized private fields.
 
 ## Level 0 readiness
 
-The implemented gate covers deterministic unit tests, clippy with warnings denied and formatting.
-Production readiness still requires real adapters, process-level integration tests, schema
-migrations, crash recovery, signed engine manifests, UI workflows and an explicit authorization
-model. None of those are implied by this foundation.
+The domain is wired through dependency-injected orchestration, SQLite snapshots, typed Tauri IPC,
+deterministic JSON/HTML reporting and the React workflow. The end-to-end path accepts only a
+backend-owned synthetic fixture. Success, partial failure, unavailable coverage, cancellation,
+startup reconciliation, storage reload and report generation have automated coverage.
+
+The Engine Manager has an integrity/containment gate and process-level tests, but the desktop does
+not call it in production. Real engine smoke is skipped by policy: Job Objects do not enforce
+network denial, and Trivy/OSV offline data was not downloaded. Production readiness still requires
+the later-level real-target authorization model, promoted adapters/data, operational recovery,
+packaged runtime validation and the independent Tauri upstream gate.

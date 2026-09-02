@@ -1,18 +1,21 @@
-# EDY VERDICT — Level -1C foundation
+# EDY VERDICT — Level 0 synthetic validation workspace
 
-Technical infrastructure only. No scanner, verdict algorithm, live provider, telemetry,
-engine download, installer or product UI is implemented or authorized by this baseline.
-Windows 10 Pro 22H2 x64 is fixed; Windows 11 migration is cancelled.
+The immutable Level -1C foundation now has a Level 0 implementation on the work branch:
+typed orchestration, project-local SQLite persistence, deterministic correlation/reporting,
+restricted Tauri IPC and a React UI for controlled synthetic validation. This is not a
+production scanner. It cannot select or scan user files, directories, repositories, URLs or
+installed applications, and it performs no live provider requests or engine downloads.
+Windows 10 Pro 22H2 x64 remains fixed; Windows 11 migration is cancelled.
 
 Read `docs/adr/0001-platform-stack.md` and `docs/architecture/foundation-contract.md`.
 Use `scripts/Enter-Project.ps1` in a new PowerShell process before development commands.
 Toolchains, caches, temporary files and build artifacts remain project-local.
 Do not commit `.local`, `target`, `node_modules`, credentials or generated databases.
 
-Level 0 requires separate user authorization even after all foundation gates pass.
-
-Current result: **Level -1C FAIL**. Read `docs/LEVEL_MINUS_1C_REPORT.md` before
-running any native desktop build. Five Windows transitive advisories block promotion.
+Current implementation result: **Level 0 COMPLETE WITH ACTIONS (synthetic scope)**.
+Read `docs/LEVEL_0_REPORT.md` for the exact boundary. The independent release gate remains
+**Level -1C FAIL / WAITING TAURI UPSTREAM** because five Windows transitive `unic-*`
+advisories still block promotion.
 
 Authorized foundation reproduction (PowerShell, from this directory):
 
@@ -39,4 +42,4 @@ Pinned development auditors were built with `cargo install cargo-audit --version
 `-RunAuthorizedFakeCredentialTest` switch writes/deletes the documented fake target;
 omit it unless that specific native test is authorized. Never use a real API key.
 
-Both locks are tracked in the local Git index. There is no remote or approval commit.
+Both locks are tracked. No push, deploy, package or installer is authorized by Level 0.
