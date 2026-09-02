@@ -90,4 +90,30 @@ describe("Level 0 product shell", () => {
     const report = renderToStaticMarkup(<FoundationView status={status} failed={false} initialPage="reports" scans={[{ id: "018f4c2a-1d3b-7abc-8def-0123456789ab", state: "partial", verdict: "inconclusive", risk: "medium", confidence: "low", coverage: { total: 7, completed: 5, failed: 0, unavailable: 2, skipped: 0 } }]} />);
     for (const label of ["Executivo", "Técnico", "Desenvolvedor"]) expect(report).toContain(label);
   });
+
+  it("renders explicit Level 2 preview and confirmation without automatic analysis", () => {
+    const status = parseFoundationStatus({ core: "ready", storage: "ready", ipc: "restricted", schema_version: 1 });
+    const identity={volume_id:"123",file_id:"456",size:42,last_write_time:"134000000000000000",attributes:32};
+    const html=renderToStaticMarkup(<FoundationView status={status} failed={false} initialPage="new-scan" filePreview={{preview_id:"018f4c2a-1d3b-7abc-8def-0123456789ab",requested_path:"D:/fixture.bin",canonical_path:"D:/fixture.bin",file_name:"fixture.bin",identity,detected_type:"unknown_binary",proposed_checks:["streaming_sha256","offline_authenticode_when_applicable"],policy_limitations:["YARA-X real execution is unavailable by execution policy"],max_file_size:268435456}} fileAuthorization={{authorization_id:"018f4c2a-1d3b-7abc-8def-0123456789ab",canonical_path:"D:/fixture.bin",size:42,detected_type:"unknown_binary",proposed_checks:["streaming_sha256"],policy_limitations:["YARA policy blocked"]}} />);
+    for(const label of ["File / Binary Security","File preview","Resolved location","Detected type","Authorize this exact file","Confirm file analysis","unavailable by execution policy","Not checked"]) expect(html).toContain(label);
+    expect(html).not.toContain("No threats found");
+  });
+
+  it("renders distinct identity hash PE signature YARA reputation finding and coverage panels", () => {
+    const status = parseFoundationStatus({ core: "ready", storage: "ready", ipc: "restricted", schema_version: 1 });
+    const identity={volume_id:"123",file_id:"456",size:3,last_write_time:"134000000000000000",attributes:32};
+    const html=renderToStaticMarkup(<FoundationView status={status} failed={false} fileAnalysis={{scan_id:"018f4c2a-1d3b-7abc-8def-0123456789ab",state:"partial",progress:{scan_id:"018f4c2a-1d3b-7abc-8def-0123456789ab",phase:"reporting",completed_tasks:8,total_tasks:8,percent:100,elapsed_ms:25,current_engine:null,status:"partial"},terminal_error:null,analysis:{target:{canonical_path:"D:/fixture.bin",identity},hashes:{sha256:"a".repeat(64),sha512:"b".repeat(128),bytes_hashed:3},classification:"pe_executable",pe:{machine:34404,architecture:"x86_64",subsystem:3,timestamp:0,image_base:5368709120,entry_point_rva:4096,is_dll:false,signature_present:false,sections:[]},pe_error:null,authenticode:{signature_present:false,cryptographic_status:"unsigned",trust_chain_status:"unsigned",offline_cache_only:true},yara_observations:[],reputation:{privacy_mode:"local_only",availability:"not_configured",provider:null,known:null,malicious_count:null,suspicious_count:null,status:"not_checked"},findings:[],coverage:{hashing:"completed",classification:"completed",pe_inspection:"completed",authenticode:"completed",yara:"policy_blocked",reputation:"not_checked",target_stable:true,unavailable_checks:["yara","reputation"]},verdict:{disposition:"insufficient_coverage",risk_score:0,risk:"info",confidence_score:66,confidence:"medium",reasons:["coverage down"]}}}} />);
+    for(const label of ["File Identity","Hashes","SHA-256","SHA-512","PE Metadata","Digital Signature","Unsigned","YARA","Unavailable by execution policy","Reputation","Not checked","Findings","Coverage"]) expect(html).toContain(label);
+    expect(html).toContain("This is not a clean guarantee");
+    expect(html).not.toContain("SAFE");
+  });
+
+  it("renders target changed and cancelled terminals without a final verdict", () => {
+    const status = parseFoundationStatus({ core: "ready", storage: "ready", ipc: "restricted", schema_version: 1 });
+    for(const terminal of [{phase:"target_changed",error:"TARGET_CHANGED",state:"failed" as const},{phase:"cancelled",error:"CANCELLED",state:"cancelled" as const}]){
+      const html=renderToStaticMarkup(<FoundationView status={status} failed={false} fileAnalysis={{scan_id:"018f4c2a-1d3b-7abc-8def-0123456789ab",state:terminal.state,progress:{scan_id:"018f4c2a-1d3b-7abc-8def-0123456789ab",phase:terminal.phase,completed_tasks:2,total_tasks:8,percent:null,elapsed_ms:10,current_engine:null,status:terminal.state},analysis:null,terminal_error:terminal.error}} />);
+      expect(html).toContain(terminal.error);
+      expect(html).toContain("No final file verdict was generated");
+    }
+  });
 });

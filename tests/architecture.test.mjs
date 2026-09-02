@@ -4,10 +4,16 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
 const metadata = JSON.parse(execFileSync('cargo', ['metadata', '--no-deps', '--locked', '--format-version', '1'], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }));
-const libraries = ['edy-core','edy-engine-manager','edy-providers','edy-storage','edy-reporting'];
-const allowed = Object.fromEntries(libraries.map(n=>[n,n==='edy-core'?[]:['edy-core']]));
-allowed['edy-cli'] = libraries;
-allowed['edy-desktop'] = libraries;
+const allowed = {
+  'edy-core': [],
+  'edy-repository': ['edy-core'],
+  'edy-engine-manager': ['edy-core','edy-repository'],
+  'edy-providers': ['edy-core'],
+  'edy-storage': ['edy-core'],
+  'edy-reporting': ['edy-core','edy-engine-manager','edy-repository'],
+  'edy-cli': ['edy-core','edy-engine-manager','edy-providers','edy-reporting','edy-storage'],
+  'edy-desktop': ['edy-core','edy-engine-manager','edy-providers','edy-reporting','edy-repository','edy-storage'],
+};
 
 test('workspace has exactly the frozen crates and internal edges', () => {
   assert.deepEqual(metadata.packages.map(p=>p.name).sort(), Object.keys(allowed).sort());
@@ -44,11 +50,12 @@ test('no dangerous capability, generic IPC or plugin can be added silently', () 
   const cap=JSON.parse(readFileSync('apps/desktop/src-tauri/capabilities/main.json'));
   assert.deepEqual(cap.windows,['main']);
   assert.equal(cap.remote,undefined);
-  assert.deepEqual(cap.permissions,['allow-foundation-status']);
+  const commands=['get-foundation-status','get-engine-status','authorize-repository-target','inspect-repository-target','create-repository-scan','get-repository-inventory','inspect-file-target','authorize-file-target','create-file-scan','get-file-analysis','create-synthetic-scan','get-scan','list-scans','get-scan-progress','cancel-scan','list-findings','get-finding','generate-report'];
+  assert.deepEqual(cap.permissions,commands.map(command=>`allow-${command}`));
   for(const p of metadata.packages) assert(!p.dependencies.some(d=>d.name.startsWith('tauri-plugin-')));
   const source=readFileSync('apps/desktop/src-tauri/src/main.rs','utf8');
-  assert.match(source,/generate_handler!\[foundation_status\]/);
-  assert.equal((source.match(/#\[tauri::command\]/g)||[]).length,1);
+  for(const command of commands) assert.match(source,new RegExp(`\\b${command.replaceAll('-','_')}\\b`));
+  assert.equal((source.match(/#\[tauri::command\]/g)||[]).length,commands.length);
 });
 test('approved pins, lockfiles and script restrictions are present', () => {
   const p=JSON.parse(readFileSync('package.json'));

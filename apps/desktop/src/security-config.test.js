@@ -8,12 +8,21 @@ const capability = JSON.parse(read("../src-tauri/capabilities/main.json"));
 const manifest = read("../src-tauri/build.rs");
 
 const commands = [
-  "get_foundation_status", "get_engine_status", "create_synthetic_scan", "get_scan", "list_scans",
+  "get_foundation_status", "get_engine_status", "authorize_repository_target", "inspect_repository_target",
+  "create_repository_scan", "get_repository_inventory", "inspect_file_target", "authorize_file_target",
+  "create_file_scan", "get_file_analysis", "create_synthetic_scan", "get_scan", "list_scans",
   "get_scan_progress", "cancel_scan", "list_findings", "get_finding", "generate_report",
 ];
 
 describe("Tauri security configuration", () => {
-  it("uses one local capability and explicitly manifests only Level 0 commands", () => {
+  it("keeps synthetic visual fixtures out of the production entrypoint", () => {
+    expect(read("../index.html")).not.toContain("level2-visual");
+    expect(read("./main.tsx")).not.toContain("level2-visual");
+    expect(read("./App.tsx")).not.toContain("visualFixture");
+    expect(read("../qa-level2.html")).toContain("level2-visual.fixture.tsx");
+    expect(read("./level2-visual.fixture.tsx")).toContain("SYNTHETIC VISUAL QA ONLY");
+  });
+  it("uses one local capability and explicitly manifests only closed-set workflow commands", () => {
     expect(config.app.security.capabilities).toEqual(["main"]);
     expect(capability.local).toBe(true);
     expect(capability.windows).toEqual(["main"]);
@@ -67,6 +76,8 @@ describe("dependency-free Isolation hook", () => {
     const scan = hook({ cmd: "get_scan", payload: { request: { scan_id: "018f4c2a-1d3b-7abc-8def-0123456789ab" } }, callback: 3, error: 4 });
     expect(scan.cmd).toBe("get_scan");
     expect(scan.payload.request.scan_id).toMatch(/-7/);
+    const file = hook({ cmd: "authorize_file_target", payload: { request: { preview_id: "018f4c2a-1d3b-7abc-8def-0123456789ab", confirmed: true } }, callback: 5, error: 6 });
+    expect(file.payload.request.preview_id).toBe("018f4c2a-1d3b-7abc-8def-0123456789ab");
   });
 
   it.each([
@@ -78,6 +89,8 @@ describe("dependency-free Isolation hook", () => {
     { cmd: "get_foundation_status", payload: {}, callback: "1", error: 2 },
     { cmd: "get_foundation_status", payload: {}, callback: 1, error: -1 },
     { cmd: "get_scan", payload: { request: { scan_id: "../../etc" } }, callback: 1, error: 2 },
+    { cmd: "authorize_file_target", payload: { request: { path: "D:/fixture.bin", confirmed: false } }, callback: 1, error: 2 },
+    { cmd: "inspect_file_target", payload: { request: { path: "D:/fixture.bin", extra: true } }, callback: 1, error: 2 },
     { cmd: "list_scans", payload: { request: { offset: 0, limit: 1000 } }, callback: 1, error: 2 },
     { cmd: "generate_report", payload: { request: { scan_id: "018f4c2a-1d3b-7abc-8def-0123456789ab", kind: "html" } }, callback: 1, error: 2 },
   ])("rejects malformed or forbidden IPC %# before encryption", (message) => {
