@@ -160,6 +160,7 @@ pub enum PeError {
     UnsupportedOptionalHeader,
     AbsurdSectionCount,
     SectionTableOverflow,
+    SectionDataOutsideFile,
     InvalidSecurityDirectory,
 }
 
@@ -170,6 +171,7 @@ pub enum AuthenticodeStatus {
     SignedValidOffline,
     SignedInvalid,
     TrustChainValidOffline,
+    TrustChainUntrusted,
     TrustChainUnavailableOffline,
     Indeterminate,
     Error,
@@ -183,6 +185,9 @@ pub struct PublisherMetadata {
     pub certificate_fingerprint: Option<String>,
     pub signing_time: Option<String>,
     pub timestamp_present: Option<bool>,
+    /// Separate from mere countersignature presence; None means not established offline.
+    #[serde(default)]
+    pub trusted_timestamp_present: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -644,6 +649,11 @@ fn parse_pe_with_size(bytes: &[u8], total_file_size: u64) -> Result<PeMetadata, 
     let mut sections = Vec::with_capacity(section_count);
     for index in 0..section_count {
         let offset = section_table + index * 40;
+        let raw_size = read_u32(bytes, offset + 16).ok_or(PeError::SectionTableOverflow)?;
+        let raw_offset = read_u32(bytes, offset + 20).ok_or(PeError::SectionTableOverflow)?;
+        if raw_size != 0 && u64::from(raw_offset) + u64::from(raw_size) > total_file_size {
+            return Err(PeError::SectionDataOutsideFile);
+        }
         let name_bytes = &bytes[offset..offset + 8];
         let name_end = name_bytes.iter().position(|byte| *byte == 0).unwrap_or(8);
         let name = if name_bytes[..name_end]
@@ -657,7 +667,7 @@ fn parse_pe_with_size(bytes: &[u8], total_file_size: u64) -> Result<PeMetadata, 
         sections.push(PeSection {
             name,
             virtual_size: read_u32(bytes, offset + 8).ok_or(PeError::SectionTableOverflow)?,
-            raw_size: read_u32(bytes, offset + 16).ok_or(PeError::SectionTableOverflow)?,
+            raw_size,
             characteristics: read_u32(bytes, offset + 36).ok_or(PeError::SectionTableOverflow)?,
         });
     }
@@ -1120,6 +1130,8 @@ fn file_identity(file: &File) -> Result<FileIdentity, FileSecurityError> {
         BY_HANDLE_FILE_INFORMATION, GetFileInformationByHandle,
     };
     let mut information = BY_HANDLE_FILE_INFORMATION::default();
+    // SAFETY: File owns a live handle; the initialized output lives through the call.
+    // Nothing is retained or transferred. Zero is handled as Io; File closes its handle.
     let ok = unsafe { GetFileInformationByHandle(file.as_raw_handle().cast(), &mut information) };
     if ok == 0 {
         return Err(FileSecurityError::new(FileSecurityErrorKind::Io));
@@ -1159,6 +1171,8 @@ fn final_path(file: &File, _fallback: &Path) -> Result<String, FileSecurityError
         FILE_NAME_NORMALIZED, GetFinalPathNameByHandleW, VOLUME_NAME_DOS,
     };
     let mut buffer = vec![0_u16; 32_768];
+    // SAFETY: live borrowed file handle and writable 32768-u16 buffer; Windows receives
+    // its exact capacity. No ownership transfer; zero/oversize is rejected before slicing.
     let length = unsafe {
         GetFinalPathNameByHandleW(
             file.as_raw_handle().cast(),
@@ -1197,8 +1211,12 @@ fn is_local_fixed(path: &Path) -> bool {
         .chain(std::iter::once(0))
         .collect::<Vec<_>>();
     let mut root = vec![0_u16; 1024];
+    // SAFETY: NUL-terminated input and writable root buffer live through this call;
+    // failure is checked before root is passed to GetDriveTypeW. No resources transferred.
     let ok =
         unsafe { GetVolumePathNameW(path_wide.as_ptr(), root.as_mut_ptr(), root.len() as u32) };
+    // SAFETY: successful GetVolumePathNameW returned a terminated root in this live buffer.
+    // GetDriveTypeW borrows it; unknown/error/non-fixed results are rejected.
     ok != 0 && unsafe { GetDriveTypeW(root.as_ptr()) } == DRIVE_FIXED
 }
 
@@ -1253,6 +1271,9 @@ fn inspect_authenticode(
         pSignatureSettings: std::ptr::null_mut(),
     };
     let mut action = WINTRUST_ACTION_GENERIC_VERIFY_V2;
+    // SAFETY: FILE union/tag agree, initialized structures and terminated path outlive
+    // VERIFY/CLOSE. File retains the read-only handle. TrustState closes even failed VERIFY.
+    // No callbacks/UI/network permitted; result is an HRESULT-like LONG, not GetLastError.
     let result = unsafe {
         WinVerifyTrust(
             windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE,
@@ -1263,6 +1284,18 @@ fn inspect_authenticode(
     let state = TrustState(&mut data);
     let mut inspection = map_authenticode_result(result, signature_present);
     inspection.publisher = publisher_from_state(state.0.hWVTStateData);
+    // A chain failure alone cannot prove signature validity. Require BOTH a CMS signature
+    // check with the embedded signer AND a SIP digest check against the locked file.
+    if inspection.cryptographic_status == AuthenticodeStatus::Indeterminate
+        && matches!(
+            inspection.trust_chain_status,
+            AuthenticodeStatus::TrustChainUntrusted
+                | AuthenticodeStatus::TrustChainUnavailableOffline
+        )
+        && verify_crypto_from_state(&state, file)
+    {
+        inspection.cryptographic_status = AuthenticodeStatus::SignedValidOffline;
+    }
     inspection
 }
 
@@ -1275,7 +1308,9 @@ impl Drop for TrustState<'_> {
         use windows_sys::Win32::Security::WinTrust::*;
         self.0.dwStateAction = WTD_STATEACTION_CLOSE;
         let mut action = WINTRUST_ACTION_GENERIC_VERIFY_V2;
-        // Release only the transient trust state. No certificate-store mutation.
+        // SAFETY: same live WINTRUST_DATA/FILE/path from VERIFY, tagged as CLOSE exactly
+        // once by RAII. WinTrust accepts failed/NULL state. No borrowed child pointer escapes.
+        // Release only transient state; no certificate-store mutation or ownership of File.
         unsafe {
             WinVerifyTrust(
                 windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE,
@@ -1287,13 +1322,79 @@ impl Drop for TrustState<'_> {
 }
 
 #[cfg(windows)]
+fn verify_crypto_from_state(state: &TrustState<'_>, file: &File) -> bool {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Security::{Cryptography::Sip::*, Cryptography::*, WinTrust::*};
+    if state.0.hWVTStateData.is_null() {
+        return false;
+    }
+    // SAFETY: only called while TrustState and File are alive. OS-owned provider, signer,
+    // certificate, SIP and CMS pointers are checked before dereference and never escape.
+    // The fresh SIP subject borrows the SAME locked file handle; neither verification API
+    // takes ownership. No cert/chain/network API is called. Any absent data/API error is false.
+    unsafe {
+        let provider = WTHelperProvDataFromStateData(state.0.hWVTStateData);
+        if provider.is_null()
+            || (*provider).hMsg.is_null()
+            || (*provider).dwSubjectChoice != CPD_CHOICE_SIP
+        {
+            return false;
+        }
+        let signer = WTHelperGetProvSignerFromChain(provider, 0, 0, 0);
+        if signer.is_null() || (*signer).csCertChain == 0 {
+            return false;
+        }
+        let cert = WTHelperGetProvCertFromChain(signer, 0);
+        if cert.is_null() || (*cert).pCert.is_null() {
+            return false;
+        }
+        let sip = (*provider).Anonymous.pPDSip;
+        if sip.is_null() || (*sip).psSipSubjectInfo.is_null() || (*sip).psIndirectData.is_null() {
+            return false;
+        }
+        let check = CMSG_CTRL_VERIFY_SIGNATURE_EX_PARA {
+            cbSize: std::mem::size_of::<CMSG_CTRL_VERIFY_SIGNATURE_EX_PARA>() as u32,
+            hCryptProv: 0,
+            dwSignerIndex: 0,
+            dwSignerType: CMSG_VERIFY_SIGNER_CERT,
+            pvSigner: (*cert).pCert.cast_mut().cast(),
+        };
+        if CryptMsgControl(
+            (*provider).hMsg,
+            0,
+            CMSG_CTRL_VERIFY_SIGNATURE_EX,
+            (&check as *const CMSG_CTRL_VERIFY_SIGNATURE_EX_PARA).cast(),
+        ) == 0
+        {
+            return false;
+        }
+        // Do NOT shallow-copy provider SIP_SUBJECTINFO: its pClientData may be transient.
+        // Build our own zero-initialized subject with the caller-owned path and locked handle.
+        let mut subject_type = (*sip).gSubject;
+        let mut subject = SIP_SUBJECTINFO {
+            cbSize: std::mem::size_of::<SIP_SUBJECTINFO>() as u32,
+            pgSubjectType: &mut subject_type,
+            hFile: file.as_raw_handle().cast(),
+            pwsFileName: (*state.0.Anonymous.pFile).pcwszFilePath,
+            DigestAlgorithm: (*(*sip).psIndirectData).DigestAlgorithm,
+            dwEncodingType: X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
+            ..SIP_SUBJECTINFO::default()
+        };
+        CryptSIPVerifyIndirectData(&mut subject, (*sip).psIndirectData) != 0
+    }
+}
+
+#[cfg(windows)]
 fn publisher_from_state(state: windows_sys::Win32::Foundation::HANDLE) -> PublisherMetadata {
     use windows_sys::Win32::Security::Cryptography::*;
     use windows_sys::Win32::Security::WinTrust::*;
     if state.is_null() {
         return PublisherMetadata::default();
     }
-    // These pointers are owned by WinTrust and valid until TrustState closes the state.
+    // SAFETY: private caller holds TrustState until return; all OS-owned pointers are
+    // checked before use. Count/size caps precede slices; names use a bounded output buffer.
+    // Only copied public metadata escapes. WinTrust alone releases contexts/handles on CLOSE.
+    // NULL/missing/oversized fields return None, never dereference an untrusted file pointer.
     unsafe {
         let provider = WTHelperProvDataFromStateData(state);
         if provider.is_null() {
@@ -1305,8 +1406,40 @@ fn publisher_from_state(state: windows_sys::Win32::Foundation::HANDLE) -> Publis
         }
         let mut metadata = PublisherMetadata {
             timestamp_present: Some((*signer).csCounterSigners > 0),
+            trusted_timestamp_present: if (*signer).csCounterSigners == 0 {
+                Some(false)
+            } else {
+                None
+            },
             ..PublisherMetadata::default()
         };
+        if !(*signer).psSigner.is_null() {
+            let attrs = &(*(*signer).psSigner).AuthAttrs;
+            if (1..=32).contains(&attrs.cAttr) && !attrs.rgAttr.is_null() {
+                let attr = CertFindAttribute(szOID_RSA_signingTime, attrs.cAttr, attrs.rgAttr);
+                if !attr.is_null() && (*attr).cValue == 1 && !(*attr).rgValue.is_null() {
+                    let blob = &*(*attr).rgValue;
+                    if !blob.pbData.is_null() && (1..=32).contains(&blob.cbData) {
+                        metadata.signing_time = parse_signing_time_der(std::slice::from_raw_parts(
+                            blob.pbData,
+                            blob.cbData as usize,
+                        ));
+                    }
+                }
+            }
+        }
+        // A present countersigner alone is NOT a trusted timestamp. Require Windows' verified
+        // countersigner and its cached trusted chain; otherwise retain explicit unknown (None).
+        if (*signer).csCounterSigners > 0 {
+            let counter = WTHelperGetProvSignerFromChain(provider, 0, 1, 0);
+            if !counter.is_null()
+                && (*counter).dwError == 0
+                && !(*counter).pChainContext.is_null()
+                && (*(*counter).pChainContext).TrustStatus.dwErrorStatus == 0
+            {
+                metadata.trusted_timestamp_present = Some(true);
+            }
+        }
         if (*signer).csCertChain == 0 {
             return metadata;
         }
@@ -1346,6 +1479,50 @@ fn publisher_from_state(state: windows_sys::Win32::Foundation::HANDLE) -> Publis
     }
 }
 
+/// Strict authenticated PKCS#9 signingTime DER, not sftVerifyAsOf or a trusted TSA time.
+/// Accept UTC Zulu seconds only; malformed/ambiguous/trailing data fails closed.
+#[cfg(any(windows, test))]
+fn parse_signing_time_der(der: &[u8]) -> Option<String> {
+    let (tag, body) = (*der.first()?, der.get(2..)?);
+    if usize::from(*der.get(1)?) != body.len() || body.last() != Some(&b'Z') {
+        return None;
+    }
+    let digits = body.get(..body.len().checked_sub(1)?)?;
+    if !digits.iter().all(u8::is_ascii_digit) {
+        return None;
+    }
+    let number = |range: std::ops::Range<usize>| -> Option<u32> {
+        std::str::from_utf8(digits.get(range)?).ok()?.parse().ok()
+    };
+    let (year, offset) = match (tag, digits.len()) {
+        (0x17, 12) => {
+            let y = number(0..2)?;
+            (if y >= 50 { 1900 + y } else { 2000 + y }, 2)
+        }
+        (0x18, 14) => (number(0..4)?, 4),
+        _ => return None,
+    };
+    let month = number(offset..offset + 2)?;
+    let day = number(offset + 2..offset + 4)?;
+    let hour = number(offset + 4..offset + 6)?;
+    let minute = number(offset + 6..offset + 8)?;
+    let second = number(offset + 8..offset + 10)?;
+    let leap = year.is_multiple_of(4) && (!year.is_multiple_of(100) || year.is_multiple_of(400));
+    let days = match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if leap => 29,
+        2 => 28,
+        _ => return None,
+    };
+    if year == 0 || day == 0 || day > days || hour > 23 || minute > 59 || second > 59 {
+        return None;
+    }
+    Some(format!(
+        "{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}Z"
+    ))
+}
+
 #[cfg(windows)]
 fn sanitize_publisher_text(value: &str) -> String {
     value
@@ -1370,12 +1547,14 @@ fn map_authenticode_result(result: i32, signature_present: bool) -> Authenticode
         )
     } else if result == TRUST_E_NOSIGNATURE && !signature_present {
         (AuthenticodeStatus::Unsigned, AuthenticodeStatus::Unsigned)
+    } else if result == CERT_E_UNTRUSTEDROOT {
+        (
+            AuthenticodeStatus::Indeterminate,
+            AuthenticodeStatus::TrustChainUntrusted,
+        )
     } else if matches!(
         result,
-        CERT_E_UNTRUSTEDROOT
-            | CERT_E_CHAINING
-            | CERT_E_REVOCATION_FAILURE
-            | CRYPT_E_REVOCATION_OFFLINE
+        CERT_E_CHAINING | CERT_E_REVOCATION_FAILURE | CRYPT_E_REVOCATION_OFFLINE
     ) {
         (
             AuthenticodeStatus::Indeterminate,
@@ -1925,7 +2104,20 @@ mod tests {
             valid.trust_chain_status,
             AuthenticodeStatus::TrustChainValidOffline
         );
-        for status in [CERT_E_UNTRUSTEDROOT, CRYPT_E_REVOCATION_OFFLINE] {
+        let untrusted = map_authenticode_result(CERT_E_UNTRUSTEDROOT, true);
+        assert_eq!(
+            untrusted.trust_chain_status,
+            AuthenticodeStatus::TrustChainUntrusted
+        );
+        assert_eq!(
+            untrusted.cryptographic_status,
+            AuthenticodeStatus::Indeterminate
+        );
+        for status in [
+            CRYPT_E_REVOCATION_OFFLINE,
+            windows_sys::Win32::Foundation::CERT_E_CHAINING,
+            windows_sys::Win32::Foundation::CERT_E_REVOCATION_FAILURE,
+        ] {
             let unavailable = map_authenticode_result(status, true);
             assert_eq!(
                 unavailable.cryptographic_status,
@@ -1954,6 +2146,140 @@ mod tests {
         let unsigned = map_authenticode_result(TRUST_E_NOSIGNATURE, false);
         assert!(!unsigned.signature_present);
         assert_eq!(unsigned.cryptographic_status, AuthenticodeStatus::Unsigned);
+    }
+
+    #[test]
+    fn pe_section_data_bounds_and_deterministic_mutations_never_panic() {
+        let mut bytes = minimal_pe(false);
+        let section = 0x98 + 0xf0;
+        bytes[section + 20..section + 24].copy_from_slice(&u32::MAX.to_le_bytes());
+        assert_eq!(parse_pe(&bytes), Err(PeError::SectionDataOutsideFile));
+        let mut state = 0x4ed2_0971_u32;
+        for case in 0..4096 {
+            let mut bytes = minimal_pe(false);
+            for _ in 0..8 {
+                state ^= state << 13;
+                state ^= state >> 17;
+                state ^= state << 5;
+                let at = state as usize % bytes.len();
+                bytes[at] = (state >> 8) as u8;
+            }
+            if case % 2 == 0 {
+                bytes.truncate(case % 512);
+            }
+            assert!(
+                std::panic::catch_unwind(|| parse_pe(&bytes)).is_ok(),
+                "case {case}"
+            );
+        }
+    }
+
+    #[test]
+    fn signing_time_der_is_strict_and_not_a_trusted_timestamp() {
+        assert_eq!(
+            parse_signing_time_der(b"\x17\x0d260902120304Z").as_deref(),
+            Some("2026-09-02T12:03:04Z")
+        );
+        assert_eq!(
+            parse_signing_time_der(b"\x18\x0f20500228120304Z").as_deref(),
+            Some("2050-02-28T12:03:04Z")
+        );
+        assert_eq!(
+            parse_signing_time_der(b"\x17\x0d500101000000Z").as_deref(),
+            Some("1950-01-01T00:00:00Z")
+        );
+        for invalid in [
+            b"".as_slice(),
+            b"\x17\x0d260229120304Z",
+            b"\x17\x0d260902240304Z",
+            b"\x17\x0d260902120360Z",
+            b"\x17\x0d260902120304Zx",
+            b"\x17\x0d260902120304+",
+            b"\x17\x0d26a902120304Z",
+        ] {
+            assert_eq!(parse_signing_time_der(invalid), None);
+        }
+        for len in 0..15 {
+            assert_eq!(
+                parse_signing_time_der(&b"\x17\x0d260902120304Z"[..len]),
+                None
+            );
+        }
+        assert_eq!(PublisherMetadata::default().signing_time, None);
+        assert_eq!(PublisherMetadata::default().trusted_timestamp_present, None);
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn real_offline_authenticode_positive_tamper_and_malformed_fixture() {
+        // Public-only inert PE generated by Microsoft SignTool /dg + ephemeral RSA + /di.
+        // No private key/PFX, store insertion, network or PE execution occurs in this test.
+        let hex = include_str!("../tests/fixtures/level2/signed-test-only.hex");
+        let digits = hex
+            .chars()
+            .filter(|c| !c.is_ascii_whitespace())
+            .collect::<String>();
+        assert!(digits.len().is_multiple_of(2));
+        let mut bytes = digits
+            .as_bytes()
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap())
+            .collect::<Vec<_>>();
+        let temp = Temp::new();
+        let path = temp.file("signed-synthetic.bin", &bytes);
+        let result = analyze_authorized_file(&authorized(&path), || false).unwrap();
+        assert_eq!(
+            result.hashes.sha256,
+            "2fc5b08550136239e42793ede57b79ebffe342da05b949ba17728c18133d22b5"
+        );
+        let auth = result.authenticode;
+        assert!(auth.signature_present);
+        assert_eq!(
+            auth.cryptographic_status,
+            AuthenticodeStatus::SignedValidOffline,
+            "{auth:?}"
+        );
+        assert_eq!(
+            auth.trust_chain_status,
+            AuthenticodeStatus::TrustChainUntrusted
+        );
+        assert_eq!(
+            auth.publisher.subject.as_deref(),
+            Some("EDY VERDICT AUTHENTICODE TEST ONLY")
+        );
+        assert_eq!(auth.publisher.timestamp_present, Some(false));
+        assert_eq!(auth.publisher.trusted_timestamp_present, Some(false));
+        println!(
+            "SYNTHETIC_AUTHENTICODE={}",
+            serde_json::to_string(&auth).unwrap()
+        );
+        let pe = read_u32(&bytes, 0x3c).unwrap() as usize;
+        let optional = pe + 24;
+        let section = optional + read_u16(&bytes, pe + 20).unwrap() as usize;
+        let covered = read_u32(&bytes, section + 20).unwrap() as usize;
+        bytes[covered] ^= 1;
+        let tampered = temp.file("tampered-synthetic.bin", &bytes);
+        let result = analyze_authorized_file(&authorized(&tampered), || false).unwrap();
+        assert_eq!(
+            result.authenticode.cryptographic_status,
+            AuthenticodeStatus::SignedInvalid
+        );
+        bytes[covered] ^= 1;
+        let certificate_offset = read_u32(&bytes, optional + 112 + 32).unwrap() as usize;
+        bytes[certificate_offset + 8] = 0; // corrupt the PKCS7 SEQUENCE tag, not the PE header.
+        let malformed = temp.file("malformed-signature-synthetic.bin", &bytes);
+        let result = analyze_authorized_file(&authorized(&malformed), || false).unwrap();
+        assert!(result.authenticode.signature_present);
+        assert_ne!(
+            result.authenticode.cryptographic_status,
+            AuthenticodeStatus::SignedValidOffline
+        );
+        assert_ne!(
+            result.authenticode.cryptographic_status,
+            AuthenticodeStatus::Unsigned
+        );
     }
 
     #[test]

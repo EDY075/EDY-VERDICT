@@ -1021,12 +1021,8 @@ impl Level0Backend {
             token.request();
             return Ok(level1.progress);
         }
-        if let Ok(mut level2) = self.load_level2(&request.scan_id) {
-            level2.state = "cancellation_requested".into();
-            level2.progress.status = "cancellation_requested".into();
-            replace_level2_snapshot(&self.level2, &level2)?;
-            token.request();
-            return Ok(level2.progress);
+        if self.load_level2(&request.scan_id).is_ok() {
+            return request_level2_cancellation(&self.level2, &request.scan_id, &token);
         }
         if current.status != "cancellation_requested" {
             let mut clock = SystemClock;
@@ -1700,8 +1696,6 @@ fn replace_level2_snapshot(
     store: &Arc<Mutex<Level2SnapshotStore>>,
     scan: &Level2StoredScan,
 ) -> Result<(), SafeIpcError> {
-    let payload = serde_json::to_vec(scan)
-        .map_err(|_| SafeIpcError::new("file_storage_failed", "File scan could not be stored"))?;
     let mut store = store.lock().map_err(|_| {
         SafeIpcError::new(
             "storage_unavailable",
@@ -1711,10 +1705,70 @@ fn replace_level2_snapshot(
     let current = store
         .load(&scan.scan_id)
         .map_err(|_| SafeIpcError::new("file_storage_failed", "File scan could not be stored"))?;
+    let previous: Level2StoredScan = serde_json::from_slice(&current.payload)
+        .map_err(|_| SafeIpcError::new("file_storage_failed", "File snapshot is invalid"))?;
+    let next = resolve_level2_write(&previous, scan);
+    let payload = serde_json::to_vec(&next)
+        .map_err(|_| SafeIpcError::new("file_storage_failed", "File scan could not be stored"))?;
     store
         .replace(&scan.scan_id, current.revision, &payload)
         .map_err(|_| SafeIpcError::new("file_storage_failed", "File scan could not be stored"))?;
     Ok(())
+}
+
+fn resolve_level2_write(
+    current: &Level2StoredScan,
+    proposed: &Level2StoredScan,
+) -> Level2StoredScan {
+    // Terminal snapshots are immutable. This decision is made under the SAME store lock
+    // as revision read + replacement, so late worker/cancel writes cannot resurrect results.
+    if matches!(
+        current.state.as_str(),
+        "partial" | "completed" | "failed" | "cancelled"
+    ) {
+        return current.clone();
+    }
+    let mut next = proposed.clone();
+    if current.state == "cancellation_requested" {
+        next.analysis = None;
+        next.state = "cancelled".into();
+        next.progress.status = "cancelled".into();
+        next.progress.phase = "cancelled".into();
+        next.progress.percent = None;
+        next.progress.current_engine = None;
+        next.terminal_error = Some("CANCELLED".into());
+    }
+    next
+}
+
+fn request_level2_cancellation(
+    store: &Arc<Mutex<Level2SnapshotStore>>,
+    scan_id: &str,
+    token: &CancellationToken,
+) -> Result<ScanProgressView, SafeIpcError> {
+    let failure = || SafeIpcError::new("cancel_unavailable", "Cancellation could not be persisted");
+    let mut store = store.lock().map_err(|_| failure())?;
+    let blob = store.load(scan_id).map_err(|_| failure())?;
+    let mut current: Level2StoredScan =
+        serde_json::from_slice(&blob.payload).map_err(|_| failure())?;
+    if matches!(
+        current.state.as_str(),
+        "partial" | "completed" | "failed" | "cancelled"
+    ) {
+        return Err(SafeIpcError::new(
+            "scan_not_cancellable",
+            "Scan is already terminal",
+        ));
+    }
+    current.state = "cancellation_requested".into();
+    current.progress.status = "cancellation_requested".into();
+    current.analysis = None;
+    let payload = serde_json::to_vec(&current).map_err(|_| failure())?;
+    store
+        .replace(scan_id, blob.revision, &payload)
+        .map_err(|_| failure())?;
+    token.request();
+    Ok(current.progress)
 }
 
 fn parse_scan_id(value: &str) -> Result<ScanId, SafeIpcError> {
@@ -2750,6 +2804,74 @@ mod tests {
                 assert!(!report.json.contains("MZ malformed synthetic fixture"));
             }
         }
+    }
+
+    #[test]
+    fn level2_cancel_and_worker_commit_are_serialized_and_terminal_is_immutable() {
+        let (temp, backend) = backend();
+        let path = temp.0.join("cancel-commit-race.txt");
+        std::fs::write(&path, b"synthetic cancellation race evidence").unwrap();
+        let preview = backend
+            .inspect_file_target(InspectFileTargetRequest {
+                path: display_test_path(&path),
+            })
+            .unwrap();
+        let authorization = backend
+            .authorize_file_target(AuthorizeFileTargetRequest {
+                preview_id: preview.preview_id,
+                confirmed: true,
+            })
+            .unwrap();
+        let started = backend
+            .create_file_scan(CreateFileScanRequest {
+                authorization_id: authorization.authorization_id,
+                confirmed: true,
+            })
+            .unwrap();
+        let completed = wait_terminal(&backend, &started.id);
+        assert_eq!(completed.state, "partial");
+        let mut late_worker = backend.load_level2(&started.id).unwrap();
+        assert!(late_worker.analysis.is_some());
+        let original_id = started.id;
+        let token = CancellationToken::default();
+        // Commit wins: late cancellation cannot change a committed terminal snapshot.
+        assert_eq!(
+            request_level2_cancellation(&backend.level2, &original_id, &token)
+                .unwrap_err()
+                .code,
+            "scan_not_cancellable"
+        );
+        assert!(!token.is_requested());
+        late_worker.scan_id = new_uuid_v7();
+        late_worker.target_id = new_uuid_v7();
+        late_worker.authorization_id = new_uuid_v7();
+        late_worker.progress.scan_id = late_worker.scan_id.clone();
+        let mut preparing = late_worker.clone();
+        preparing.state = "running".into();
+        preparing.progress.status = "running".into();
+        preparing.analysis = None;
+        backend
+            .level2
+            .lock()
+            .unwrap()
+            .create(
+                &preparing.scan_id,
+                &preparing.target_id,
+                &preparing.authorization_id,
+                &preparing.canonical_target_id,
+                &serde_json::to_vec(&preparing).unwrap(),
+            )
+            .unwrap();
+        // Cancellation wins: a stale worker with an actual verdict may not publish it.
+        request_level2_cancellation(&backend.level2, &preparing.scan_id, &token).unwrap();
+        assert!(token.is_requested());
+        replace_level2_snapshot(&backend.level2, &late_worker).unwrap();
+        let cancelled = backend.load_level2(&preparing.scan_id).unwrap();
+        assert_eq!(cancelled.state, "cancelled");
+        assert!(cancelled.analysis.is_none());
+        assert_eq!(cancelled.terminal_error.as_deref(), Some("CANCELLED"));
+        replace_level2_snapshot(&backend.level2, &late_worker).unwrap();
+        assert_eq!(backend.load_level2(&preparing.scan_id).unwrap(), cancelled);
     }
 
     #[test]

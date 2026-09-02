@@ -63,7 +63,8 @@ fn get_foundation_status(
     ipc_guard(&window)?;
     if state.smoke && !state.smoke_received.swap(true, Ordering::SeqCst) {
         println!(
-            "FOUNDATION_IPC_RECEIVED core=ready storage=ready ipc=restricted schema_version=1"
+            "FOUNDATION_IPC_RECEIVED core=ready storage=ready ipc=restricted schema_version={}",
+            state.status.schema_version
         );
         // Only the explicit technical smoke launch exits. No IPC exit argument exists.
         std::thread::spawn(move || {
@@ -302,23 +303,48 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .skip(1)
         .any(|arg| arg == "--foundation-smoke");
     let root = project_root()?;
-    let data = local_directory(&root, "data")?;
+    // Explicit debug-only native QA, not a production setting or IPC surface. Real handlers,
+    // Isolation and React remain unchanged; only local data isolation and viewport differ.
+    let native_qa_size: Option<(f64, f64)> = if cfg!(debug_assertions) {
+        std::env::args().find_map(|arg| match arg.as_str() {
+            "--level2-native-qa=1366x768" => Some((1366.0, 768.0)),
+            "--level2-native-qa=1920x1080" => Some((1920.0, 1080.0)),
+            "--level2-native-qa=2560x1440" => Some((2560.0, 1440.0)),
+            _ => None,
+        })
+    } else {
+        None
+    };
+    let data = local_directory(
+        &root,
+        if native_qa_size.is_some() {
+            "level2-native-qa-data"
+        } else {
+            "data"
+        },
+    )?;
     let database = data.join("foundation.sqlite3");
     reject_link(&database)?;
     let storage = Storage::open(&database)?;
-    let schema_version = storage.schema_version()?;
-    if schema_version != 1 {
-        return Err(std::io::Error::other("Unexpected foundation storage schema").into());
-    }
+    // Storage::open verifies and migrates to its current schema (Level 0 introduced v2).
+    // Do not reject that valid database with the obsolete pre-Level-0 v1 literal.
     drop(storage);
     let backend = Level0Backend::open(&root, &data.join("level0.sqlite3"))?;
-    let webview_data = local_directory(&root, "webview2")?;
+    let webview_data = local_directory(
+        &root,
+        if native_qa_size.is_some() {
+            "level2-native-qa-webview2"
+        } else {
+            "webview2"
+        },
+    )?;
     let state = FoundationState {
         status: FoundationStatus {
             core: "ready",
             storage: "ready",
             ipc: "restricted",
-            schema_version,
+            // Frozen infrastructure wire envelope v1, NOT SQLite PRAGMA user_version.
+            schema_version: 1,
         },
         backend,
         smoke,
@@ -354,7 +380,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 .iter()
                 .find(|window| window.label == "main")
                 .ok_or_else(|| std::io::Error::other("Foundation window configuration absent"))?;
-            WebviewWindowBuilder::from_config(app, config)?
+            let builder = WebviewWindowBuilder::from_config(app, config)?;
+            let builder = if let Some((width, height)) = native_qa_size {
+                builder.inner_size(width, height)
+            } else {
+                builder
+            };
+            let window = builder
                 .data_directory(webview_data)
                 .devtools(false)
                 .browser_extensions_enabled(false)
@@ -363,6 +395,15 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny)
                 .on_download(|_, _| false)
                 .build()?;
+            if native_qa_size.is_some() {
+                let size = window.inner_size()?;
+                println!(
+                    "NATIVE_QA_VIEWPORT physical_width={} physical_height={} scale={}",
+                    size.width,
+                    size.height,
+                    window.scale_factor()?
+                );
+            }
             if smoke {
                 let handle = app.handle().clone();
                 std::thread::spawn(move || {
