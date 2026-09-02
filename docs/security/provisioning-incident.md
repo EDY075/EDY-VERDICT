@@ -50,3 +50,19 @@ Rust inventory and QA commands must never execute inside the repository with a g
 unset Rustup/Cargo context. `scripts/Assert-ProjectRustEnvironment.ps1` enforces the approved
 project-local homes for repository execution and permits global inventory only from a neutral
 directory. `scripts/Enter-Project.ps1` invokes this gate after establishing the local context.
+
+## Second recurrence — Level 1 final validation
+
+The exact triggering command was `rustup toolchain list`, invoked by the final-validation
+PowerShell command block after it removed `RUSTUP_HOME` and `CARGO_HOME`. Its parent was the
+Codex `exec_command` PowerShell process, its working directory was the repository root, and
+the environment source therefore fell back to the user-global Rustup defaults. The repository
+`rust-toolchain.toml` override caused Rustup to provision `1.98.0-x86_64-pc-windows-msvc`
+globally. The extra toolchain was removed with the official uninstall operation and `stable`
+remained the default.
+
+The permanent control is now executable rather than documentary: all routine project Rust QA
+uses `scripts/Invoke-ProjectRust.ps1`, which accepts only a closed action list and resolves
+project-local binaries by absolute path. Global inventory uses the separate
+`scripts/Invoke-GlobalRustInventory.ps1`, which refuses repository or nested-repository working
+directories and requires an explicit global-inventory flag with no inherited Rust homes.

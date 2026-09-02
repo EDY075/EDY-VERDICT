@@ -8,14 +8,14 @@ function Add-Tool([string]$Name,[string]$Requested,[string]$Version,[string]$Fil
     $Tools.Add([pscustomobject]@{tool=$Name;requested_version=$Requested;installed_version=$Version;source=$Source;license=$License;status=$Status;location=$Location;sha256=$Digest})
 }
 $RustBin=Join-Path $env:RUSTUP_HOME 'toolchains/1.98.0-x86_64-pc-windows-msvc/bin'
-Add-Tool 'Rust' '1.98.0' (& rustc --version) (Join-Path $RustBin 'rustc.exe') 'https://static.rust-lang.org/dist/channel-rust-1.98.0.toml' 'MIT OR Apache-2.0' 'READY_PROJECT_LOCAL'
-Add-Tool 'Cargo' '1.98.0' (& cargo --version) (Join-Path $RustBin 'cargo.exe') 'https://static.rust-lang.org/' 'MIT OR Apache-2.0' 'READY_PROJECT_LOCAL'
-Add-Tool 'rustfmt' 'component of Rust 1.98.0' (& rustfmt --version) (Join-Path $RustBin 'rustfmt.exe') 'https://static.rust-lang.org/' 'MIT OR Apache-2.0' 'READY_PROJECT_LOCAL'
-Add-Tool 'clippy' 'component of Rust 1.98.0' (& cargo clippy --version) (Join-Path $RustBin 'cargo-clippy.exe') 'https://static.rust-lang.org/' 'MIT OR Apache-2.0' 'READY_PROJECT_LOCAL'
+Add-Tool 'Rust' '1.98.0' (& scripts/Invoke-ProjectRust.ps1 -Action RustcVersion) (Join-Path $RustBin 'rustc.exe') 'https://static.rust-lang.org/dist/channel-rust-1.98.0.toml' 'MIT OR Apache-2.0' 'READY_PROJECT_LOCAL'
+Add-Tool 'Cargo' '1.98.0' (& scripts/Invoke-ProjectRust.ps1 -Action CargoVersion) (Join-Path $RustBin 'cargo.exe') 'https://static.rust-lang.org/' 'MIT OR Apache-2.0' 'READY_PROJECT_LOCAL'
+Add-Tool 'rustfmt' 'component of Rust 1.98.0' (& scripts/Invoke-ProjectRust.ps1 -Action RustfmtVersion) (Join-Path $RustBin 'rustfmt.exe') 'https://static.rust-lang.org/' 'MIT OR Apache-2.0' 'READY_PROJECT_LOCAL'
+Add-Tool 'clippy' 'component of Rust 1.98.0' (& scripts/Invoke-ProjectRust.ps1 -Action ClippyVersion) (Join-Path $RustBin 'cargo-clippy.exe') 'https://static.rust-lang.org/' 'MIT OR Apache-2.0' 'READY_PROJECT_LOCAL'
 Add-Tool 'Node' '24.20.0' (& node --version) (Join-Path $ProjectRoot '.local/toolchains/node-v24.20.0-win-x64/node.exe') 'https://nodejs.org/dist/v24.20.0/' 'MIT and bundled notices' 'READY_DEV_ONLY_AUTHENTICODE_VALID'
 Add-Tool 'pnpm' '11.25.0' (& pnpm --version) (Join-Path $ProjectRoot '.local/downloads/pnpm-11.25.0.tgz') 'https://registry.npmjs.org/pnpm/11.25.0' 'MIT' 'READY_PROJECT_LOCAL_SHA512_VERIFIED'
-Add-Tool 'cargo-audit' '0.22.2' (& cargo audit --version) (Join-Path $ProjectRoot '.local/audit-tools/bin/cargo-audit.exe') 'https://crates.io/crates/cargo-audit/0.22.2' 'Apache-2.0 OR MIT' 'READY_DEV_ONLY_SOURCE_BUILD_LOCKED'
-Add-Tool 'cargo-deny' '0.20.2' (& cargo deny --version) (Join-Path $ProjectRoot '.local/audit-tools/bin/cargo-deny.exe') 'https://crates.io/crates/cargo-deny/0.20.2' 'MIT OR Apache-2.0' 'READY_DEV_ONLY_SOURCE_BUILD_LOCKED'
+Add-Tool 'cargo-audit' '0.22.2' (& scripts/Invoke-ProjectRust.ps1 -Action CargoAuditVersion) (Join-Path $ProjectRoot '.local/audit-tools/bin/cargo-audit.exe') 'https://crates.io/crates/cargo-audit/0.22.2' 'Apache-2.0 OR MIT' 'READY_DEV_ONLY_SOURCE_BUILD_LOCKED'
+Add-Tool 'cargo-deny' '0.20.2' (& scripts/Invoke-ProjectRust.ps1 -Action CargoDenyVersion) (Join-Path $ProjectRoot '.local/audit-tools/bin/cargo-deny.exe') 'https://crates.io/crates/cargo-deny/0.20.2' 'MIT OR Apache-2.0' 'READY_DEV_ONLY_SOURCE_BUILD_LOCKED'
 $Compiler=(Get-Command cl.exe).Source
 Add-Tool 'MSVC' 'existing compatible MSVC x64' (Get-Item -LiteralPath $Compiler).VersionInfo.FileVersion $Compiler 'https://visualstudio.microsoft.com/visual-cpp-build-tools/' 'Microsoft license' 'REUSED_NO_INSTALL'
 Add-Tool 'Git' 'existing' (& git --version) (Get-Command git.exe).Source 'https://git-scm.com/' 'GPL-2.0-only' 'REUSED_NO_INSTALL'

@@ -12,14 +12,14 @@ function Gate([string]$Name,[scriptblock]$Command) {
     $Results.Add([pscustomobject]@{check=$Name;exit_code=$code;result=if($code -eq 0){'PASS'}else{'FAIL'}})
     Write-Output "$Name exit=$code"
 }
-Gate 'rust-tests-infrastructure' { cargo test --workspace --exclude edy-desktop --locked }
-Gate 'rust-clippy-infrastructure' { cargo clippy --workspace --exclude edy-desktop --all-targets --locked -- -D warnings }
-Gate 'rust-fmt-all' { cargo fmt --all -- --check }
-if ($RunAuthorizedFakeCredentialTest) { Gate 'credential-fake-only' { cargo test -p edy-storage --locked secrets::tests -- --ignored --test-threads=1 } }
-Gate 'cargo-audit' { cargo audit }
-& cargo audit --json 2> (Join-Path $Evidence 'cargo-audit-json.stderr.log') | Out-File -LiteralPath (Join-Path $Evidence 'cargo-audit.json') -Encoding utf8
-Gate 'cargo-deny' { cargo deny check }
-& cargo deny --format json check 2>&1 | Out-File -LiteralPath (Join-Path $Evidence 'cargo-deny.jsonl') -Encoding utf8
+Gate 'rust-tests-workspace' { & scripts/Invoke-ProjectRust.ps1 -Action WorkspaceTest }
+Gate 'rust-clippy-workspace' { & scripts/Invoke-ProjectRust.ps1 -Action WorkspaceClippy }
+Gate 'rust-fmt-all' { & scripts/Invoke-ProjectRust.ps1 -Action FmtCheck }
+if ($RunAuthorizedFakeCredentialTest) { Gate 'credential-fake-only' { & scripts/Invoke-ProjectRust.ps1 -Action CredentialFakeTest } }
+Gate 'cargo-audit' { & scripts/Invoke-ProjectRust.ps1 -Action CargoAudit }
+& scripts/Invoke-ProjectRust.ps1 -Action CargoAuditJson 2> (Join-Path $Evidence 'cargo-audit-json.stderr.log') | Out-File -LiteralPath (Join-Path $Evidence 'cargo-audit.json') -Encoding utf8
+Gate 'cargo-deny' { & scripts/Invoke-ProjectRust.ps1 -Action CargoDeny }
+& scripts/Invoke-ProjectRust.ps1 -Action CargoDenyJson 2>&1 | Out-File -LiteralPath (Join-Path $Evidence 'cargo-deny.jsonl') -Encoding utf8
 Gate 'pnpm-install-frozen' { pnpm install --frozen-lockfile }
 Gate 'pnpm-typecheck' { pnpm typecheck }
 Gate 'pnpm-lint' { pnpm lint }
