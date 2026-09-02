@@ -1,11 +1,11 @@
-//! Fixture-only parsers for pinned external engine output.
+//! Safe invocation planning and fixture-only parsers for pinned engine output.
 //!
-//! This module does not construct commands or execute engines. Production execution
-//! remains behind the process, manifest, receipt and network-enforcement gates.
+//! Invocation planning returns arguments only; it never starts a process. Production
+//! execution remains behind the process, manifest, receipt and network-enforcement gates.
 
 use crate::manifest::{EngineManifest, EngineTrustPolicy};
 use crate::receipt::{EngineReceipt, EngineState, IntegrityObservation, verify_execution_ready};
-use edy_core::{Confidence, Severity};
+use edy_core::{Confidence, Severity, Target, TargetKind, TargetLocator};
 use serde::Serialize;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -91,6 +91,9 @@ pub enum AdapterError {
     InvalidOutput,
     UnsupportedSchema,
     ExitMismatch,
+    UnsupportedTarget,
+    InvalidArgument,
+    MissingRules,
 }
 
 impl fmt::Display for AdapterError {
@@ -105,6 +108,9 @@ impl fmt::Display for AdapterError {
             Self::InvalidOutput => "engine output is invalid",
             Self::UnsupportedSchema => "engine output schema or version is unsupported",
             Self::ExitMismatch => "engine exit code disagrees with parsed output",
+            Self::UnsupportedTarget => "target kind is not supported by this engine",
+            Self::InvalidArgument => "engine argument is invalid or unsafe",
+            Self::MissingRules => "YARA-X requires an approved rules path",
         })
     }
 }
@@ -114,6 +120,11 @@ impl std::error::Error for AdapterError {}
 pub trait EngineAdapter {
     fn engine_id(&self) -> &'static str;
     fn engine_version(&self) -> &'static str;
+    fn supported_targets(&self) -> &'static [TargetKind];
+    fn prepare_arguments(
+        &self,
+        preparation: &AdapterPreparation<'_>,
+    ) -> Result<Vec<String>, AdapterError>;
     fn parse_value(&self, value: &Value) -> Result<Vec<NormalizedObservation>, AdapterError>;
     fn classify_exit(
         &self,
@@ -150,6 +161,14 @@ pub trait EngineAdapter {
     }
 }
 
+/// Inputs for pure argument preparation. The executable is deliberately excluded:
+/// it must come from a verified manifest and receipt at the execution boundary.
+pub struct AdapterPreparation<'a> {
+    pub target: &'a Target,
+    /// Approved local rules file/directory. Used only by YARA-X.
+    pub yara_rules_path: Option<&'a str>,
+}
+
 pub struct YaraXAdapter;
 pub struct GitleaksAdapter;
 pub struct TrivyAdapter;
@@ -162,6 +181,34 @@ impl EngineAdapter for YaraXAdapter {
 
     fn engine_version(&self) -> &'static str {
         "1.20.0"
+    }
+
+    fn supported_targets(&self) -> &'static [TargetKind] {
+        const TARGETS: &[TargetKind] =
+            &[TargetKind::Repository, TargetKind::File, TargetKind::Binary];
+        TARGETS
+    }
+
+    fn prepare_arguments(
+        &self,
+        preparation: &AdapterPreparation<'_>,
+    ) -> Result<Vec<String>, AdapterError> {
+        let target = checked_target_path(self, preparation.target)?;
+        let rules = checked_path_argument(
+            preparation
+                .yara_rules_path
+                .ok_or(AdapterError::MissingRules)?,
+        )?;
+        let mut arguments = vec![
+            "scan".to_owned(),
+            "--output-format=json".to_owned(),
+            "--no-mmap".to_owned(),
+        ];
+        if preparation.target.kind() == TargetKind::Repository {
+            arguments.push("--recursive".to_owned());
+        }
+        arguments.extend([rules.to_owned(), target.to_owned()]);
+        Ok(arguments)
     }
 
     fn parse_value(&self, value: &Value) -> Result<Vec<NormalizedObservation>, AdapterError> {
@@ -210,6 +257,29 @@ impl EngineAdapter for GitleaksAdapter {
 
     fn engine_version(&self) -> &'static str {
         "8.30.0"
+    }
+
+    fn supported_targets(&self) -> &'static [TargetKind] {
+        const TARGETS: &[TargetKind] = &[TargetKind::Repository, TargetKind::File];
+        TARGETS
+    }
+
+    fn prepare_arguments(
+        &self,
+        preparation: &AdapterPreparation<'_>,
+    ) -> Result<Vec<String>, AdapterError> {
+        reject_unused_rules(preparation)?;
+        let target = checked_target_path(self, preparation.target)?;
+        Ok(vec![
+            "dir".to_owned(),
+            "--no-banner".to_owned(),
+            "--no-color".to_owned(),
+            "--redact=100".to_owned(),
+            "--report-format=json".to_owned(),
+            "--report-path=-".to_owned(),
+            "--exit-code=1".to_owned(),
+            target.to_owned(),
+        ])
     }
 
     fn parse_value(&self, value: &Value) -> Result<Vec<NormalizedObservation>, AdapterError> {
@@ -263,6 +333,27 @@ impl EngineAdapter for TrivyAdapter {
         "0.74.0"
     }
 
+    fn supported_targets(&self) -> &'static [TargetKind] {
+        const TARGETS: &[TargetKind] = &[TargetKind::Repository, TargetKind::File];
+        TARGETS
+    }
+
+    fn prepare_arguments(
+        &self,
+        preparation: &AdapterPreparation<'_>,
+    ) -> Result<Vec<String>, AdapterError> {
+        reject_unused_rules(preparation)?;
+        let target = checked_target_path(self, preparation.target)?;
+        Ok(vec![
+            "filesystem".to_owned(),
+            "--format=json".to_owned(),
+            "--offline-scan".to_owned(),
+            "--skip-db-update".to_owned(),
+            "--scanners=vuln".to_owned(),
+            target.to_owned(),
+        ])
+    }
+
     fn parse_value(&self, value: &Value) -> Result<Vec<NormalizedObservation>, AdapterError> {
         let root = object(value)?;
         if root.get("SchemaVersion").and_then(Value::as_u64) != Some(2) {
@@ -314,6 +405,29 @@ impl EngineAdapter for OsvScannerAdapter {
 
     fn engine_version(&self) -> &'static str {
         "2.5.1"
+    }
+
+    fn supported_targets(&self) -> &'static [TargetKind] {
+        const TARGETS: &[TargetKind] = &[TargetKind::Repository, TargetKind::File];
+        TARGETS
+    }
+
+    fn prepare_arguments(
+        &self,
+        preparation: &AdapterPreparation<'_>,
+    ) -> Result<Vec<String>, AdapterError> {
+        reject_unused_rules(preparation)?;
+        let target = checked_target_path(self, preparation.target)?;
+        let mut arguments = vec![
+            "scan".to_owned(),
+            "--format=json".to_owned(),
+            "--offline".to_owned(),
+        ];
+        if preparation.target.kind() == TargetKind::Repository {
+            arguments.push("--recursive".to_owned());
+        }
+        arguments.push(target.to_owned());
+        Ok(arguments)
     }
 
     fn parse_value(&self, value: &Value) -> Result<Vec<NormalizedObservation>, AdapterError> {
@@ -375,6 +489,41 @@ impl EngineAdapter for OsvScannerAdapter {
             (0 | 1, _) => Err(AdapterError::ExitMismatch),
             _ => Err(AdapterError::ProcessFailed),
         }
+    }
+}
+
+fn checked_target_path<'a, A: EngineAdapter + ?Sized>(
+    adapter: &A,
+    target: &'a Target,
+) -> Result<&'a str, AdapterError> {
+    if !adapter.supported_targets().contains(&target.kind()) {
+        return Err(AdapterError::UnsupportedTarget);
+    }
+    match target.locator() {
+        TargetLocator::LocalPath(path) => checked_path_argument(path),
+        TargetLocator::InstalledApplicationId(_) | TargetLocator::HttpsUrl(_) => {
+            Err(AdapterError::UnsupportedTarget)
+        }
+    }
+}
+
+fn checked_path_argument(value: &str) -> Result<&str, AdapterError> {
+    if value.is_empty()
+        || value.len() > 4096
+        || value.starts_with('-')
+        || value.trim() != value
+        || value.chars().any(char::is_control)
+    {
+        return Err(AdapterError::InvalidArgument);
+    }
+    Ok(value)
+}
+
+fn reject_unused_rules(preparation: &AdapterPreparation<'_>) -> Result<(), AdapterError> {
+    if preparation.yara_rules_path.is_some() {
+        Err(AdapterError::InvalidArgument)
+    } else {
+        Ok(())
     }
 }
 

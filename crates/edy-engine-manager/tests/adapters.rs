@@ -1,3 +1,4 @@
+use edy_core::{Target, TargetId, TargetKind, TargetLocator};
 use edy_engine_manager::adapters::*;
 
 fn output(exit_code: u32, stdout: &[u8]) -> CapturedOutput<'_> {
@@ -6,6 +7,15 @@ fn output(exit_code: u32, stdout: &[u8]) -> CapturedOutput<'_> {
         stdout,
         stderr: &[],
     }
+}
+
+fn local_target(kind: TargetKind, path: &str) -> Target {
+    Target::new(
+        TargetId::new("018f4c2a-1d3b-7abc-8def-0123456789ac").unwrap(),
+        kind,
+        TargetLocator::new_local_path(path).unwrap(),
+    )
+    .unwrap()
 }
 
 const YARA: &[u8] = br#"{
@@ -173,4 +183,130 @@ fn absolute_locations_are_display_redacted() {
         "<target>/secret.txt:9"
     );
     assert!(!serde_json::to_string(&report).unwrap().contains("person"));
+}
+
+#[test]
+fn adapters_declare_their_supported_targets() {
+    assert_eq!(
+        YaraXAdapter.supported_targets(),
+        &[TargetKind::Repository, TargetKind::File, TargetKind::Binary]
+    );
+    for adapter in [
+        &GitleaksAdapter as &dyn EngineAdapter,
+        &TrivyAdapter,
+        &OsvScannerAdapter,
+    ] {
+        assert_eq!(
+            adapter.supported_targets(),
+            &[TargetKind::Repository, TargetKind::File]
+        );
+    }
+}
+
+#[test]
+fn preparation_is_pure_offline_and_redacted_by_default() {
+    let repository = local_target(TargetKind::Repository, "D:/fixture/repository");
+    let yara = YaraXAdapter
+        .prepare_arguments(&AdapterPreparation {
+            target: &repository,
+            yara_rules_path: Some("D:/fixture/rules"),
+        })
+        .unwrap();
+    assert_eq!(
+        yara,
+        [
+            "scan",
+            "--output-format=json",
+            "--no-mmap",
+            "--recursive",
+            "D:/fixture/rules",
+            "D:/fixture/repository"
+        ]
+    );
+
+    let cases: [(&dyn EngineAdapter, &[&str]); 3] = [
+        (
+            &GitleaksAdapter,
+            &[
+                "dir",
+                "--no-banner",
+                "--no-color",
+                "--redact=100",
+                "--report-format=json",
+                "--report-path=-",
+                "--exit-code=1",
+                "D:/fixture/repository",
+            ],
+        ),
+        (
+            &TrivyAdapter,
+            &[
+                "filesystem",
+                "--format=json",
+                "--offline-scan",
+                "--skip-db-update",
+                "--scanners=vuln",
+                "D:/fixture/repository",
+            ],
+        ),
+        (
+            &OsvScannerAdapter,
+            &[
+                "scan",
+                "--format=json",
+                "--offline",
+                "--recursive",
+                "D:/fixture/repository",
+            ],
+        ),
+    ];
+    for (adapter, expected) in cases {
+        let actual = adapter
+            .prepare_arguments(&AdapterPreparation {
+                target: &repository,
+                yara_rules_path: None,
+            })
+            .unwrap();
+        assert_eq!(actual, expected);
+    }
+}
+
+#[test]
+fn argument_preparation_fails_closed() {
+    let file = local_target(TargetKind::File, "-untrusted-option");
+    assert_eq!(
+        TrivyAdapter.prepare_arguments(&AdapterPreparation {
+            target: &file,
+            yara_rules_path: None,
+        }),
+        Err(AdapterError::InvalidArgument)
+    );
+
+    let application = Target::new(
+        TargetId::new("018f4c2a-1d3b-7abc-8def-0123456789ad").unwrap(),
+        TargetKind::InstalledApplication,
+        TargetLocator::new_application_id("fixture.app").unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        GitleaksAdapter.prepare_arguments(&AdapterPreparation {
+            target: &application,
+            yara_rules_path: None,
+        }),
+        Err(AdapterError::UnsupportedTarget)
+    );
+    assert_eq!(
+        YaraXAdapter.prepare_arguments(&AdapterPreparation {
+            target: &local_target(TargetKind::Binary, "D:/fixture/sample.bin"),
+            yara_rules_path: None,
+        }),
+        Err(AdapterError::MissingRules)
+    );
+    assert_eq!(
+        TrivyAdapter.prepare_arguments(&AdapterPreparation {
+            target: &local_target(TargetKind::Repository, "D:/fixture/repository"),
+            yara_rules_path: Some("D:/fixture/rules"),
+        }),
+        Err(AdapterError::InvalidArgument)
+    );
 }
