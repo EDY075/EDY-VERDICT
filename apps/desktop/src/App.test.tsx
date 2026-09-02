@@ -30,4 +30,27 @@ describe("Level 0 product shell", () => {
     expect(html).not.toContain("https://");
     expect(html).not.toContain("http://");
   });
+
+  it("renders backend-provided dimensions without turning coverage into safety", () => {
+    const status = parseFoundationStatus({ core: "ready", storage: "ready", ipc: "restricted", schema_version: 1 });
+    const html = renderToStaticMarkup(<FoundationView status={status} failed={false} scans={[{
+      id: "018f4c2a-1d3b-7abc-8def-0123456789ab",
+      state: "partial",
+      verdict: "needs_review",
+      risk: "high",
+      confidence: "low",
+      coverage: { total: 4, completed: 2, failed: 1, unavailable: 1, skipped: 0 },
+    }]} />);
+    expect(html).toContain("2/4");
+    expect(html).toContain("high");
+    expect(html).toContain("low");
+    expect(html).toContain("needs_review");
+    expect(html).not.toContain("50% secure");
+  });
+
+  it("shows only a safe presentation error", () => {
+    const html = renderToStaticMarkup(<FoundationView status={null} failed error="Backend response rejected or unavailable" />);
+    expect(html).toContain("Backend response rejected or unavailable");
+    expect(html).not.toContain("stack trace");
+  });
 });
