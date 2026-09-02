@@ -25,9 +25,11 @@ use windows_sys::Win32::{
 };
 
 pub struct ProcessRequest {
+    pub approved_root: PathBuf,
     pub executable: PathBuf,
     pub sha256: String,
     pub arguments: Vec<String>,
+    pub environment: Vec<(String, String)>,
     pub working_directory: PathBuf,
     pub timeout: Duration,
     pub stdout_limit: usize,
@@ -187,7 +189,8 @@ pub fn execute(request: &ProcessRequest, cancel: &AtomicBool) -> io::Result<Proc
     if let Some(reason) = interruption(cancel, start, request.timeout) {
         return Ok(stopped_before_spawn(reason));
     }
-    if !request.executable.is_absolute()
+    if !request.approved_root.is_absolute()
+        || !request.executable.is_absolute()
         || !request.working_directory.is_absolute()
         || request.timeout.is_zero()
         || request.timeout > Duration::from_secs(600)
@@ -196,6 +199,7 @@ pub fn execute(request: &ProcessRequest, cancel: &AtomicBool) -> io::Result<Proc
         || request.stderr_limit == 0
         || request.stderr_limit > 4 * 1024 * 1024
         || request.arguments.iter().any(|a| a.contains('\0'))
+        || !safe_environment(&request.environment)
     {
         return Err(io::Error::other("Unsafe process request"));
     }
@@ -212,11 +216,30 @@ pub fn execute(request: &ProcessRequest, cancel: &AtomicBool) -> io::Result<Proc
         let root = [drive as u16, b':' as u16, b'\\' as u16, 0];
         unsafe { windows_sys::Win32::Storage::FileSystem::GetDriveTypeW(root.as_ptr()) == 3 }
     }
-    if !fixed_disk_path(&request.executable) || !fixed_disk_path(&request.working_directory) {
+    if !fixed_disk_path(&request.approved_root)
+        || !fixed_disk_path(&request.executable)
+        || !fixed_disk_path(&request.working_directory)
+    {
         return Err(io::Error::other("Local fixed disk paths required"));
     }
-    let executable = request.executable.canonicalize()?;
-    let working_directory = request.working_directory.canonicalize()?;
+    let approved_root = crate::execution::revalidate_canonical_directory(&request.approved_root)
+        .map_err(|error| io::Error::other(error.to_string()))?;
+    for (_, value) in &request.environment {
+        let directory = PathBuf::from(value);
+        let directory = crate::execution::canonical_local_directory(&directory)
+            .map_err(|error| io::Error::other(error.to_string()))?;
+        crate::execution::ensure_contained(&approved_root, &directory)
+            .map_err(|error| io::Error::other(error.to_string()))?;
+    }
+    let executable = crate::execution::revalidate_canonical_regular_file(&request.executable)
+        .map_err(|error| io::Error::other(error.to_string()))?;
+    let working_directory =
+        crate::execution::revalidate_canonical_directory(&request.working_directory)
+            .map_err(|error| io::Error::other(error.to_string()))?;
+    crate::execution::ensure_contained(&approved_root, &executable)
+        .map_err(|error| io::Error::other(error.to_string()))?;
+    crate::execution::ensure_contained(&approved_root, &working_directory)
+        .map_err(|error| io::Error::other(error.to_string()))?;
     if !fixed_disk_path(&working_directory) || !working_directory.is_dir() {
         return Err(io::Error::other(
             "Resolved working directory must be a local directory",
@@ -328,7 +351,7 @@ pub fn execute(request: &ProcessRequest, cancel: &AtomicBool) -> io::Result<Proc
     startup.StartupInfo.hStdError = err_write.0;
     startup.lpAttributeList = attributes_ptr;
     let mut info: PROCESS_INFORMATION = unsafe { zeroed() };
-    let environment = [0u16, 0u16];
+    let environment = environment_block(&request.environment)?;
     if let Some(reason) = interruption(cancel, start, request.timeout) {
         return Ok(stopped_before_spawn(reason));
     }
@@ -431,4 +454,41 @@ pub fn execute(request: &ProcessRequest, cancel: &AtomicBool) -> io::Result<Proc
         process_id: info.dwProcessId,
         job_empty: true,
     })
+}
+
+fn safe_environment(environment: &[(String, String)]) -> bool {
+    const ALLOWED: &[&str] = &["TEMP", "TMP"];
+    if environment.len() > ALLOWED.len() {
+        return false;
+    }
+    let mut keys = std::collections::BTreeSet::new();
+    environment.iter().all(|(key, value)| {
+        let canonical = key.to_ascii_uppercase();
+        ALLOWED.contains(&canonical.as_str())
+            && keys.insert(canonical)
+            && !key.is_empty()
+            && !key.contains(['=', '\0'])
+            && !value.is_empty()
+            && value.len() <= 4096
+            && !value.contains('\0')
+    })
+}
+
+fn environment_block(environment: &[(String, String)]) -> io::Result<Vec<u16>> {
+    let mut environment = environment.to_vec();
+    environment.sort_by_key(|(key, _)| key.to_ascii_uppercase());
+    let mut block = Vec::new();
+    for (key, value) in environment {
+        let item = format!("{key}={value}");
+        let encoded = wide(OsStr::new(&item))?;
+        block.extend_from_slice(&encoded);
+    }
+    if block.is_empty() {
+        block.push(0);
+    }
+    block.push(0);
+    if block.len() > 32767 {
+        return Err(io::Error::other("Environment block too long"));
+    }
+    Ok(block)
 }

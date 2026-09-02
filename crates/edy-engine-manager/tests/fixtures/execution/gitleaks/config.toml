@@ -1,0 +1,8 @@
+title = "EDY VERDICT synthetic-only Gitleaks configuration"
+
+[[rules]]
+id = "edy-synthetic-fake-token"
+description = "Intentional non-credential marker for contained testing"
+regex = '''EDY_FAKE_TEST_TOKEN_IMPOSSIBLE_[A-Z0-9]{16}'''
+secretGroup = 0
+keywords = ["EDY_FAKE_TEST_TOKEN_IMPOSSIBLE_"]

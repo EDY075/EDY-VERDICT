@@ -1,0 +1,4 @@
+EDY_BENIGN_YARA_MARKER_NON_MALICIOUS
+EDY_FAKE_TEST_TOKEN_IMPOSSIBLE_0000000000000000
+
+This file is fabricated, harmless, and contains no usable credential.

@@ -28,10 +28,15 @@ fn expired_deadline_never_launches() {
 fn request(mode: &str) -> ProcessRequest {
     let path = PathBuf::from(env!("CARGO_BIN_EXE_benign-fixture"));
     ProcessRequest {
+        approved_root: path.parent().unwrap().to_path_buf(),
         sha256: format!("{:x}", Sha256::digest(std::fs::read(&path).unwrap())),
         executable: path,
         arguments: vec![mode.into()],
-        working_directory: std::env::temp_dir(),
+        environment: Vec::new(),
+        working_directory: PathBuf::from(env!("CARGO_BIN_EXE_benign-fixture"))
+            .parent()
+            .unwrap()
+            .to_path_buf(),
         timeout: Duration::from_secs(3),
         stdout_limit: 4096,
         stderr_limit: 4096,
@@ -74,10 +79,13 @@ fn timeout_and_tree_are_killed() {
 }
 #[test]
 fn excessive_output_is_bounded() {
-    let result = execute(&request("stdout"), &AtomicBool::new(false)).unwrap();
-    assert_eq!(result.outcome, Outcome::OutputLimit);
-    assert!(result.stdout.len() <= 4096);
-    assert!(result.job_empty);
+    for mode in ["stdout", "stderr-overflow"] {
+        let result = execute(&request(mode), &AtomicBool::new(false)).unwrap();
+        assert_eq!(result.outcome, Outcome::OutputLimit);
+        assert!(result.stdout.len() <= 4096);
+        assert!(result.stderr.len() <= 4096);
+        assert!(result.job_empty);
+    }
 }
 #[test]
 fn cancellation_reaps_job() {
@@ -114,4 +122,35 @@ fn arguments_are_not_shell_interpreted() {
     assert_eq!(result.outcome, Outcome::Exited(0));
     let actual: Vec<String> = serde_json::from_slice(&result.stdout).unwrap();
     assert_eq!(actual, values);
+}
+
+#[test]
+fn executable_and_working_directory_must_stay_in_approved_root() {
+    let mut outside_root = request("success");
+    outside_root.approved_root = std::env::temp_dir();
+    assert!(execute(&outside_root, &AtomicBool::new(false)).is_err());
+
+    let mut outside_cwd = request("success");
+    outside_cwd.working_directory = std::env::temp_dir();
+    assert!(execute(&outside_cwd, &AtomicBool::new(false)).is_err());
+}
+
+#[test]
+fn environment_is_allowlisted_and_does_not_accept_secrets() {
+    let mut secret_environment = request("success");
+    secret_environment.environment =
+        vec![("EDY_FAKE_TEST_TOKEN".into(), "impossible-fixture".into())];
+    assert!(execute(&secret_environment, &AtomicBool::new(false)).is_err());
+
+    let mut allowed_environment = request("success");
+    allowed_environment.environment = vec![(
+        "TEMP".into(),
+        allowed_environment.approved_root.display().to_string(),
+    )];
+    assert_eq!(
+        execute(&allowed_environment, &AtomicBool::new(false))
+            .unwrap()
+            .outcome,
+        Outcome::Exited(0)
+    );
 }

@@ -19,6 +19,14 @@ fn main() {
                 }
             }
         }
+        "stderr-overflow" => {
+            let mut out = io::stderr().lock();
+            for _ in 0..100_000 {
+                if out.write_all(&[b'x'; 4096]).is_err() {
+                    break;
+                }
+            }
+        }
         "stderr" => eprintln!("synthetic diagnostic"),
         "nonzero" => std::process::exit(23),
         "tree" => {
