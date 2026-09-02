@@ -2,9 +2,13 @@
 
 use crate::level0::*;
 use edy_core::{
-    Confidence, EngineId, EngineObservation, Evidence, EvidenceDraft, EvidenceId, EvidenceKind,
-    EvidenceProvenance, EvidenceStrength, ObservationSignal, ScanId, ScanResult, ScanState,
-    Severity, Sha256Digest, StructuredFact, TargetId, Timestamp,
+    AffectedRange, Confidence, EngineId, EngineObservation, EpssRecord, Evidence, EvidenceDraft,
+    EvidenceId, EvidenceKind, EvidenceProvenance, EvidenceStrength, IdentityAlias,
+    InstalledAppFinding, InstalledApplication, InstalledApplicationSignature,
+    InstalledApplicationSnapshot, InventoryCoverage, InventoryScope, InventorySource,
+    InventorySourceKind, KevRecord, ObservationSignal, RawInstalledApplication, RegistryView,
+    ScanId, ScanResult, ScanState, Severity, Sha256Digest, StructuredFact, TargetId, Timestamp,
+    VulnerabilityRecord, correlate_installed_vulnerabilities, normalize_inventory,
 };
 use edy_engine_manager::file_security::{
     AuthorizedFileTarget, DEFAULT_MAX_FILE_SIZE, FileAnalysis, FileSecurityErrorKind,
@@ -14,7 +18,14 @@ use edy_engine_manager::file_security::{
 use edy_engine_manager::repository::{
     GitleaksRepositoryAdapter, OsvRepositoryAdapter, TrivyRepositoryAdapter,
 };
+use edy_providers::installed_apps::{
+    CISA_KEV_URL, CacheMetadata, EPSS_DAILY_URL, FixedPublicDataClient, NVD_API_BASE,
+    cache_is_stale, collect_installed_applications, parse_cisa_kev, parse_epss_gzip, parse_nvd,
+    promote_validated_cache, read_validated_cache_metadata_with_fallback,
+    resolve_display_icon_candidate, sha256,
+};
 use edy_reporting::file::FileReport;
+use edy_reporting::installed_apps::{DatasetStatus, InstalledApplicationReport};
 use edy_reporting::repository::RepositoryReport;
 use edy_reporting::{REPORT_SCHEMA, ReportDocument, ReportEvidence, ReportKind, ReportSnapshot};
 use edy_repository::{
@@ -23,7 +34,7 @@ use edy_repository::{
     aggregate_repository_posture, correlate_repository_observations, inspect, inspect_revalidated,
     normalize_license_state,
 };
-use edy_storage::level0_snapshot::{Level1SnapshotStore, Level2SnapshotStore};
+use edy_storage::level0_snapshot::{Level1SnapshotStore, Level2SnapshotStore, Level3SnapshotStore};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -158,6 +169,76 @@ pub struct CreateFileScanRequest {
     pub confirmed: bool,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct InstalledApplicationPreviewRequest {
+    pub include_system_components: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AuthorizeInstalledApplicationRequest {
+    pub preview_id: String,
+    pub confirmed: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CreateInstalledApplicationScanRequest {
+    pub authorization_id: String,
+    pub confirmed: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct InstalledApplicationRequest {
+    pub scan_id: String,
+    pub application_id: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RefreshPublicDataRequest {
+    pub confirmed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct InstalledApplicationPreviewView {
+    pub preview_id: String,
+    pub application_count: u32,
+    pub system_component_count: u32,
+    pub inventory_fingerprint: String,
+    pub coverage: InventoryCoverage,
+    pub requires_confirmation: bool,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct AuthorizedInstalledApplicationView {
+    pub authorization_id: String,
+    pub application_count: u32,
+    pub inventory_fingerprint: String,
+    pub coverage: InventoryCoverage,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct InstalledApplicationInventoryView {
+    pub scan_id: String,
+    pub state: String,
+    pub snapshot: InstalledApplicationSnapshot,
+    pub findings: Vec<InstalledAppFinding>,
+    pub provider_status: Vec<DatasetStatus>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct PublicDataRefreshView {
+    pub provider_status: Vec<DatasetStatus>,
+    pub host_inventory_transmitted: bool,
+}
+
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct AuthorizedFileTargetView {
@@ -204,6 +285,18 @@ struct FileAuthorizationSession {
     preview: FileTargetPreview,
 }
 
+#[derive(Debug, Clone)]
+struct Level3PreviewSession {
+    snapshot: InstalledApplicationSnapshot,
+    inventory_fingerprint: String,
+}
+
+#[derive(Debug, Clone)]
+struct Level3AuthorizationSession {
+    snapshot: InstalledApplicationSnapshot,
+    inventory_fingerprint: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 struct Level2StoredScan {
@@ -230,6 +323,25 @@ struct Level1StoredScan {
     findings: Vec<CorrelatedRepositoryFinding>,
     evidence: Vec<RepositoryEvidenceReference>,
     unavailable_checks: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+struct Level3StoredScan {
+    scan_id: String,
+    authorization_id: String,
+    inventory_fingerprint: String,
+    state: String,
+    progress: ScanProgressView,
+    snapshot: InstalledApplicationSnapshot,
+    findings: Vec<InstalledAppFinding>,
+    provider_status: Vec<DatasetStatus>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Level3FixtureProviderMode {
+    Ready,
+    Degraded,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -317,10 +429,38 @@ pub struct Level0Backend {
     file_previews: Arc<Mutex<BTreeMap<String, FileTargetPreview>>>,
     level1: Arc<Mutex<Level1SnapshotStore>>,
     level2: Arc<Mutex<Level2SnapshotStore>>,
+    level3: Arc<Mutex<Level3SnapshotStore>>,
+    level3_previews: Arc<Mutex<BTreeMap<String, Level3PreviewSession>>>,
+    level3_authorizations: Arc<Mutex<BTreeMap<String, Level3AuthorizationSession>>>,
+    level3_fixture: bool,
+    level3_fixture_provider_mode: Level3FixtureProviderMode,
 }
 
 impl Level0Backend {
     pub fn open(project_root: &Path, database: &Path) -> Result<Self, SafeIpcError> {
+        Self::open_internal(project_root, database, false)
+    }
+
+    #[cfg(all(feature = "native-e2e", debug_assertions))]
+    pub fn open_level3_fixture(project_root: &Path, database: &Path) -> Result<Self, SafeIpcError> {
+        Self::open_internal(project_root, database, true)
+    }
+
+    #[cfg(all(feature = "native-e2e", debug_assertions))]
+    pub fn open_level3_degraded_fixture(
+        project_root: &Path,
+        database: &Path,
+    ) -> Result<Self, SafeIpcError> {
+        let mut backend = Self::open_internal(project_root, database, true)?;
+        backend.level3_fixture_provider_mode = Level3FixtureProviderMode::Degraded;
+        Ok(backend)
+    }
+
+    fn open_internal(
+        project_root: &Path,
+        database: &Path,
+        level3_fixture: bool,
+    ) -> Result<Self, SafeIpcError> {
         if !project_root.is_absolute() || !project_root.is_dir() || !database.is_absolute() {
             return Err(SafeIpcError::new(
                 "backend_path_invalid",
@@ -351,7 +491,584 @@ impl Level0Backend {
                 |_| SafeIpcError::new("storage_unavailable", "Repository storage is unavailable"),
             )?)),
             level2: Arc::new(Mutex::new(level2)),
+            level3: Arc::new(Mutex::new(Level3SnapshotStore::open(database).map_err(
+                |_| {
+                    SafeIpcError::new(
+                        "storage_unavailable",
+                        "Installed application storage is unavailable",
+                    )
+                },
+            )?)),
+            level3_previews: Arc::new(Mutex::new(BTreeMap::new())),
+            level3_authorizations: Arc::new(Mutex::new(BTreeMap::new())),
+            level3_fixture,
+            level3_fixture_provider_mode: Level3FixtureProviderMode::Ready,
         })
+    }
+
+    pub fn preview_installed_applications(
+        &self,
+        request: InstalledApplicationPreviewRequest,
+    ) -> Result<InstalledApplicationPreviewView, SafeIpcError> {
+        let collection = if self.level3_fixture {
+            level3_fixture_inventory()
+        } else {
+            collect_installed_applications().map_err(|_| {
+                SafeIpcError::new(
+                    "installed_inventory_unavailable",
+                    "Installed application inventory is unavailable",
+                )
+            })?
+        };
+        let mut snapshot =
+            normalize_inventory(collection.raw, &level3_aliases(), collection.coverage);
+        if !request.include_system_components {
+            snapshot
+                .applications
+                .retain(|application| !application.system_component);
+        }
+        let system_component_count = snapshot
+            .applications
+            .iter()
+            .filter(|application| application.system_component)
+            .count() as u32;
+        let payload = serde_json::to_vec(&snapshot).map_err(|_| {
+            SafeIpcError::new(
+                "installed_inventory_invalid",
+                "Installed application inventory could not be normalized",
+            )
+        })?;
+        let inventory_fingerprint = sha256(&payload);
+        let preview_id = new_uuid_v7();
+        let mut previews = self.level3_previews.lock().map_err(|_| {
+            SafeIpcError::new(
+                "authorization_unavailable",
+                "Installed application preview is unavailable",
+            )
+        })?;
+        if previews.len() >= 8 {
+            previews.clear();
+        }
+        previews.insert(
+            preview_id.clone(),
+            Level3PreviewSession {
+                snapshot: snapshot.clone(),
+                inventory_fingerprint: inventory_fingerprint.clone(),
+            },
+        );
+        Ok(InstalledApplicationPreviewView {
+            preview_id,
+            application_count: snapshot.applications.len() as u32,
+            system_component_count,
+            inventory_fingerprint,
+            coverage: snapshot.coverage,
+            requires_confirmation: true,
+        })
+    }
+
+    pub fn authorize_installed_applications(
+        &self,
+        request: AuthorizeInstalledApplicationRequest,
+    ) -> Result<AuthorizedInstalledApplicationView, SafeIpcError> {
+        if !request.confirmed {
+            return Err(SafeIpcError::new(
+                "confirmation_required",
+                "Explicit installed application inventory confirmation is required",
+            ));
+        }
+        parse_scan_id(&request.preview_id)?;
+        let preview = self
+            .level3_previews
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new(
+                    "authorization_unavailable",
+                    "Installed application preview is unavailable",
+                )
+            })?
+            .remove(&request.preview_id)
+            .ok_or_else(|| {
+                SafeIpcError::new(
+                    "preview_expired",
+                    "Installed application preview expired; create a new preview",
+                )
+            })?;
+        let authorization_id = new_uuid_v7();
+        self.level3_authorizations
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new(
+                    "authorization_unavailable",
+                    "Installed application authorization is unavailable",
+                )
+            })?
+            .insert(
+                authorization_id.clone(),
+                Level3AuthorizationSession {
+                    snapshot: preview.snapshot.clone(),
+                    inventory_fingerprint: preview.inventory_fingerprint.clone(),
+                },
+            );
+        Ok(AuthorizedInstalledApplicationView {
+            authorization_id,
+            application_count: preview.snapshot.applications.len() as u32,
+            inventory_fingerprint: preview.inventory_fingerprint,
+            coverage: preview.snapshot.coverage,
+        })
+    }
+
+    pub fn create_installed_application_scan(
+        &self,
+        request: CreateInstalledApplicationScanRequest,
+    ) -> Result<ScanSummaryView, SafeIpcError> {
+        if !request.confirmed {
+            return Err(SafeIpcError::new(
+                "confirmation_required",
+                "Explicit installed application scan confirmation is required",
+            ));
+        }
+        parse_scan_id(&request.authorization_id)?;
+        let authorization = self
+            .level3_authorizations
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new(
+                    "authorization_unavailable",
+                    "Installed application authorization is unavailable",
+                )
+            })?
+            .remove(&request.authorization_id)
+            .ok_or_else(|| {
+                SafeIpcError::new(
+                    "authorization_expired",
+                    "Installed application authorization expired",
+                )
+            })?;
+        let mut snapshot = authorization.snapshot;
+        if sha256(&serde_json::to_vec(&snapshot).map_err(|_| {
+            SafeIpcError::new(
+                "installed_inventory_invalid",
+                "Installed application inventory could not be normalized",
+            )
+        })?) != authorization.inventory_fingerprint
+        {
+            return Err(SafeIpcError::new(
+                "installed_inventory_changed",
+                "Installed application authorization no longer matches its preview",
+            ));
+        }
+        if self.level3_fixture {
+            let inventory_fingerprint = sha256(&serde_json::to_vec(&snapshot).map_err(|_| {
+                SafeIpcError::new(
+                    "installed_inventory_invalid",
+                    "Installed application inventory could not be normalized",
+                )
+            })?);
+            let scan_id = new_uuid_v7();
+            let token = CancellationToken::default();
+            let mut stored = Level3StoredScan {
+                scan_id: scan_id.clone(),
+                authorization_id: request.authorization_id,
+                inventory_fingerprint,
+                state: "preparing".into(),
+                progress: ScanProgressView {
+                    scan_id: scan_id.clone(),
+                    phase: "installed_application_inventory".into(),
+                    completed_tasks: 0,
+                    total_tasks: 7,
+                    percent: Some(0),
+                    elapsed_ms: 0,
+                    current_engine: None,
+                    status: "preparing".into(),
+                },
+                snapshot,
+                findings: Vec::new(),
+                provider_status: level3_fixture_provider_data(self.level3_fixture_provider_mode).3,
+            };
+            let payload = serde_json::to_vec(&stored).map_err(|_| {
+                SafeIpcError::new(
+                    "installed_scan_invalid",
+                    "Installed application scan could not be serialized",
+                )
+            })?;
+            self.level3
+                .lock()
+                .map_err(|_| {
+                    SafeIpcError::new(
+                        "storage_unavailable",
+                        "Installed application storage is unavailable",
+                    )
+                })?
+                .create(
+                    &scan_id,
+                    &stored.authorization_id,
+                    &stored.inventory_fingerprint,
+                    &payload,
+                )
+                .map_err(|_| {
+                    SafeIpcError::new(
+                        "storage_unavailable",
+                        "Installed application scan could not be stored",
+                    )
+                })?;
+            self.jobs
+                .lock()
+                .map_err(|_| {
+                    SafeIpcError::new(
+                        "scan_unavailable",
+                        "Installed application job is unavailable",
+                    )
+                })?
+                .insert(scan_id.clone(), token.clone());
+            let store = Arc::clone(&self.level3);
+            let jobs = Arc::clone(&self.jobs);
+            let provider_mode = self.level3_fixture_provider_mode;
+            let result = level3_summary(&stored);
+            std::thread::spawn(move || {
+                let started = std::time::Instant::now();
+                for step in 1..=300_u32 {
+                    if token.is_requested() {
+                        stored.state = "cancelled".into();
+                        stored.progress.phase = "cancelled".into();
+                        stored.progress.status = "cancelled".into();
+                        stored.progress.percent = None;
+                        stored.findings.clear();
+                        let _ = replace_level3_snapshot(&store, &stored);
+                        let _ = jobs.lock().map(|mut active| active.remove(&scan_id));
+                        return;
+                    }
+                    if step % 60 == 0 {
+                        stored.state = "running".into();
+                        stored.progress.phase = "installed_application_correlation".into();
+                        stored.progress.status = "running".into();
+                        stored.progress.completed_tasks = (step / 60).min(5);
+                        stored.progress.percent = Some((step / 3).min(95));
+                        stored.progress.elapsed_ms =
+                            u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
+                        if replace_level3_snapshot(&store, &stored).is_err() {
+                            let _ = jobs.lock().map(|mut active| active.remove(&scan_id));
+                            return;
+                        }
+                    }
+                    std::thread::sleep(Duration::from_millis(5));
+                }
+                let (vulnerabilities, kev, epss, provider_status) =
+                    level3_fixture_provider_data(provider_mode);
+                stored.findings = correlate_installed_vulnerabilities(
+                    &stored.snapshot,
+                    &vulnerabilities,
+                    &kev,
+                    &epss,
+                );
+                stored.provider_status = provider_status;
+                stored.state = "completed".into();
+                stored.progress.phase = "reporting".into();
+                stored.progress.status = "completed".into();
+                stored.progress.completed_tasks = 7;
+                stored.progress.percent = Some(100);
+                stored.progress.elapsed_ms =
+                    u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
+                let _ = replace_level3_snapshot(&store, &stored);
+                let _ = jobs.lock().map(|mut active| active.remove(&scan_id));
+            });
+            return Ok(result);
+        }
+        if !self.level3_fixture {
+            enrich_display_icon_signatures(&mut snapshot);
+        }
+        let inventory_fingerprint = sha256(&serde_json::to_vec(&snapshot).map_err(|_| {
+            SafeIpcError::new(
+                "installed_inventory_invalid",
+                "Installed application inventory could not be normalized",
+            )
+        })?);
+        let (vulnerabilities, kev, epss, provider_status) = (
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            self.vulnerability_provider_status(),
+        );
+        let findings =
+            correlate_installed_vulnerabilities(&snapshot, &vulnerabilities, &kev, &epss);
+        let complete = false;
+        let scan_id = new_uuid_v7();
+        let stored = Level3StoredScan {
+            scan_id: scan_id.clone(),
+            authorization_id: request.authorization_id,
+            inventory_fingerprint,
+            state: if complete { "completed" } else { "partial" }.into(),
+            progress: ScanProgressView {
+                scan_id: scan_id.clone(),
+                phase: "installed_application_correlation".into(),
+                completed_tasks: if complete { 7 } else { 4 },
+                total_tasks: 7,
+                percent: Some(if complete { 100 } else { 57 }),
+                elapsed_ms: 0,
+                current_engine: None,
+                status: if complete { "completed" } else { "partial" }.into(),
+            },
+            snapshot,
+            findings,
+            provider_status,
+        };
+        let payload = serde_json::to_vec(&stored).map_err(|_| {
+            SafeIpcError::new(
+                "installed_scan_invalid",
+                "Installed application scan could not be serialized",
+            )
+        })?;
+        self.level3
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new(
+                    "storage_unavailable",
+                    "Installed application storage is unavailable",
+                )
+            })?
+            .create(
+                &scan_id,
+                &stored.authorization_id,
+                &stored.inventory_fingerprint,
+                &payload,
+            )
+            .map_err(|_| {
+                SafeIpcError::new(
+                    "storage_unavailable",
+                    "Installed application scan could not be stored",
+                )
+            })?;
+        Ok(level3_summary(&stored))
+    }
+
+    pub fn get_installed_application_inventory(
+        &self,
+        request: &ScanRequest,
+    ) -> Result<InstalledApplicationInventoryView, SafeIpcError> {
+        let stored = self.load_level3(&request.scan_id)?;
+        Ok(InstalledApplicationInventoryView {
+            scan_id: stored.scan_id,
+            state: stored.state,
+            snapshot: stored.snapshot,
+            findings: stored.findings,
+            provider_status: stored.provider_status,
+        })
+    }
+
+    pub fn get_installed_application(
+        &self,
+        request: &InstalledApplicationRequest,
+    ) -> Result<InstalledApplication, SafeIpcError> {
+        if request.application_id.len() != 38
+            || !request.application_id.starts_with("appv1-")
+            || !request.application_id[6..]
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+        {
+            return Err(SafeIpcError::new(
+                "application_id_invalid",
+                "Installed application identifier was refused",
+            ));
+        }
+        self.load_level3(&request.scan_id)?
+            .snapshot
+            .applications
+            .into_iter()
+            .find(|application| application.application_id == request.application_id)
+            .ok_or_else(|| {
+                SafeIpcError::new(
+                    "application_not_found",
+                    "Installed application was not found",
+                )
+            })
+    }
+
+    pub fn vulnerability_provider_status(&self) -> Vec<DatasetStatus> {
+        if self.level3_fixture {
+            return level3_fixture_provider_data(self.level3_fixture_provider_mode).3;
+        }
+        let cache = self.project_root.join(".local/provider-cache");
+        [
+            ("NVD", "nvd-fixed.json", NVD_API_BASE, 24),
+            ("CISA_KEV", "cisa-kev.json", CISA_KEV_URL, 24),
+            ("EPSS", "epss-current.csv.gz", EPSS_DAILY_URL, 48),
+        ]
+        .into_iter()
+        .map(|(provider, file, source, maximum_age_hours)| {
+            match read_validated_cache_metadata_with_fallback(&cache.join(file), source).ok() {
+                Some((mut metadata, fallback)) => {
+                    let stale = fallback || cache_is_stale(&metadata, maximum_age_hours);
+                    if stale {
+                        metadata.freshness = if fallback {
+                            "stale_previous_good_cache".into()
+                        } else {
+                            format!("stale_age_over_{maximum_age_hours}h")
+                        };
+                    }
+                    DatasetStatus {
+                        provider: provider.into(),
+                        state: if stale { "stale_cache" } else { "ready" }.into(),
+                        dataset_version: metadata.dataset_version,
+                        fetched_at_utc: Some(metadata.fetched_at_utc),
+                        sha256: Some(metadata.sha256),
+                        freshness: metadata.freshness,
+                    }
+                }
+                None => DatasetStatus {
+                    provider: provider.into(),
+                    state: "unavailable".into(),
+                    dataset_version: None,
+                    fetched_at_utc: None,
+                    sha256: None,
+                    freshness: "no_validated_cache".into(),
+                },
+            }
+        })
+        .collect()
+    }
+
+    pub fn refresh_public_vulnerability_data(
+        &self,
+        request: RefreshPublicDataRequest,
+    ) -> Result<PublicDataRefreshView, SafeIpcError> {
+        if !request.confirmed {
+            return Err(SafeIpcError::new(
+                "confirmation_required",
+                "Explicit public dataset refresh confirmation is required",
+            ));
+        }
+        let cache = self.project_root.join(".local/provider-cache");
+        if let Ok(metadata) = std::fs::symlink_metadata(&cache)
+            && metadata.file_type().is_symlink()
+        {
+            return Err(SafeIpcError::new(
+                "provider_cache_refused",
+                "Provider cache link was refused",
+            ));
+        }
+        std::fs::create_dir_all(&cache).map_err(|_| {
+            SafeIpcError::new(
+                "provider_cache_unavailable",
+                "Provider cache is unavailable",
+            )
+        })?;
+        let client = FixedPublicDataClient::new().map_err(|_| {
+            SafeIpcError::new("provider_unavailable", "Public data client is unavailable")
+        })?;
+        let mut clock = SystemClock;
+        let fetched = clock
+            .now()
+            .map_err(SafeIpcError::from)?
+            .as_str()
+            .to_string();
+        let nvd = client
+            .nvd_fixed_smoke(None)
+            .map_err(|_| SafeIpcError::new("nvd_unavailable", "NVD fixed public query failed"))?;
+        let nvd_records = parse_nvd(&nvd)
+            .map_err(|_| SafeIpcError::new("nvd_invalid", "NVD fixed response was rejected"))?;
+        if nvd_records
+            .iter()
+            .any(|record| record.cve != "CVE-2021-44228")
+        {
+            return Err(SafeIpcError::new(
+                "nvd_invalid",
+                "NVD fixed response escaped the approved query",
+            ));
+        }
+        let kev_bytes = client
+            .cisa_kev()
+            .map_err(|_| SafeIpcError::new("cisa_kev_unavailable", "CISA KEV refresh failed"))?;
+        let (kev_version, kev) = parse_cisa_kev(&kev_bytes)
+            .map_err(|_| SafeIpcError::new("cisa_kev_invalid", "CISA KEV response was rejected"))?;
+        if kev.is_empty() {
+            return Err(SafeIpcError::new(
+                "cisa_kev_invalid",
+                "CISA KEV dataset was empty",
+            ));
+        }
+        let epss_bytes = client
+            .epss_daily()
+            .map_err(|_| SafeIpcError::new("epss_unavailable", "EPSS refresh failed"))?;
+        let epss = parse_epss_gzip(&epss_bytes)
+            .map_err(|_| SafeIpcError::new("epss_invalid", "EPSS response was rejected"))?;
+        let promote = |filename: &str,
+                       source_url: &str,
+                       bytes: &[u8],
+                       version: Option<String>|
+         -> Result<(), SafeIpcError> {
+            let metadata = CacheMetadata {
+                source_url: source_url.into(),
+                fetched_at_utc: fetched.clone(),
+                dataset_version: version,
+                sha256: sha256(bytes),
+                bytes: bytes.len() as u64,
+                freshness: "fresh".into(),
+            };
+            promote_validated_cache(&cache.join(filename), bytes, &metadata).map_err(|_| {
+                SafeIpcError::new(
+                    "provider_cache_failed",
+                    "Validated public data could not be promoted",
+                )
+            })
+        };
+        promote(
+            "nvd-fixed.json",
+            edy_providers::installed_apps::NVD_API_BASE,
+            &nvd,
+            Some("API_2.0_FIXED_CVE-2021-44228".into()),
+        )?;
+        promote(
+            "cisa-kev.json",
+            edy_providers::installed_apps::CISA_KEV_URL,
+            &kev_bytes,
+            Some(kev_version),
+        )?;
+        promote(
+            "epss-current.csv.gz",
+            edy_providers::installed_apps::EPSS_DAILY_URL,
+            &epss_bytes,
+            epss.first().and_then(|record| record.model_version.clone()),
+        )?;
+        Ok(PublicDataRefreshView {
+            provider_status: self.vulnerability_provider_status(),
+            host_inventory_transmitted: false,
+        })
+    }
+
+    fn load_level3(&self, scan_id: &str) -> Result<Level3StoredScan, SafeIpcError> {
+        parse_scan_id(scan_id)?;
+        let blob = self
+            .level3
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new(
+                    "storage_unavailable",
+                    "Installed application storage is unavailable",
+                )
+            })?
+            .load(scan_id)
+            .map_err(|_| {
+                SafeIpcError::new("scan_not_found", "Installed application scan was not found")
+            })?;
+        let stored: Level3StoredScan = serde_json::from_slice(&blob.payload).map_err(|_| {
+            SafeIpcError::new(
+                "storage_snapshot_invalid",
+                "Installed application snapshot is invalid",
+            )
+        })?;
+        if stored.scan_id != scan_id
+            || sha256(&serde_json::to_vec(&stored.snapshot).map_err(|_| {
+                SafeIpcError::new(
+                    "storage_snapshot_invalid",
+                    "Installed application snapshot is invalid",
+                )
+            })?) != stored.inventory_fingerprint
+        {
+            return Err(SafeIpcError::new(
+                "storage_snapshot_invalid",
+                "Installed application snapshot is incoherent",
+            ));
+        }
+        Ok(stored)
     }
 
     pub fn authorize_repository_target(
@@ -924,6 +1641,9 @@ impl Level0Backend {
         if let Ok(scan) = self.repository()?.load(&id) {
             return Ok(summary(&scan));
         }
+        if let Ok(scan) = self.load_level3(&request.scan_id) {
+            return Ok(level3_summary(&scan));
+        }
         if let Ok(scan) = self.load_level1(&request.scan_id) {
             return Ok(level1_summary(&scan));
         }
@@ -974,6 +1694,25 @@ impl Level0Backend {
             for id in ids {
                 scans.push(level2_summary(&self.load_level2(&id)?));
             }
+            let ids = self
+                .level3
+                .lock()
+                .map_err(|_| {
+                    SafeIpcError::new(
+                        "storage_unavailable",
+                        "Installed application storage is unavailable",
+                    )
+                })?
+                .list_ids(0, request.limit)
+                .map_err(|_| {
+                    SafeIpcError::new(
+                        "storage_unavailable",
+                        "Installed application storage is unavailable",
+                    )
+                })?;
+            for id in ids {
+                scans.push(level3_summary(&self.load_level3(&id)?));
+            }
             scans.truncate(request.limit as usize);
         }
         Ok(scans)
@@ -983,6 +1722,9 @@ impl Level0Backend {
         let id = parse_scan_id(&request.scan_id)?;
         if let Ok(scan) = self.repository()?.load(&id) {
             return Ok(progress(&scan));
+        }
+        if let Ok(scan) = self.load_level3(&request.scan_id) {
+            return Ok(scan.progress);
         }
         if let Ok(scan) = self.load_level1(&request.scan_id) {
             return Ok(scan.progress);
@@ -1020,6 +1762,9 @@ impl Level0Backend {
             replace_level1_snapshot(&self.level1, &level1)?;
             token.request();
             return Ok(level1.progress);
+        }
+        if self.load_level3(&request.scan_id).is_ok() {
+            return request_level3_cancellation(&self.level3, &request.scan_id, &token);
         }
         if self.load_level2(&request.scan_id).is_ok() {
             return request_level2_cancellation(&self.level2, &request.scan_id, &token);
@@ -1074,6 +1819,15 @@ impl Level0Backend {
         validate_page(request.offset, request.limit, 100)?;
         let id = parse_scan_id(&request.scan_id)?;
         let Ok(scan) = self.repository()?.load(&id) else {
+            if let Ok(scan) = self.load_level3(&request.scan_id) {
+                return Ok(scan
+                    .findings
+                    .iter()
+                    .skip(request.offset as usize)
+                    .take(request.limit as usize)
+                    .map(|finding| level3_finding_view(&scan.scan_id, finding))
+                    .collect());
+            }
             if let Ok(scan) = self.load_level1(&request.scan_id) {
                 return Ok(scan
                     .findings
@@ -1108,6 +1862,32 @@ impl Level0Backend {
     }
 
     pub fn get_finding(&self, request: &FindingRequest) -> Result<FindingView, SafeIpcError> {
+        let level3_ids = self
+            .level3
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new(
+                    "storage_unavailable",
+                    "Installed application storage is unavailable",
+                )
+            })?
+            .list_ids(0, 50)
+            .map_err(|_| {
+                SafeIpcError::new(
+                    "storage_unavailable",
+                    "Installed application storage is unavailable",
+                )
+            })?;
+        for id in level3_ids {
+            let scan = self.load_level3(&id)?;
+            if let Some(finding) = scan
+                .findings
+                .iter()
+                .find(|finding| finding.fingerprint == request.finding_id)
+            {
+                return Ok(level3_finding_view(&scan.scan_id, finding));
+            }
+        }
         let level2_ids = self
             .level2
             .lock()
@@ -1179,6 +1959,29 @@ impl Level0Backend {
     pub fn report(&self, request: &GenerateReportRequest) -> Result<ReportView, SafeIpcError> {
         let id = parse_scan_id(&request.scan_id)?;
         let Ok(scan) = self.repository()?.load(&id) else {
+            if let Ok(stored) = self.load_level3(&request.scan_id) {
+                if stored.state != "partial" && stored.state != "completed" {
+                    return Err(SafeIpcError::new(
+                        "report_unavailable",
+                        "Report is unavailable until installed application processing is terminal",
+                    ));
+                }
+                let report = InstalledApplicationReport::capture(
+                    request.kind,
+                    &stored.scan_id,
+                    &stored.snapshot,
+                    &stored.findings,
+                    stored.provider_status,
+                );
+                return Ok(ReportView {
+                    scan_id: stored.scan_id,
+                    kind: request.kind,
+                    schema: REPORT_SCHEMA,
+                    json: report.json().map_err(|_| {
+                        SafeIpcError::new("report_failed", "Report could not be rendered")
+                    })?,
+                });
+            }
             if let Ok(stored) = self.load_level1(&request.scan_id) {
                 if stored.state != "partial" && stored.state != "completed" {
                     return Err(SafeIpcError::new(
@@ -1260,6 +2063,308 @@ impl Level0Backend {
             json,
         })
     }
+}
+
+fn level3_aliases() -> Vec<IdentityAlias> {
+    vec![IdentityAlias {
+        normalized_name: "fixture app".into(),
+        normalized_publisher: Some("fixture corporation".into()),
+        cpe: "cpe:2.3:a:fixture:app:*:*:*:*:*:*:*:*".into(),
+        purl: Some("pkg:generic/fixture-app".into()),
+    }]
+}
+
+fn level3_fixture_inventory() -> edy_providers::installed_apps::InventoryCollection {
+    let registry = |source: &str,
+                    scope: InventoryScope,
+                    view: RegistryView,
+                    name: &str,
+                    version: Option<&str>,
+                    publisher: Option<&str>,
+                    product: Option<&str>,
+                    system: bool| RawInstalledApplication {
+        source: InventorySource {
+            kind: InventorySourceKind::Registry,
+            scope,
+            view,
+            source_id: source.into(),
+        },
+        display_name: Some(name.into()),
+        display_version: version.map(str::to_string),
+        publisher: publisher.map(str::to_string),
+        install_location: None,
+        display_icon: None,
+        install_date: Some("20990101".into()),
+        windows_installer: Some(true),
+        system_component: Some(system),
+        release_type: None,
+        product_code: product.map(str::to_string),
+        package_family_name: None,
+    };
+    let product = "{12345678-1234-1234-1234-1234567890AB}";
+    let raw = vec![
+        registry(
+            "fixture-x64",
+            InventoryScope::Machine,
+            RegistryView::Registry64,
+            "Fixture App",
+            Some("1.0.0"),
+            Some("Fixture Corporation"),
+            Some(product),
+            false,
+        ),
+        registry(
+            "fixture-x86-duplicate",
+            InventoryScope::Machine,
+            RegistryView::Registry32,
+            "Fixture App",
+            Some("1.0.0"),
+            Some("Fixture Corporation"),
+            Some(product),
+            false,
+        ),
+        registry(
+            "fixture-user",
+            InventoryScope::CurrentUser,
+            RegistryView::Registry64,
+            "Unmapped Vendor Tool",
+            Some("Release Blue"),
+            None,
+            None,
+            false,
+        ),
+        registry(
+            "fixture-system",
+            InventoryScope::Machine,
+            RegistryView::Registry64,
+            "Fixture Runtime Component",
+            None,
+            Some("Fixture Corporation"),
+            None,
+            true,
+        ),
+        RawInstalledApplication {
+            source: InventorySource {
+                kind: InventorySourceKind::Msix,
+                scope: InventoryScope::CurrentUser,
+                view: RegistryView::NotApplicable,
+                source_id: "Fixture.Store_3.0.0.0_x64__fixture".into(),
+            },
+            display_name: Some("Fixture Store App".into()),
+            display_version: Some("3.0.0.0".into()),
+            publisher: Some("Fixture Corporation".into()),
+            install_location: None,
+            display_icon: None,
+            install_date: None,
+            windows_installer: Some(false),
+            system_component: Some(false),
+            release_type: Some("msix".into()),
+            product_code: None,
+            package_family_name: Some("Fixture.Store_fixture".into()),
+        },
+    ];
+    edy_providers::installed_apps::InventoryCollection {
+        raw,
+        coverage: InventoryCoverage {
+            registry_machine_64: true,
+            registry_machine_32: true,
+            registry_current_user_64: true,
+            registry_current_user_32: true,
+            msix_current_user: true,
+            other_users: false,
+            portable_applications: false,
+            filesystem_crawl: false,
+            limitations: vec![
+                "Synthetic QA inventory; no host application data is used.".into(),
+                "Other users and portable applications remain outside coverage.".into(),
+            ],
+        },
+    }
+}
+
+fn level3_fixture_provider_data(
+    mode: Level3FixtureProviderMode,
+) -> (
+    Vec<VulnerabilityRecord>,
+    Vec<KevRecord>,
+    Vec<EpssRecord>,
+    Vec<DatasetStatus>,
+) {
+    let cpe = "cpe:2.3:a:fixture:app:*:*:*:*:*:*:*:*";
+    let affected = VulnerabilityRecord {
+        cve: "CVE-2099-0001".into(),
+        cpe: cpe.into(),
+        ranges: vec![AffectedRange {
+            start_including: Some("0.9.0".into()),
+            end_excluding: Some("2.0.0".into()),
+            ..Default::default()
+        }],
+        cvss_score: Some(8.8),
+        cvss_severity: Some("HIGH".into()),
+        fixed_version: Some("2.0.0".into()),
+        source: "NVD_FIXTURE".into(),
+    };
+    let unaffected = VulnerabilityRecord {
+        cve: "CVE-2099-0002".into(),
+        cpe: cpe.into(),
+        ranges: vec![AffectedRange {
+            start_including: Some("2.1.0".into()),
+            end_including: Some("2.5.0".into()),
+            ..Default::default()
+        }],
+        cvss_score: Some(9.8),
+        cvss_severity: Some("CRITICAL".into()),
+        fixed_version: Some("2.5.1".into()),
+        source: "NVD_FIXTURE".into(),
+    };
+    let duplicate = VulnerabilityRecord {
+        source: "VENDOR_FIXTURE".into(),
+        ..affected.clone()
+    };
+    let kev = vec![KevRecord {
+        cve: "CVE-2099-0001".into(),
+        date_added: "2099-01-01".into(),
+        due_date: Some("2099-01-15".into()),
+        required_action: Some("Apply vendor guidance after explicit user review.".into()),
+    }];
+    let epss = vec![EpssRecord {
+        cve: "CVE-2099-0001".into(),
+        probability: 0.91,
+        percentile: 0.99,
+        score_date: "2099-01-01".into(),
+        model_version: Some("fixture-v1".into()),
+    }];
+    let mut statuses = [
+        ("NVD", "API_2.0_FIXTURE"),
+        ("CISA_KEV", "FIXTURE_2099.01.01"),
+        ("EPSS", "FIXTURE_V1"),
+    ]
+    .into_iter()
+    .map(|(provider, version)| DatasetStatus {
+        provider: provider.into(),
+        state: "ready".into(),
+        dataset_version: Some(version.into()),
+        fetched_at_utc: None,
+        sha256: Some(sha256(format!("{provider}:{version}").as_bytes())),
+        freshness: "synthetic_fixture".into(),
+    })
+    .collect::<Vec<_>>();
+    if mode == Level3FixtureProviderMode::Degraded {
+        statuses[0].state = "stale_cache".into();
+        statuses[0].freshness = "stale_age_over_24h".into();
+        statuses[1].state = "unavailable".into();
+        statuses[1].dataset_version = None;
+        statuses[1].sha256 = None;
+        statuses[1].freshness = "no_validated_cache".into();
+    }
+    (vec![affected, duplicate, unaffected], kev, epss, statuses)
+}
+
+fn enrich_display_icon_signatures(snapshot: &mut InstalledApplicationSnapshot) {
+    let mut cache = BTreeMap::<PathBuf, Option<InstalledApplicationSignature>>::new();
+    for application in &mut snapshot.applications {
+        let Some(candidate) = application
+            .display_icon
+            .as_deref()
+            .and_then(resolve_display_icon_candidate)
+        else {
+            continue;
+        };
+        if !cache.contains_key(&candidate) && cache.len() >= 8 {
+            continue;
+        }
+        let signature=cache.entry(candidate.clone()).or_insert_with(||{
+            let authorized=authorize_file_target(new_uuid_v7(),&candidate.to_string_lossy(),"2026-09-02T00:00:00Z".into(),16 * 1024 * 1024).ok()?;
+            let analysis=analyze_authorized_file(&authorized,||false).ok()?;
+            analysis.pe.as_ref()?;
+            let status=|value:&_|serde_json::to_value(value).ok()?.as_str().map(str::to_string);
+            Some(InstalledApplicationSignature{
+                cryptographic_status:status(&analysis.authenticode.cryptographic_status)?,
+                trust_chain_status:status(&analysis.authenticode.trust_chain_status)?,
+                publisher_subject:analysis.authenticode.publisher.subject,
+                offline_cache_only:analysis.authenticode.offline_cache_only,
+                limitation:"DisplayIcon was an unambiguous PE candidate; signature evidence is offline/cache-only and is not a safety guarantee.".into(),
+            })
+        }).clone();
+        application.display_icon_signature = signature;
+    }
+    snapshot.coverage.limitations.push(
+        "DisplayIcon signature enrichment is bounded to 8 unambiguous PE candidates of at most 16 MiB each; all other icons remain not enriched.".into(),
+    );
+    snapshot.coverage.limitations.sort();
+    snapshot.coverage.limitations.dedup();
+}
+
+fn level3_summary(scan: &Level3StoredScan) -> ScanSummaryView {
+    let has_verdict = matches!(scan.state.as_str(), "completed" | "partial");
+    let risk = scan
+        .findings
+        .iter()
+        .map(|finding| match finding.priority {
+            edy_core::PriorityBand::Immediate => "critical",
+            edy_core::PriorityBand::High => "high",
+            edy_core::PriorityBand::Normal | edy_core::PriorityBand::Review => "medium",
+            edy_core::PriorityBand::Low => "low",
+        })
+        .max_by_key(|risk| match *risk {
+            "critical" => 4,
+            "high" => 3,
+            "medium" => 2,
+            "low" => 1,
+            _ => 0,
+        })
+        .unwrap_or("info");
+    ScanSummaryView {
+        id: scan.scan_id.clone(),
+        state: scan.state.clone(),
+        verdict: has_verdict.then(|| {
+            if scan.state == "completed" {
+                if scan.findings.is_empty() {
+                    "no_known_affected_application_from_available_data"
+                } else {
+                    "review_required"
+                }
+            } else {
+                "inconclusive"
+            }
+            .into()
+        }),
+        risk: has_verdict.then(|| risk.into()),
+        confidence: has_verdict.then(|| {
+            if scan.state == "completed" {
+                "high"
+            } else {
+                "low"
+            }
+            .into()
+        }),
+        coverage: CoverageView {
+            total: scan.progress.total_tasks,
+            completed: scan.progress.completed_tasks,
+            failed: 0,
+            unavailable: scan
+                .progress
+                .total_tasks
+                .saturating_sub(scan.progress.completed_tasks),
+            skipped: if scan.state == "cancelled" {
+                scan.progress
+                    .total_tasks
+                    .saturating_sub(scan.progress.completed_tasks)
+            } else {
+                0
+            },
+        },
+    }
+}
+
+fn level3_finding_view(scan_id: &str, finding: &InstalledAppFinding) -> FindingView {
+    let severity = match finding.priority {
+        edy_core::PriorityBand::Immediate => "critical",
+        edy_core::PriorityBand::High => "high",
+        edy_core::PriorityBand::Normal | edy_core::PriorityBand::Review => "medium",
+        edy_core::PriorityBand::Low => "low",
+    };
+    FindingView{id:finding.fingerprint.clone(),scan_id:scan_id.into(),title:format!("{} may be affected by {}",finding.application_name,finding.cve),category:"installed_application_vulnerability".into(),severity:severity.into(),risk:severity.into(),confidence:if finding.identity_state.permits_automatic_cve(){"high"}else{"low"}.into(),status:"open".into(),sources:finding.sources.clone(),affected_component:format!("{} {}",finding.application_name,finding.installed_version),rule_ids:vec![finding.cve.clone()],evidence_ids:vec![finding.fingerprint.clone()],remediation_guidance:finding.fixed_version.as_ref().map_or_else(||"Review vendor guidance; no automatic update or removal is performed.".into(),|version|format!("Vendor data documents fixed version {version}; availability on this host was not established.")),limitations:finding.limitations.clone()}
 }
 
 fn authorization_view(
@@ -1714,6 +2819,94 @@ fn replace_level2_snapshot(
         .replace(&scan.scan_id, current.revision, &payload)
         .map_err(|_| SafeIpcError::new("file_storage_failed", "File scan could not be stored"))?;
     Ok(())
+}
+
+fn replace_level3_snapshot(
+    store: &Arc<Mutex<Level3SnapshotStore>>,
+    proposed: &Level3StoredScan,
+) -> Result<(), SafeIpcError> {
+    let mut store = store.lock().map_err(|_| {
+        SafeIpcError::new(
+            "storage_unavailable",
+            "Installed application storage is unavailable",
+        )
+    })?;
+    let blob = store.load(&proposed.scan_id).map_err(|_| {
+        SafeIpcError::new(
+            "installed_storage_failed",
+            "Installed application scan could not be loaded",
+        )
+    })?;
+    let current: Level3StoredScan = serde_json::from_slice(&blob.payload).map_err(|_| {
+        SafeIpcError::new(
+            "installed_storage_failed",
+            "Installed application snapshot is invalid",
+        )
+    })?;
+    let mut next = proposed.clone();
+    if matches!(
+        current.state.as_str(),
+        "partial" | "completed" | "failed" | "cancelled"
+    ) {
+        next = current;
+    } else if current.state == "cancellation_requested" {
+        next.state = "cancelled".into();
+        next.progress.phase = "cancelled".into();
+        next.progress.status = "cancelled".into();
+        next.progress.percent = None;
+        next.progress.current_engine = None;
+        next.findings.clear();
+    }
+    let payload = serde_json::to_vec(&next).map_err(|_| {
+        SafeIpcError::new(
+            "installed_storage_failed",
+            "Installed application scan could not be stored",
+        )
+    })?;
+    store
+        .replace(&proposed.scan_id, blob.revision, &payload)
+        .map_err(|_| {
+            SafeIpcError::new(
+                "installed_storage_failed",
+                "Installed application scan could not be stored",
+            )
+        })?;
+    Ok(())
+}
+
+fn request_level3_cancellation(
+    store: &Arc<Mutex<Level3SnapshotStore>>,
+    scan_id: &str,
+    token: &CancellationToken,
+) -> Result<ScanProgressView, SafeIpcError> {
+    let failure = || {
+        SafeIpcError::new(
+            "cancel_unavailable",
+            "Installed application cancellation could not be persisted",
+        )
+    };
+    let mut store = store.lock().map_err(|_| failure())?;
+    let blob = store.load(scan_id).map_err(|_| failure())?;
+    let mut current: Level3StoredScan =
+        serde_json::from_slice(&blob.payload).map_err(|_| failure())?;
+    if matches!(
+        current.state.as_str(),
+        "partial" | "completed" | "failed" | "cancelled"
+    ) {
+        return Err(SafeIpcError::new(
+            "scan_not_cancellable",
+            "Scan is already terminal",
+        ));
+    }
+    current.state = "cancellation_requested".into();
+    current.progress.status = "cancellation_requested".into();
+    current.findings.clear();
+    let payload = serde_json::to_vec(&current).map_err(|_| failure())?;
+    store
+        .replace(scan_id, blob.revision, &payload)
+        .map_err(|_| failure())?;
+    token.request();
+    Ok(current.progress)
 }
 
 fn resolve_level2_write(
@@ -2176,6 +3369,19 @@ mod tests {
         (Temp(temporary), backend)
     }
 
+    fn level3_backend(fixture: bool) -> (Temp, Level0Backend) {
+        let project = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../..")
+            .canonicalize()
+            .unwrap();
+        let temporary = project.join("_intake/ipc-tests").join(new_uuid_v7());
+        std::fs::create_dir_all(&temporary).unwrap();
+        let backend =
+            Level0Backend::open_internal(&project, &temporary.join("level0.sqlite3"), fixture)
+                .unwrap();
+        (Temp(temporary), backend)
+    }
+
     fn wait_terminal(backend: &Level0Backend, scan_id: &str) -> ScanSummaryView {
         for _ in 0..400 {
             let scan = backend
@@ -2192,6 +3398,198 @@ mod tests {
             std::thread::sleep(Duration::from_millis(5));
         }
         panic!("synthetic worker did not reach a terminal state")
+    }
+
+    #[test]
+    fn level3_fixture_flows_through_preview_authorization_storage_correlation_and_reports() {
+        let (_temp, backend) = level3_backend(true);
+        let preview = backend
+            .preview_installed_applications(InstalledApplicationPreviewRequest {
+                include_system_components: true,
+            })
+            .unwrap();
+        assert_eq!(preview.application_count, 4);
+        assert_eq!(preview.system_component_count, 1);
+        assert!(preview.requires_confirmation);
+        assert!(!preview.coverage.other_users);
+        assert!(
+            backend
+                .authorize_installed_applications(AuthorizeInstalledApplicationRequest {
+                    preview_id: preview.preview_id.clone(),
+                    confirmed: false
+                })
+                .is_err()
+        );
+        let authorization = backend
+            .authorize_installed_applications(AuthorizeInstalledApplicationRequest {
+                preview_id: preview.preview_id.clone(),
+                confirmed: true,
+            })
+            .unwrap();
+        assert_eq!(
+            authorization.inventory_fingerprint,
+            preview.inventory_fingerprint
+        );
+        assert!(
+            backend
+                .authorize_installed_applications(AuthorizeInstalledApplicationRequest {
+                    preview_id: preview.preview_id,
+                    confirmed: true
+                })
+                .is_err()
+        );
+        let started = backend
+            .create_installed_application_scan(CreateInstalledApplicationScanRequest {
+                authorization_id: authorization.authorization_id,
+                confirmed: true,
+            })
+            .unwrap();
+        assert_eq!(started.state, "preparing");
+        let scan = wait_terminal(&backend, &started.id);
+        assert_eq!(scan.state, "completed");
+        assert_eq!(scan.coverage.completed, 7);
+        assert_eq!(scan.risk.as_deref(), Some("critical"));
+        let inventory = backend
+            .get_installed_application_inventory(&ScanRequest {
+                scan_id: scan.id.clone(),
+            })
+            .unwrap();
+        assert_eq!(inventory.snapshot.applications.len(), 4);
+        assert_eq!(inventory.findings.len(), 1);
+        assert_eq!(inventory.findings[0].sources.len(), 2);
+        assert!(inventory.findings[0].kev.is_some());
+        assert!(inventory.findings[0].epss.is_some());
+        assert!(
+            inventory
+                .snapshot
+                .applications
+                .iter()
+                .any(|application| matches!(
+                    application.identity.state,
+                    edy_core::IdentityMatchState::Unmapped
+                ))
+        );
+        let detail = backend
+            .get_installed_application(&InstalledApplicationRequest {
+                scan_id: scan.id.clone(),
+                application_id: inventory.snapshot.applications[0].application_id.clone(),
+            })
+            .unwrap();
+        assert!(!detail.name.is_empty());
+        let findings = backend
+            .list_findings(&ListFindingsRequest {
+                scan_id: scan.id.clone(),
+                offset: 0,
+                limit: 100,
+            })
+            .unwrap();
+        assert_eq!(findings.len(), 1);
+        assert_eq!(
+            backend
+                .get_finding(&FindingRequest {
+                    finding_id: findings[0].id.clone()
+                })
+                .unwrap()
+                .id,
+            findings[0].id
+        );
+        for kind in [
+            ReportKind::Executive,
+            ReportKind::Technical,
+            ReportKind::Developer,
+        ] {
+            let report = backend
+                .report(&GenerateReportRequest {
+                    scan_id: scan.id.clone(),
+                    kind,
+                })
+                .unwrap();
+            assert!(
+                report
+                    .json
+                    .contains("LEVEL3_INSTALLED_APPLICATION_REPORT_V1")
+            );
+            assert!(!report.json.contains("UninstallString"));
+        }
+        assert_eq!(
+            backend
+                .list_scans(&ListScansRequest {
+                    offset: 0,
+                    limit: 50
+                })
+                .unwrap()
+                .iter()
+                .filter(|item| item.id == scan.id)
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn level3_fixture_cancellation_is_persisted_without_findings_or_verdict() {
+        let (_temp, backend) = level3_backend(true);
+        let preview = backend
+            .preview_installed_applications(InstalledApplicationPreviewRequest {
+                include_system_components: true,
+            })
+            .unwrap();
+        let authorization = backend
+            .authorize_installed_applications(AuthorizeInstalledApplicationRequest {
+                preview_id: preview.preview_id,
+                confirmed: true,
+            })
+            .unwrap();
+        let started = backend
+            .create_installed_application_scan(CreateInstalledApplicationScanRequest {
+                authorization_id: authorization.authorization_id,
+                confirmed: true,
+            })
+            .unwrap();
+        assert_eq!(started.state, "preparing");
+        let requested = backend
+            .cancel(&ScanRequest {
+                scan_id: started.id.clone(),
+            })
+            .unwrap();
+        assert_eq!(requested.status, "cancellation_requested");
+        let cancelled = wait_terminal(&backend, &started.id);
+        assert_eq!(cancelled.state, "cancelled");
+        assert!(cancelled.verdict.is_none());
+        let inventory = backend
+            .get_installed_application_inventory(&ScanRequest {
+                scan_id: started.id.clone(),
+            })
+            .unwrap();
+        assert_eq!(inventory.state, "cancelled");
+        assert!(inventory.findings.is_empty());
+        assert_eq!(
+            backend
+                .cancel(&ScanRequest {
+                    scan_id: started.id
+                })
+                .unwrap()
+                .status,
+            "cancelled"
+        );
+    }
+
+    #[test]
+    fn real_host_preview_is_read_only_and_does_not_claim_complete_provider_coverage() {
+        let (_temp, backend) = level3_backend(false);
+        let preview = backend
+            .preview_installed_applications(InstalledApplicationPreviewRequest {
+                include_system_components: false,
+            })
+            .unwrap();
+        assert!(preview.application_count > 0);
+        assert!(!preview.coverage.other_users);
+        assert!(!preview.coverage.filesystem_crawl);
+        assert!(
+            backend
+                .vulnerability_provider_status()
+                .iter()
+                .all(|provider| provider.state == "unavailable")
+        );
     }
 
     #[test]

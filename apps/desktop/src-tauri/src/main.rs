@@ -7,14 +7,20 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
+use edy_core::InstalledApplication;
 use edy_desktop::ipc::{
-    AuthorizeFileTargetRequest, AuthorizeRepositoryTargetRequest, AuthorizedFileTargetView,
-    AuthorizedRepositoryTargetView, CreateFileScanRequest, CreateRepositoryScanRequest,
-    CreateSyntheticScanRequest, EngineStatusView, FileAnalysisView, FileTargetPreviewView,
-    FindingRequest, FindingView, GenerateReportRequest, InspectFileTargetRequest, Level0Backend,
-    ListFindingsRequest, ListScansRequest, ReportView, RepositoryAuthorizationRequest,
+    AuthorizeFileTargetRequest, AuthorizeInstalledApplicationRequest,
+    AuthorizeRepositoryTargetRequest, AuthorizedFileTargetView, AuthorizedInstalledApplicationView,
+    AuthorizedRepositoryTargetView, CreateFileScanRequest, CreateInstalledApplicationScanRequest,
+    CreateRepositoryScanRequest, CreateSyntheticScanRequest, EngineStatusView, FileAnalysisView,
+    FileTargetPreviewView, FindingRequest, FindingView, GenerateReportRequest,
+    InspectFileTargetRequest, InstalledApplicationInventoryView,
+    InstalledApplicationPreviewRequest, InstalledApplicationPreviewView,
+    InstalledApplicationRequest, Level0Backend, ListFindingsRequest, ListScansRequest,
+    PublicDataRefreshView, RefreshPublicDataRequest, ReportView, RepositoryAuthorizationRequest,
     SafeIpcError, ScanProgressView, ScanRequest, ScanSummaryView,
 };
+use edy_reporting::installed_apps::DatasetStatus;
 use edy_repository::RepositoryInventory;
 use edy_storage::Storage;
 use serde::Serialize;
@@ -168,6 +174,75 @@ fn get_file_analysis(
 }
 
 #[tauri::command]
+fn preview_installed_applications(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: InstalledApplicationPreviewRequest,
+) -> Result<InstalledApplicationPreviewView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.preview_installed_applications(request)
+}
+
+#[tauri::command]
+fn authorize_installed_applications(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: AuthorizeInstalledApplicationRequest,
+) -> Result<AuthorizedInstalledApplicationView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.authorize_installed_applications(request)
+}
+
+#[tauri::command]
+fn create_installed_application_scan(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: CreateInstalledApplicationScanRequest,
+) -> Result<ScanSummaryView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.create_installed_application_scan(request)
+}
+
+#[tauri::command]
+fn get_installed_application_inventory(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: ScanRequest,
+) -> Result<InstalledApplicationInventoryView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.get_installed_application_inventory(&request)
+}
+
+#[tauri::command]
+fn get_installed_application(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: InstalledApplicationRequest,
+) -> Result<InstalledApplication, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.get_installed_application(&request)
+}
+
+#[tauri::command]
+fn get_vulnerability_provider_status(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+) -> Result<Vec<DatasetStatus>, SafeIpcError> {
+    ipc_guard(&window)?;
+    Ok(state.backend.vulnerability_provider_status())
+}
+
+#[tauri::command]
+fn refresh_public_vulnerability_data(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: RefreshPublicDataRequest,
+) -> Result<PublicDataRefreshView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.refresh_public_vulnerability_data(request)
+}
+
+#[tauri::command]
 fn create_synthetic_scan(
     window: WebviewWindow,
     state: tauri::State<'_, FoundationState>,
@@ -306,6 +381,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .skip(1)
         .any(|arg| arg == "--foundation-smoke");
     let root = project_root()?;
+    let _native_level3_degraded = cfg!(debug_assertions)
+        && std::env::args().any(|arg| arg.starts_with("--level3-native-qa-degraded="));
+    let native_level3 = cfg!(debug_assertions)
+        && std::env::args().any(|arg| {
+            arg.starts_with("--level3-native-qa=")
+                || arg.starts_with("--level3-native-qa-degraded=")
+        });
     // Explicit debug-only native QA, not a production setting or IPC surface. Real handlers,
     // Isolation and React remain unchanged; only local data isolation and viewport differ.
     let native_qa_size: Option<(f64, f64)> = if cfg!(debug_assertions) {
@@ -313,6 +395,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             "--level2-native-qa=1366x768" => Some((1366.0, 768.0)),
             "--level2-native-qa=1920x1080" => Some((1920.0, 1080.0)),
             "--level2-native-qa=2560x1440" => Some((2560.0, 1440.0)),
+            "--level3-native-qa=1366x768" => Some((1366.0, 768.0)),
+            "--level3-native-qa=1920x1080" => Some((1920.0, 1080.0)),
+            "--level3-native-qa=2560x1440" => Some((2560.0, 1440.0)),
+            "--level3-native-qa-degraded=1366x768" => Some((1366.0, 768.0)),
             _ => None,
         })
     } else {
@@ -321,7 +407,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let data = local_directory(
         &root,
         if native_qa_size.is_some() {
-            "level2-native-qa-data"
+            if native_level3 {
+                "level3-native-qa-data"
+            } else {
+                "level2-native-qa-data"
+            }
         } else {
             "data"
         },
@@ -332,11 +422,24 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     // Storage::open verifies and migrates to its current schema (Level 0 introduced v2).
     // Do not reject that valid database with the obsolete pre-Level-0 v1 literal.
     drop(storage);
+    #[cfg(all(feature = "native-e2e", debug_assertions))]
+    let backend = if _native_level3_degraded {
+        Level0Backend::open_level3_degraded_fixture(&root, &data.join("level0.sqlite3"))?
+    } else if native_level3 {
+        Level0Backend::open_level3_fixture(&root, &data.join("level0.sqlite3"))?
+    } else {
+        Level0Backend::open(&root, &data.join("level0.sqlite3"))?
+    };
+    #[cfg(not(all(feature = "native-e2e", debug_assertions)))]
     let backend = Level0Backend::open(&root, &data.join("level0.sqlite3"))?;
     let webview_data = local_directory(
         &root,
         if native_qa_size.is_some() {
-            "level2-native-qa-webview2"
+            if native_level3 {
+                "level3-native-qa-webview2"
+            } else {
+                "level2-native-qa-webview2"
+            }
         } else {
             "webview2"
         },
@@ -359,7 +462,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(all(feature = "native-e2e", debug_assertions))]
     let builder = {
         if native_qa_size.is_none() {
-            return Err("native-e2e requires an explicit Level 2 QA viewport".into());
+            return Err("native-e2e requires an explicit bounded QA viewport".into());
         }
         builder.plugin(tauri_plugin_wdio_webdriver::init_with_port(4445))
     };
@@ -376,6 +479,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             authorize_file_target,
             create_file_scan,
             get_file_analysis,
+            preview_installed_applications,
+            authorize_installed_applications,
+            create_installed_application_scan,
+            get_installed_application_inventory,
+            get_installed_application,
+            get_vulnerability_provider_status,
+            refresh_public_vulnerability_data,
             create_synthetic_scan,
             get_scan,
             list_scans,

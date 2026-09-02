@@ -6,3 +6,12 @@ rust-version.workspace = true
 publish.workspace = true
 [dependencies]
 edy-core.workspace = true
+flate2.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+time.workspace = true
+[target.'cfg(windows)'.dependencies]
+windows.workspace = true
+windows-sys.workspace = true

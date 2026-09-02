@@ -116,4 +116,27 @@ describe("Level 0 product shell", () => {
       expect(html).toContain("No final file verdict was generated");
     }
   });
+
+  it("renders the Level 3 preview, coverage, identity and vulnerability evidence conservatively",()=>{
+    const status=parseFoundationStatus({core:"ready",storage:"ready",ipc:"restricted",schema_version:1});
+    const coverage={registry_machine_64:true,registry_machine_32:true,registry_current_user_64:true,registry_current_user_32:true,msix_current_user:true,other_users:false,portable_applications:false,filesystem_crawl:false,limitations:["Portable applications are outside coverage."]} as const;
+    const app={application_id:`appv1-${"b".repeat(32)}`,name:"Fixture App",normalized_name:"fixture app",publisher:"Fixture Corp.",normalized_publisher:"fixture corp",version:{raw:"1.0.0",kind:"sem_ver" as const,canonical:"1.0.0",numeric:[1,0,0]},sources:[{kind:"registry" as const,scope:"machine" as const,view:"registry64" as const,source_id:"fixture"}],product_code:null,package_family_name:null,install_location:null,display_icon:null,display_icon_signature:null,install_date_reported:"20260902",system_component:false,release_type:null,identity:{state:"curated" as const,cpe:"cpe:2.3:a:fixture:app:*:*:*:*:*:*:*:*",purl:null,reason:"versioned curated alias matched",alias_dataset:"IDENTITY_ALIAS_DATA_V1"}};
+    const finding={fingerprint_version:"INSTALLED_APP_VULNERABILITY_V1" as const,fingerprint:`iav1-${"d".repeat(32)}`,application_id:app.application_id,application_name:app.name,installed_version:"1.0.0",cve:"CVE-2099-0001",affected:"affected" as const,identity_state:"curated" as const,priority:"immediate" as const,priority_reasons:["CISA KEV lists this validated CVE; this does not prove host exploitation."],cvss_score:9.8,cvss_severity:"CRITICAL",kev:{cve:"CVE-2099-0001",date_added:"2099-01-01",due_date:null,required_action:null},epss:{cve:"CVE-2099-0001",probability:0.9,percentile:0.99,score_date:"2099-01-01",model_version:"v1"},fixed_version:"2.0.0",sources:["NVD"],limitations:["Availability not established"]};
+    const providers=(["NVD","CISA_KEV","EPSS"] as const).map(provider=>({provider,state:"ready" as const,dataset_version:"fixture",fetched_at_utc:null,sha256:"c".repeat(64),freshness:"synthetic_fixture"}));
+    const html=renderToStaticMarkup(<FoundationView status={status} failed={false} initialPage="installed-apps" installedPreview={{preview_id:"018f4c2a-1d3b-7abc-8def-0123456789ab",application_count:1,system_component_count:0,inventory_fingerprint:"a".repeat(64),coverage,requires_confirmation:true}} installedAuthorization={{authorization_id:"018f4c2a-1d3b-7abc-8def-0123456789ac",application_count:1,inventory_fingerprint:"a".repeat(64),coverage}} providerStatus={providers} installedInventory={{scan_id:"018f4c2a-1d3b-7abc-8def-0123456789ad",state:"completed",snapshot:{schema:"INSTALLED_APPLICATION_SNAPSHOT_V1",applications:[app],coverage},findings:[finding],provider_status:providers}}/>);
+    for(const label of ["Installed Application Security","Preview inventory","Authorize this snapshot","Confirm installed-app analysis","Provider status","Inventory coverage","Fixture App","curated","CVE-2099-0001","immediate","No finding does not mean clean","does not prove host exploitation","availability on this host is not established"])expect(html).toContain(label);
+    expect(html).not.toContain("No threats found");expect(html).not.toContain("host exploited</strong>");
+  });
+
+  it("renders stale and unavailable Level 3 provider coverage explicitly",()=>{
+    const status=parseFoundationStatus({core:"ready",storage:"ready",ipc:"restricted",schema_version:1});
+    const providers=[
+      {provider:"NVD",state:"stale_cache",dataset_version:"fixture-old",fetched_at_utc:"2026-08-01T00:00:00Z",sha256:"a".repeat(64),freshness:"stale_age_over_24h"},
+      {provider:"CISA_KEV",state:"unavailable",dataset_version:null,fetched_at_utc:null,sha256:null,freshness:"no_validated_cache"},
+      {provider:"EPSS",state:"ready",dataset_version:"fixture",fetched_at_utc:"2026-09-02T00:00:00Z",sha256:"b".repeat(64),freshness:"age_within_48h"},
+    ] as const;
+    const html=renderToStaticMarkup(<FoundationView status={status} failed={false} initialPage="installed-apps" providerStatus={providers}/>);
+    for(const label of ["Provider status","stale_cache","stale_age_over_24h","unavailable","no_validated_cache"])expect(html).toContain(label);
+    expect(html).not.toContain("No vulnerabilities");
+  });
 });

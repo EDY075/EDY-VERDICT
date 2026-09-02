@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import type { FoundationStatus } from "./foundation";
 import { level0Api } from "./level0-api";
-import type { EngineStatus, FileAnalysisView, FileAuthorization, FileTargetPreview, FindingView, ReportView, ScanProgress, ScanSummary, RepositoryAuthorization } from "./level0-api";
+import type { DatasetStatus, EngineStatus, FileAnalysisView, FileAuthorization, FileTargetPreview, FindingView, InstalledApplicationAuthorization, InstalledApplicationInventory, InstalledApplicationPreview, ReportView, ScanProgress, ScanSummary, RepositoryAuthorization } from "./level0-api";
 
 type Locale = "pt-BR" | "en";
 type Theme = "professional" | "neon";
-type Page = "overview" | "new-scan" | "progress" | "findings" | "history" | "engines" | "reports" | "settings";
+type Page = "overview" | "new-scan" | "installed-apps" | "progress" | "findings" | "history" | "engines" | "reports" | "settings";
 
-const pages: readonly Page[] = ["overview", "new-scan", "progress", "findings", "history", "engines", "reports", "settings"];
+const pages: readonly Page[] = ["overview", "new-scan", "installed-apps", "progress", "findings", "history", "engines", "reports", "settings"];
 const terminalStates = new Set(["cancelled", "completed", "partial", "failed"]);
 
 function safeUiError(error: unknown, fallback: string): string {
@@ -33,7 +33,7 @@ function safeUiError(error: unknown, fallback: string): string {
 const copy = {
   "pt-BR": {
     product: "EDY VERDICT", edition: "Centro de segurança local", overview: "Visão geral", "new-scan": "Nova análise",
-    progress: "Progresso", findings: "Achados", history: "Histórico", engines: "Engines", reports: "Relatórios",
+    "installed-apps": "Aplicativos instalados", progress: "Progresso", findings: "Achados", history: "Histórico", engines: "Engines", reports: "Relatórios",
     settings: "Configurações", foundation: "Fundação Level 0", available: "Infraestrutura disponível",
     unavailable: "Infraestrutura indisponível", checking: "Validando infraestrutura…", noData: "Nenhum dado disponível",
     noDataDetail: "A interface não usa demonstrações silenciosas. Os dados aparecem somente após resposta válida do backend.",
@@ -45,7 +45,7 @@ const copy = {
   },
   en: {
     product: "EDY VERDICT", edition: "Local security center", overview: "Overview", "new-scan": "New Scan",
-    progress: "Scan Progress", findings: "Findings", history: "History", engines: "Engines", reports: "Reports",
+    "installed-apps": "Installed Apps", progress: "Scan Progress", findings: "Findings", history: "History", engines: "Engines", reports: "Reports",
     settings: "Settings", foundation: "Level 0 Foundation", available: "Infrastructure available",
     unavailable: "Infrastructure unavailable", checking: "Validating infrastructure…", noData: "No data available",
     noDataDetail: "The interface never uses silent demos. Data appears only after a valid backend response.",
@@ -82,16 +82,35 @@ interface ProductViewProps {
   readonly onInspectFile?: (path:string) => void;
   readonly onAuthorizeFile?: (previewId:string) => void;
   readonly onStartFile?: () => void;
+  readonly installedPreview?: InstalledApplicationPreview | null;
+  readonly installedAuthorization?: InstalledApplicationAuthorization | null;
+  readonly installedInventory?: InstalledApplicationInventory | null;
+  readonly providerStatus?: readonly DatasetStatus[];
+  readonly onPreviewInstalled?: (includeSystemComponents:boolean) => void;
+  readonly onAuthorizeInstalled?: (previewId:string) => void;
+  readonly onStartInstalled?: () => void;
+  readonly onRefreshProviders?: () => void;
 }
 
 function EmptyState({ title, detail }: { readonly title: string; readonly detail: string }) {
   return <section className="empty-state" data-mode="production-empty"><div className="radar" aria-hidden="true"><span /></div><div><h2>{title}</h2><p>{detail}</p></div></section>;
 }
 
+function InstalledAppsPanel({preview,authorization,inventory,providers,busy,onPreview,onAuthorize,onStart,onRefresh}:{readonly preview:InstalledApplicationPreview|null;readonly authorization:InstalledApplicationAuthorization|null;readonly inventory:InstalledApplicationInventory|null;readonly providers:readonly DatasetStatus[];readonly busy:boolean;readonly onPreview:((include:boolean)=>void)|undefined;readonly onAuthorize:((id:string)=>void)|undefined;readonly onStart:(()=>void)|undefined;readonly onRefresh:(()=>void)|undefined}) {
+  const [includeSystem,setIncludeSystem]=useState(false); const [search,setSearch]=useState(""); const [priority,setPriority]=useState("all"); const [identity,setIdentity]=useState("all"); const [selectedApp,setSelectedApp]=useState<string|null>(null);
+  const applications=inventory?.snapshot.applications.filter(app=>(includeSystem||!app.system_component)&&(search===""||`${app.name} ${app.publisher??""}`.toLowerCase().includes(search.toLowerCase()))&&(identity==="all"||app.identity.state===identity))??[];
+  const findings=inventory?.findings.filter(finding=>priority==="all"||finding.priority===priority)??[]; const detail=inventory?.snapshot.applications.find(app=>app.application_id===selectedApp)??applications[0]??null;
+  return <div className="workflow-stack" data-level3-screen={inventory?"inventory":preview?"preview":"start"}>
+    <section className="action-panel"><div className="panel-heading"><div><p className="eyebrow">Level 3 · Windows inventory</p><h2>Installed Application Security</h2></div><button className="secondary" disabled={busy||onRefresh===undefined} onClick={onRefresh}>Refresh public data</button></div><p>Read-only inventory from standard uninstall registry views and current-user MSIX. Portable apps, other users and filesystem crawling are outside coverage.</p><label><input type="checkbox" checked={includeSystem} onChange={event=>setIncludeSystem(event.target.checked)} /> Include system components</label><button className="secondary" disabled={busy||onPreview===undefined} onClick={()=>onPreview?.(includeSystem)}>Preview inventory</button>{preview&&<div className="confirmation-panel"><strong>{preview.application_count} applications in preview</strong><p>{preview.system_component_count} system components · explicit confirmation required.</p><button className="secondary" disabled={busy||onAuthorize===undefined} onClick={()=>onAuthorize?.(preview.preview_id)}>Authorize this snapshot</button></div>}{authorization&&<div className="confirmation-panel"><strong>Snapshot authorized</strong><p>{authorization.application_count} applications. Public providers receive no host inventory.</p><button className="primary" disabled={busy||onStart===undefined} onClick={onStart}>Confirm installed-app analysis</button></div>}</section>
+    <section className="data-panel" data-level3-screen="provider-status"><h2>Provider status</h2><div className="engine-grid">{providers.map(provider=><article key={provider.provider}><span className={`status-dot ${provider.state==="ready"?"ready":""}`} /><div><strong>{provider.provider}</strong><p>{provider.state} · {provider.freshness}</p><small>{provider.dataset_version??"No validated local dataset"}</small></div></article>)}</div><p>NVD uses only an approved fixed public development query. CISA KEV and EPSS enrich validated CVEs; neither proves host exploitation.</p></section>
+    {inventory&&<><section className="data-panel" data-level3-screen="coverage"><h2>Inventory coverage</h2><p>{inventory.state} · {inventory.snapshot.applications.length} normalized applications · {inventory.findings.length} validated affected findings.</p><p className="coverage-warning">No finding does not mean clean. Unknown identity, unparseable versions and unavailable data never become vulnerability findings.</p><ul>{inventory.snapshot.coverage.limitations.map(item=><li key={item}>{item}</li>)}</ul></section><section className="findings-workspace"><div className="filter-bar"><label>Search<input aria-label="Application search" value={search} onChange={event=>setSearch(event.target.value)} /></label><label>Identity<select aria-label="Identity filter" value={identity} onChange={event=>setIdentity(event.target.value)}><option value="all">All</option>{["exact","curated","strong","heuristic","unmapped","conflicting"].map(value=><option key={value}>{value}</option>)}</select></label><label>Priority<select aria-label="Priority filter" value={priority} onChange={event=>setPriority(event.target.value)}><option value="all">All</option>{["immediate","high","normal","low","review"].map(value=><option key={value}>{value}</option>)}</select></label></div><div className="finding-layout"><div className="table-wrap"><table><thead><tr><th>Application</th><th>Version</th><th>Publisher</th><th>Identity</th></tr></thead><tbody>{applications.map(app=><tr key={app.application_id} onClick={()=>setSelectedApp(app.application_id)}><td>{app.name}</td><td>{app.version.raw??"Unknown"}</td><td>{app.publisher??"Unknown"}</td><td>{app.identity.state}</td></tr>)}</tbody></table></div>{detail&&<article className="data-panel finding-detail" data-level3-screen="application-detail"><h2>{detail.name}</h2><dl><dt>Version</dt><dd>{detail.version.raw??"Unknown"} ({detail.version.kind})</dd><dt>Publisher</dt><dd>{detail.publisher??"Unknown"}</dd><dt>Identity</dt><dd>{detail.identity.state} · {detail.identity.reason}</dd><dt>CPE / PURL</dt><dd>{detail.identity.cpe??detail.identity.purl??"Unmapped"}</dd><dt>Sources</dt><dd>{detail.sources.map(source=>`${source.kind}/${source.scope}/${source.view}`).join(", ")}</dd><dt>Install date</dt><dd>{detail.install_date_reported??"Unavailable"} (publisher-reported)</dd></dl></article>}</div></section><section className="data-panel" data-level3-screen="vulnerabilities"><h2>Validated affected findings</h2>{findings.length===0?<p>No validated affected finding from available datasets. This is not a clean guarantee.</p>:findings.map(finding=><article key={finding.fingerprint} className="finding-card"><span className={`severity severity-${finding.priority==="immediate"?"critical":finding.priority==="high"?"high":"medium"}`}>{finding.priority}</span><strong>{finding.cve} · {finding.application_name}</strong><p>Installed {finding.installed_version} · CVSS {finding.cvss_score??"unavailable"} · KEV {finding.kev?"yes":"no"} · EPSS {finding.epss?.probability??"unavailable"}</p><small>{finding.priority_reasons.join(" ")} Fixed version: {finding.fixed_version??"not documented"}; availability on this host is not established.</small></article>)}</section></>}
+  </div>;
+}
+
 export function FoundationView({
   status, failed, engines = [], scans = [], selected = null, progress = null, findings = [], report = null,
   error = null, busy = false, onStart, onCancel, onSelect, onReport, repositoryAuthorization = null, onAuthorizeRepository, onStartRepository,
-  filePreview = null, fileAuthorization = null, fileAnalysis = null, onInspectFile, onAuthorizeFile, onStartFile, initialPage = "overview",
+  filePreview = null, fileAuthorization = null, fileAnalysis = null, onInspectFile, onAuthorizeFile, onStartFile, installedPreview=null, installedAuthorization=null, installedInventory=null, providerStatus=[], onPreviewInstalled, onAuthorizeInstalled, onStartInstalled, onRefreshProviders, initialPage = "overview",
 }: ProductViewProps) {
   const [page, setPage] = useState<Page>(initialPage);
   const [locale, setLocale] = useState<Locale>("pt-BR");
@@ -115,6 +134,7 @@ export function FoundationView({
   const findingDetail = findings.find((finding) => finding.id === selectedFindingId) ?? visibleFindings[0] ?? null;
 
   const content = (() => {
+    if(page==="installed-apps") return <InstalledAppsPanel preview={installedPreview} authorization={installedAuthorization} inventory={installedInventory} providers={providerStatus} busy={busy} onPreview={onPreviewInstalled} onAuthorize={onAuthorizeInstalled} onStart={onStartInstalled} onRefresh={onRefreshProviders}/>;
     if (page === "new-scan") return <div className="workflow-stack"><section className="action-panel"><h2>File / Binary Security</h2><p>One explicit local file only. Preview never starts analysis.</p><label>File path<input aria-label="File path" value={filePath} disabled={busy} onChange={(event)=>setFilePath(event.target.value)} /></label><button className="secondary" disabled={!ready||busy||filePath.length===0||onInspectFile===undefined} onClick={()=>onInspectFile?.(filePath)}>Preview file</button>{filePreview && filePreview.requested_path === filePath && <div className="data-panel" data-level2-screen="file-authorization"><h3>File preview</h3><dl><dt>File name</dt><dd>{filePreview.file_name}</dd><dt>Resolved location</dt><dd><code>{filePreview.canonical_path}</code></dd><dt>Size</dt><dd>{filePreview.identity.size} bytes</dd><dt>Detected type</dt><dd>{filePreview.detected_type}</dd><dt>Proposed checks</dt><dd>{filePreview.proposed_checks.join(", ")}</dd><dt>Policy limitations</dt><dd>{filePreview.policy_limitations.join(" ")}</dd></dl><button className="secondary" disabled={busy||onAuthorizeFile===undefined} onClick={()=>onAuthorizeFile?.(filePreview.preview_id)}>Authorize this exact file</button></div>}{fileAuthorization && filePreview?.requested_path === filePath && <div className="confirmation-panel"><strong>Authorization captured</strong><code>{fileAuthorization.canonical_path}</code><p>Analysis still requires explicit confirmation. YARA-X is unavailable by execution policy; reputation will be Not checked.</p><button className="primary" disabled={busy||onStartFile===undefined} onClick={onStartFile}>Confirm file analysis</button></div>}</section><section className="action-panel"><h2>Repository Security</h2><p>Repository inventory available. Some security checks are unavailable until execution policy requirements are satisfied.</p><label>Repository path<input aria-label="Repository path" value={repositoryPath} onChange={(event)=>setRepositoryPath(event.target.value)} /></label><button className="secondary" disabled={!ready||busy||repositoryPath.length===0||onAuthorizeRepository===undefined} onClick={()=>onAuthorizeRepository?.(repositoryPath)}>Authorize and inspect</button>{repositoryAuthorization && <div className="data-panel"><h3>Authorization preview</h3><code>{repositoryAuthorization.canonical_root}</code><dl><dt>Estimated files</dt><dd>{repositoryAuthorization.estimated_files}</dd><dt>Estimated bytes</dt><dd>{repositoryAuthorization.estimated_bytes}</dd><dt>Exclusions</dt><dd>{repositoryAuthorization.exclusions.join(", ")}</dd><dt>Readiness</dt><dd>{repositoryAuthorization.readiness}</dd></dl><button className="primary" disabled={busy||onStartRepository===undefined} onClick={onStartRepository}>Confirm repository scan</button></div>}</section><section className="action-panel"><h2>{text.synthetic}</h2><p>{text.syntheticNote}</p><button className="primary" disabled={!ready || busy || onStart === undefined} onClick={onStart}>{busy ? "…" : text.synthetic}</button></section></div>;
     if (page === "progress") return progress === null
       ? <EmptyState title={text.noData} detail={text.noDataDetail} />
@@ -163,17 +183,22 @@ export default function App() {
   const [filePreview,setFilePreview]=useState<FileTargetPreview|null>(null);
   const [fileAuthorization,setFileAuthorization]=useState<FileAuthorization|null>(null);
   const [fileAnalysis,setFileAnalysis]=useState<FileAnalysisView|null>(null);
+  const [installedPreview,setInstalledPreview]=useState<InstalledApplicationPreview|null>(null);
+  const [installedAuthorization,setInstalledAuthorization]=useState<InstalledApplicationAuthorization|null>(null);
+  const [installedInventory,setInstalledInventory]=useState<InstalledApplicationInventory|null>(null);
+  const [providerStatus,setProviderStatus]=useState<readonly DatasetStatus[]>([]);
   const selectedId = useRef<string | null>(null);
 
   useEffect(() => { selectedId.current = selected?.id ?? null; }, [selected?.id]);
 
   useEffect(() => {
     let active = true;
-    void Promise.allSettled([level0Api.foundation(), level0Api.engines(), level0Api.listScans()]).then((results) => {
+    void Promise.allSettled([level0Api.foundation(), level0Api.engines(), level0Api.listScans(),level0Api.vulnerabilityProviderStatus()]).then((results) => {
       if (!active) return;
       if (results[0].status === "fulfilled") setStatus(results[0].value); else setFailed(true);
       if (results[1].status === "fulfilled") setEngines(results[1].value);
       if (results[2].status === "fulfilled") { setScans(results[2].value); setSelected(results[2].value[0] ?? null); }
+      if (results[3].status === "fulfilled") setProviderStatus(results[3].value);
       if (results.some((result) => result.status === "rejected")) setError("Some backend data is unavailable");
     });
     return () => { active = false; };
@@ -194,7 +219,7 @@ export default function App() {
         setProgress(next);
         if (terminalStates.has(next.status)) {
           const [scanResult, findingResult] = await Promise.all([level0Api.getScan(selected.id), level0Api.findings(selected.id)]);
-          if (active) { setSelected(scanResult); setFindings(findingResult); setScans((current) => [scanResult, ...current.filter((item) => item.id !== scanResult.id)]); try { const result = await level0Api.getFileAnalysis(selected.id); if (active) setFileAnalysis(result); } catch { if (active) setFileAnalysis(null); } }
+          if (active) { setSelected(scanResult); setFindings(findingResult); setScans((current) => [scanResult, ...current.filter((item) => item.id !== scanResult.id)]); try { const result = await level0Api.getFileAnalysis(selected.id); if (active) setFileAnalysis(result); } catch { if (active) setFileAnalysis(null); } try { const result=await level0Api.getInstalledApplicationInventory(selected.id);if(active){setInstalledInventory(result);setProviderStatus(result.provider_status);}} catch { if(active)setInstalledInventory(null); } }
         } else {
           timer = setTimeout(() => { void poll(); }, 750);
         }
@@ -222,6 +247,10 @@ export default function App() {
   const inspectFile=async(path:string)=>{setBusy(true);setError(null);setFileAuthorization(null);try{setFilePreview(await level0Api.inspectFile(path));}catch(cause){setFilePreview(null);setError(safeUiError(cause,"File preview was refused safely"));}finally{setBusy(false);}};
   const authorizeFile=async(previewId:string)=>{setBusy(true);setError(null);try{setFileAuthorization(await level0Api.authorizeFile(previewId));}catch(cause){setFileAuthorization(null);setError(safeUiError(cause,"File authorization was refused safely"));}finally{setBusy(false);}};
   const startFile=async()=>{if(!fileAuthorization)return;setBusy(true);setError(null);setFileAnalysis(null);try{const scan=await level0Api.createFileScan(fileAuthorization.authorization_id);setSelected(scan);setScans(current=>[scan,...current]);}catch(cause){setError(safeUiError(cause,"File analysis could not be created safely"));}finally{setBusy(false);}};
+  const previewInstalled=async(include:boolean)=>{setBusy(true);setError(null);setInstalledAuthorization(null);setInstalledInventory(null);try{setInstalledPreview(await level0Api.previewInstalledApplications(include));}catch(cause){setError(safeUiError(cause,"Installed application preview failed safely"));}finally{setBusy(false);}};
+  const authorizeInstalled=async(previewId:string)=>{setBusy(true);setError(null);try{setInstalledAuthorization(await level0Api.authorizeInstalledApplications(previewId));}catch(cause){setError(safeUiError(cause,"Installed application authorization failed safely"));}finally{setBusy(false);}};
+  const startInstalled=async()=>{if(!installedAuthorization)return;setBusy(true);setError(null);try{const scan=await level0Api.createInstalledApplicationScan(installedAuthorization.authorization_id);setSelected(scan);setScans(current=>[scan,...current]);setInstalledInventory(await level0Api.getInstalledApplicationInventory(scan.id));}catch(cause){setError(safeUiError(cause,"Installed application analysis failed safely"));}finally{setBusy(false);}};
+  const refreshProviders=async()=>{setBusy(true);setError(null);try{const result=await level0Api.refreshPublicVulnerabilityData();setProviderStatus(result.provider_status);}catch(cause){setError(safeUiError(cause,"Public vulnerability datasets remain unavailable; prior validated cache was preserved"));}finally{setBusy(false);}};
   const generateReport = async (kind: ReportView["kind"]) => {
     if (selected === null) return;
     const scanId = selected.id;
@@ -229,5 +258,5 @@ export default function App() {
     try { const result = await level0Api.report(scanId, kind); if (selectedId.current === scanId) setReport(result); }
     catch (cause) { setError(safeUiError(cause, "Report generation failed safely")); } finally { setBusy(false); }
   };
-  return <FoundationView status={status} failed={failed} engines={engines} scans={scans} selected={selected} progress={progress} findings={findings} report={report} error={error} busy={busy} repositoryAuthorization={repositoryAuthorization} onAuthorizeRepository={(path)=>{void authorizeRepository(path);}} onStartRepository={()=>{void startRepository();}} filePreview={filePreview} fileAuthorization={fileAuthorization} fileAnalysis={fileAnalysis} onInspectFile={(path)=>{void inspectFile(path);}} onAuthorizeFile={(path)=>{void authorizeFile(path);}} onStartFile={()=>{void startFile();}} onStart={() => { void start(); }} onCancel={() => { void cancel(); }} onSelect={(scan) => { if (!busy) setSelected(scan); }} onReport={(kind) => { void generateReport(kind); }} />;
+  return <FoundationView status={status} failed={failed} engines={engines} scans={scans} selected={selected} progress={progress} findings={findings} report={report} error={error} busy={busy} repositoryAuthorization={repositoryAuthorization} onAuthorizeRepository={(path)=>{void authorizeRepository(path);}} onStartRepository={()=>{void startRepository();}} filePreview={filePreview} fileAuthorization={fileAuthorization} fileAnalysis={fileAnalysis} onInspectFile={(path)=>{void inspectFile(path);}} onAuthorizeFile={(path)=>{void authorizeFile(path);}} onStartFile={()=>{void startFile();}} installedPreview={installedPreview} installedAuthorization={installedAuthorization} installedInventory={installedInventory} providerStatus={providerStatus} onPreviewInstalled={include=>{void previewInstalled(include);}} onAuthorizeInstalled={id=>{void authorizeInstalled(id);}} onStartInstalled={()=>{void startInstalled();}} onRefreshProviders={()=>{void refreshProviders();}} onStart={() => { void start(); }} onCancel={() => { void cancel(); }} onSelect={(scan) => { if (!busy) setSelected(scan); }} onReport={(kind) => { void generateReport(kind); }} />;
 }

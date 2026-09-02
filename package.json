@@ -9,6 +9,7 @@
     "lint": "pnpm --dir apps/desktop lint",
     "test": "node --test tests/*.test.mjs && pnpm --dir apps/desktop test",
     "build": "pnpm --dir apps/desktop build",
-    "test:level2-native": "node tests/native/level2-e2e.mjs"
+    "test:level2-native": "node tests/native/level2-e2e.mjs",
+    "test:level3-native": "node tests/native/level3-e2e.mjs"
   }
 }

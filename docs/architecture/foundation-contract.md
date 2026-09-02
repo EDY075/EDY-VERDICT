@@ -6,12 +6,15 @@ combined gates. Shared directory editing is disjoint, not parallel integration.
 
 Allowed internal dependencies:
 - edy-core: none; no Tauri/Tokio/SQLite/reqwest/WebView/frontend.
-- edy-engine-manager, edy-providers, edy-storage, edy-reporting: edy-core only.
-- edy-cli and desktop Rust: the five library crates, not each other.
+- edy-repository and edy-providers: edy-core only.
+- edy-engine-manager: edy-core plus edy-repository; edy-storage: edy-core;
+  edy-reporting: edy-core plus the Level 1/2 domain crates it renders.
+- edy-cli and desktop Rust: the approved library crates, not each other.
 
 All contracts are structural, snake_case serde enums, severity != confidence.
 Unavailable != clean. Level 0 adds a documented, versioned numeric risk/confidence model;
-providers remain fakes until their later levels.
+providers remain closed contracts until their owning level. Level 3 adds read-only Windows
+inventory plus fixed-origin NVD/CISA KEV/EPSS public-data adapters; the core still has no HTTP.
 Wire envelope schema_version=1, producer_version, generated_at_utc, data.
 The earlier infrastructure envelope keeps opaque strings for backward compatibility. Level 0
 domain entities use fail-closed UUIDv7 IDs, normalized UTC timestamps and validated aggregate
@@ -23,11 +26,12 @@ Secret adapter is native Windows Credential Manager, no frontend secret command.
 Only fake credential target EDY-VERDICT-LEVEL1C-TEST is authorized for tests;
 never overwrite a preexisting credential at that target. Cleanup even on failure.
 
-Desktop IPC: `foundation_status` only, no arguments, returns
+The infrastructure status IPC has no arguments and returns
 {core: "ready", storage: "ready", ipc: "restricted", schema_version: 1}.
 These strings describe infrastructure, never safety of any analyzed target.
 Native storage path: project .local/data for this development-only bootstrap.
-No downloads, provider requests, scanners, telemetry or product functionality.
+There is no generic shell/filesystem/registry/SQL/HTTP IPC. Level 3 public refresh is a
+confirmed closed-set operation and never accepts a URL, query, host inventory or credential.
 
 Ownership: JR core/shared/config/docs/gates/providers/reporting/CLI;
 Core specialist storage only; Engine specialist engine-manager + tools manifests;

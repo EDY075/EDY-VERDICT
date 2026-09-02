@@ -1,10 +1,5 @@
 {
-  "scope": "preliminary Windows resolved graph, installed npm packages, and promoted project-local build tooling; not public release clearance",
-  "classifications": {
-    "PRODUCT_RUNTIME": "application dependency inventory",
-    "BUILD_TOOLING": "project-local tools used to build or package the product",
-    "EXTERNAL_ENGINES": "independently versioned command-line engines promoted with Manifest/Receipt V2"
-  },
+  "scope": "preliminary Windows resolved graph and installed npm packages; not public release clearance",
   "packages": [
     {
       "ecosystem": "cargo",
@@ -124,6 +119,22 @@
         ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/anyhow-1.0.104/build.rs"
       ],
       "id": "registry+https://github.com/rust-lang/crates.io-index#anyhow@1.0.104"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "atomic-waker",
+      "version": "1.1.2",
+      "license": "Apache-2.0 OR MIT",
+      "source": "https://github.com/smol-rs/atomic-waker",
+      "archive_sha256": "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/atomic-waker-1.1.2/LICENSE-APACHE",
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/atomic-waker-1.1.2/LICENSE-MIT",
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/atomic-waker-1.1.2/LICENSE-THIRD-PARTY"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#atomic-waker@1.1.2"
     },
     {
       "ecosystem": "cargo",
@@ -1096,6 +1107,111 @@
     },
     {
       "ecosystem": "cargo",
+      "name": "futures-channel",
+      "version": "0.3.34",
+      "license": "MIT OR Apache-2.0",
+      "source": "https://github.com/rust-lang/futures-rs",
+      "archive_sha256": "b1f9e3d69d39e4862ffed03ed071a76f9a13ba1d9109d355b0f0aa6b15e393c4",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-channel-0.3.34/LICENSE-APACHE",
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-channel-0.3.34/LICENSE-MIT"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#futures-channel@0.3.34"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "futures-core",
+      "version": "0.3.34",
+      "license": "MIT OR Apache-2.0",
+      "source": "https://github.com/rust-lang/futures-rs",
+      "archive_sha256": "92d699e522242e69e3003b94ecc1f960f3a5e015aa7c5d7486e65ad01dd94f5e",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-core-0.3.34/LICENSE-APACHE",
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-core-0.3.34/LICENSE-MIT"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#futures-core@0.3.34"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "futures-io",
+      "version": "0.3.34",
+      "license": "MIT OR Apache-2.0",
+      "source": "https://github.com/rust-lang/futures-rs",
+      "archive_sha256": "53c0fa8157de1303bfffdaa1cc2a673bfffb60102f76b0ef4441659124373fed",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-io-0.3.34/LICENSE-APACHE",
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-io-0.3.34/LICENSE-MIT"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#futures-io@0.3.34"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "futures-macro",
+      "version": "0.3.34",
+      "license": "MIT OR Apache-2.0",
+      "source": "https://github.com/rust-lang/futures-rs",
+      "archive_sha256": "9fb9654ba8355388abeb8dcb4fc62f511300867002afc858860463bdd9fe0c44",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-macro-0.3.34/LICENSE-APACHE",
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-macro-0.3.34/LICENSE-MIT"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#futures-macro@0.3.34"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "futures-sink",
+      "version": "0.3.34",
+      "license": "MIT OR Apache-2.0",
+      "source": "https://github.com/rust-lang/futures-rs",
+      "archive_sha256": "1944426bf7d03f1d14f708785e4b33efd750b36d48a157b836b3efc15ede8e1d",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-sink-0.3.34/LICENSE-APACHE",
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-sink-0.3.34/LICENSE-MIT"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#futures-sink@0.3.34"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "futures-task",
+      "version": "0.3.34",
+      "license": "MIT OR Apache-2.0",
+      "source": "https://github.com/rust-lang/futures-rs",
+      "archive_sha256": "cd417de3d1d015fc3bfd2b1ea46dfc7bab72ef86f1cc7cc9c78e728b34a6d1fd",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/LICENSE-APACHE",
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/LICENSE-MIT"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#futures-task@0.3.34"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "futures-util",
+      "version": "0.3.34",
+      "license": "MIT OR Apache-2.0",
+      "source": "https://github.com/rust-lang/futures-rs",
+      "archive_sha256": "0d50a92467f8ba5dd6e3ee5d4bd04d73ab2e4e1c44474a0674821dfce14b79bc",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-util-0.3.34/LICENSE-APACHE",
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-util-0.3.34/LICENSE-MIT"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#futures-util@0.3.34"
+    },
+    {
+      "ecosystem": "cargo",
       "name": "generic-array",
       "version": "0.14.7",
       "license": "MIT",
@@ -1281,6 +1397,34 @@
     },
     {
       "ecosystem": "cargo",
+      "name": "http-body-util",
+      "version": "0.1.5",
+      "license": "MIT",
+      "source": "https://github.com/hyperium/http-body",
+      "archive_sha256": "23169fe34a5fbcdd3f3862e78fb9b6fccd5f02a6dc6f732547005d45631ce71c",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/http-body-util-0.1.5/LICENSE"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#http-body-util@0.1.5"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "http-body",
+      "version": "1.1.0",
+      "license": "MIT",
+      "source": "https://github.com/hyperium/http-body",
+      "archive_sha256": "ca2a8f2913ee65f60facd6a5905613afaa448497a0230cc41ce022d93290bc2c",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/http-body-1.1.0/LICENSE"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#http-body@1.1.0"
+    },
+    {
+      "ecosystem": "cargo",
       "name": "http",
       "version": "1.5.0",
       "license": "MIT OR Apache-2.0",
@@ -1293,6 +1437,66 @@
       ],
       "build_scripts": [],
       "id": "registry+https://github.com/rust-lang/crates.io-index#http@1.5.0"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "httparse",
+      "version": "1.10.1",
+      "license": "MIT OR Apache-2.0",
+      "source": "https://github.com/seanmonstar/httparse",
+      "archive_sha256": "6dbf3de79e51f3d586ab4cb9d5c3e2c14aa28ed23d180cf89b4df0454a69cc87",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/httparse-1.10.1/LICENSE-APACHE",
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/httparse-1.10.1/LICENSE-MIT"
+      ],
+      "build_scripts": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/httparse-1.10.1/build.rs"
+      ],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#httparse@1.10.1"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "hyper-tls",
+      "version": "0.6.0",
+      "license": "MIT/Apache-2.0",
+      "source": "https://github.com/hyperium/hyper-tls",
+      "archive_sha256": "70206fc6890eaca9fde8a0bf71caa2ddfc9fe045ac9e5c70df101a7dbde866e0",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-tls-0.6.0/LICENSE-APACHE",
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-tls-0.6.0/LICENSE-MIT"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#hyper-tls@0.6.0"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "hyper-util",
+      "version": "0.1.20",
+      "license": "MIT",
+      "source": "https://github.com/hyperium/hyper-util",
+      "archive_sha256": "96547c2556ec9d12fb1578c4eaf448b04993e7fb79cbaad930a656880a6bdfa0",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-util-0.1.20/LICENSE"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#hyper-util@0.1.20"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "hyper",
+      "version": "1.11.1",
+      "license": "MIT",
+      "source": "https://github.com/hyperium/hyper",
+      "archive_sha256": "27b501faa50e7a26c3d3560ca625132f4078a17771f4810baf70475ae48cbe43",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-1.11.1/LICENSE"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#hyper@1.11.1"
     },
     {
       "ecosystem": "cargo",
@@ -1514,6 +1718,21 @@
       ],
       "build_scripts": [],
       "id": "registry+https://github.com/rust-lang/crates.io-index#inout@0.1.4"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "ipnet",
+      "version": "2.12.1",
+      "license": "MIT OR Apache-2.0",
+      "source": "https://github.com/krisprice/ipnet",
+      "archive_sha256": "6a756c3fac73139e83f14c2d742155dd2b78d3ee56597b419a0579b7bdd6dd78",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ipnet-2.12.1/LICENSE-APACHE",
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ipnet-2.12.1/LICENSE-MIT"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#ipnet@2.12.1"
     },
     {
       "ecosystem": "cargo",
@@ -1820,6 +2039,23 @@
       ],
       "build_scripts": [],
       "id": "registry+https://github.com/rust-lang/crates.io-index#muda@0.19.3"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "native-tls",
+      "version": "0.2.18",
+      "license": "MIT OR Apache-2.0",
+      "source": "https://github.com/rust-native-tls/rust-native-tls",
+      "archive_sha256": "465500e14ea162429d264d44189adc38b199b62b1c21eea9f69e4b73cb03bbf2",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/native-tls-0.2.18/LICENSE-APACHE",
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/native-tls-0.2.18/LICENSE-MIT"
+      ],
+      "build_scripts": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/native-tls-0.2.18/build.rs"
+      ],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#native-tls@0.2.18"
     },
     {
       "ecosystem": "cargo",
@@ -2303,6 +2539,21 @@
     },
     {
       "ecosystem": "cargo",
+      "name": "reqwest",
+      "version": "0.13.4",
+      "license": "MIT OR Apache-2.0",
+      "source": "https://github.com/seanmonstar/reqwest",
+      "archive_sha256": "219c5811de6525e5416c7d5d53bb656d3afdbc6c5af816e0802bcfa42dbdc1c3",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-0.13.4/LICENSE-APACHE",
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-0.13.4/LICENSE-MIT"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#reqwest@0.13.4"
+    },
+    {
+      "ecosystem": "cargo",
       "name": "rusqlite",
       "version": "0.40.2",
       "license": "MIT",
@@ -2347,6 +2598,21 @@
     },
     {
       "ecosystem": "cargo",
+      "name": "rustls-pki-types",
+      "version": "1.15.1",
+      "license": "MIT OR Apache-2.0",
+      "source": "https://github.com/rustls/pki-types",
+      "archive_sha256": "2f4925028c7eb5d1fcdaf196971378ed9d2c1c4efc7dc5d011256f76c99c0a96",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rustls-pki-types-1.15.1/LICENSE-APACHE",
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rustls-pki-types-1.15.1/LICENSE-MIT"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#rustls-pki-types@1.15.1"
+    },
+    {
+      "ecosystem": "cargo",
       "name": "same-file",
       "version": "1.0.6",
       "license": "Unlicense/MIT",
@@ -2359,6 +2625,20 @@
       ],
       "build_scripts": [],
       "id": "registry+https://github.com/rust-lang/crates.io-index#same-file@1.0.6"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "schannel",
+      "version": "0.1.29",
+      "license": "MIT",
+      "source": "https://github.com/steffengy/schannel-rs",
+      "archive_sha256": "91c1b7e4904c873ef0710c1f407dde2e6287de2bebc1bbbf7d430bb7cbffd939",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/schannel-0.1.29/LICENSE.md"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#schannel@0.1.29"
     },
     {
       "ecosystem": "cargo",
@@ -2723,6 +3003,20 @@
     },
     {
       "ecosystem": "cargo",
+      "name": "slab",
+      "version": "0.4.12",
+      "license": "MIT",
+      "source": "https://github.com/tokio-rs/slab",
+      "archive_sha256": "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/slab-0.4.12/LICENSE"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#slab@0.4.12"
+    },
+    {
+      "ecosystem": "cargo",
       "name": "smallvec",
       "version": "1.16.0",
       "license": "MIT OR Apache-2.0",
@@ -2868,6 +3162,20 @@
       ],
       "build_scripts": [],
       "id": "registry+https://github.com/rust-lang/crates.io-index#syn@3.0.4"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "sync_wrapper",
+      "version": "1.0.2",
+      "license": "Apache-2.0",
+      "source": "https://github.com/Actyx/sync_wrapper",
+      "archive_sha256": "0bf256ce5efdfa370213c1dabab5935a12e49f2c58d15e9eac2870d3b4f27263",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sync_wrapper-1.0.2/LICENSE"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#sync_wrapper@1.0.2"
     },
     {
       "ecosystem": "cargo",
@@ -3174,6 +3482,34 @@
     },
     {
       "ecosystem": "cargo",
+      "name": "tokio-native-tls",
+      "version": "0.3.1",
+      "license": "MIT",
+      "source": "https://github.com/tokio-rs/tls",
+      "archive_sha256": "bbae76ab933c85776efabc971569dd6119c580d8f5d448769dec1764bf796ef2",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-native-tls-0.3.1/LICENSE"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#tokio-native-tls@0.3.1"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "tokio-util",
+      "version": "0.7.19",
+      "license": "MIT",
+      "source": "https://github.com/tokio-rs/tokio",
+      "archive_sha256": "494815d09bf52b5548659851081238f0ca39ff638363907596da739561c62c52",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-util-0.7.19/LICENSE"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#tokio-util@0.7.19"
+    },
+    {
+      "ecosystem": "cargo",
       "name": "tokio",
       "version": "1.53.1",
       "license": "MIT",
@@ -3278,6 +3614,62 @@
     },
     {
       "ecosystem": "cargo",
+      "name": "tower-http",
+      "version": "0.6.11",
+      "license": "MIT",
+      "source": "https://github.com/tower-rs/tower-http",
+      "archive_sha256": "4cfcf7e2740e6fc6d4d688b4ef00650406bb94adf4731e43c096c3a19fe40840",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tower-http-0.6.11/LICENSE"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#tower-http@0.6.11"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "tower-layer",
+      "version": "0.3.3",
+      "license": "MIT",
+      "source": "https://github.com/tower-rs/tower",
+      "archive_sha256": "121c2a6cda46980bb0fcd1647ffaf6cd3fc79a013de288782836f6df9c48780e",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tower-layer-0.3.3/LICENSE"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#tower-layer@0.3.3"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "tower-service",
+      "version": "0.3.3",
+      "license": "MIT",
+      "source": "https://github.com/tower-rs/tower",
+      "archive_sha256": "8df9b6e13f2d32c91b9bd719c00d1958837bc7dec474d94952798cc8e69eeec3",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tower-service-0.3.3/LICENSE"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#tower-service@0.3.3"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "tower",
+      "version": "0.5.3",
+      "license": "MIT",
+      "source": "https://github.com/tower-rs/tower",
+      "archive_sha256": "ebe5ef63511595f1344e2d5cfa636d973292adc0eec1f0ad45fae9f0851ab1d4",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tower-0.5.3/LICENSE"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#tower@0.5.3"
+    },
+    {
+      "ecosystem": "cargo",
       "name": "tracing-core",
       "version": "0.1.36",
       "license": "MIT",
@@ -3319,6 +3711,20 @@
       ],
       "build_scripts": [],
       "id": "registry+https://github.com/rust-lang/crates.io-index#tray-icon@0.24.2"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "try-lock",
+      "version": "0.2.5",
+      "license": "MIT",
+      "source": "https://github.com/seanmonstar/try-lock",
+      "archive_sha256": "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/try-lock-0.2.5/LICENSE"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#try-lock@0.2.5"
     },
     {
       "ecosystem": "cargo",
@@ -3592,6 +3998,20 @@
       ],
       "build_scripts": [],
       "id": "registry+https://github.com/rust-lang/crates.io-index#walkdir@2.5.0"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "want",
+      "version": "0.3.1",
+      "license": "MIT",
+      "source": "https://github.com/seanmonstar/want",
+      "archive_sha256": "bfa7760aed19e106de2c7c0b581b509f2f25d3dacaf737cb82ac61bc6d760b0e",
+      "archive_verified": true,
+      "license_files": [
+        ".local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/want-0.3.1/LICENSE"
+      ],
+      "build_scripts": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#want@0.3.1"
     },
     {
       "ecosystem": "cargo",
@@ -4331,6 +4751,22 @@
     },
     {
       "ecosystem": "npm",
+      "name": "@isaacs/cliui",
+      "version": "8.0.2",
+      "license": "ISC",
+      "source": "yargs/cliui",
+      "package_json_sha256": "b4f9cc8d09602a487dea1c227ce24777cda87e2ad8a29ab9f741214ab78dc065",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/@isaacs+cliui@8.0.2/node_modules/@isaacs/cliui/LICENSE.txt"
+      ],
+      "install_scripts": {
+        "prepare": "npm run compile"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "@jridgewell/sourcemap-codec",
       "version": "1.6.0",
       "license": "MIT",
@@ -4345,6 +4781,18 @@
     },
     {
       "ecosystem": "npm",
+      "name": "@nodable/entities",
+      "version": "3.0.0",
+      "license": "MIT",
+      "source": "git+https://github.com/nodable/val-parsers.git",
+      "package_json_sha256": "548526ce0e1cad9ffe904fba19067013c9fea336eafd3cd52a337ec44406c9ed",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "@oxc-project/types",
       "version": "0.147.0",
       "license": "MIT",
@@ -4354,6 +4802,44 @@
       "license_files": [
         "node_modules/.pnpm/@oxc-project+types@0.147.0/node_modules/@oxc-project/types/LICENSE"
       ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@pkgjs/parseargs",
+      "version": "0.11.0",
+      "license": "MIT",
+      "source": "git@github.com:pkgjs/parseargs.git",
+      "package_json_sha256": "c52af8cea1efc18fc306336d6ade5a1d8d9ccd8916a5d2246bc585a92635901e",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/@pkgjs+parseargs@0.11.0/node_modules/@pkgjs/parseargs/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@promptbook/utils",
+      "version": "0.69.5",
+      "license": "CC-BY-4.0",
+      "source": "https://github.com/webgptorg/promptbook",
+      "package_json_sha256": "b75a710a287f172cbd7b4fc6abb59f524404918178756377c667f414ce720dac",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@puppeteer/browsers",
+      "version": "2.13.2",
+      "license": "Apache-2.0",
+      "source": "https://github.com/puppeteer/puppeteer/tree/main/packages/browsers",
+      "package_json_sha256": "e520b8b315cef9c8eed4cef9f37e47c9d71d9dc76f846134914e55efadc5777f",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [],
       "install_scripts": {},
       "scripts_executed": false
     },
@@ -4435,6 +4921,20 @@
     },
     {
       "ecosystem": "npm",
+      "name": "@tootallnate/quickjs-emscripten",
+      "version": "0.23.0",
+      "license": "MIT",
+      "source": "https://github.com/justjake/quickjs-emscripten",
+      "package_json_sha256": "f98e82b5e3b152eac85300425e1f5babc79e60a688aae77a39b0de16e420aac4",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/@tootallnate+quickjs-emscripten@0.23.0/node_modules/@tootallnate/quickjs-emscripten/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "@types/chai",
       "version": "5.2.3",
       "license": "MIT",
@@ -4505,6 +5005,20 @@
     },
     {
       "ecosystem": "npm",
+      "name": "@types/node",
+      "version": "20.19.43",
+      "license": "MIT",
+      "source": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+      "package_json_sha256": "30af579da31ec3b497b9405bed1592a8c041f15c8e25db3a010e3c67f765ab41",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/@types+node@20.19.43/node_modules/@types/node/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "@types/react-dom",
       "version": "19.2.5",
       "license": "MIT",
@@ -4533,6 +5047,62 @@
     },
     {
       "ecosystem": "npm",
+      "name": "@types/sinonjs__fake-timers",
+      "version": "8.1.5",
+      "license": "MIT",
+      "source": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+      "package_json_sha256": "23e6259fcbafd8d3a1d4c2fcd530c697683f8b7bb4ae18dfef41fd0a6c551829",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/@types+sinonjs__fake-timers@8.1.5/node_modules/@types/sinonjs__fake-timers/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/which",
+      "version": "2.0.2",
+      "license": "MIT",
+      "source": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+      "package_json_sha256": "1946b22d13ca85ff0d38054f92fa18ad73806cf35c53113bb76bde6133d9231d",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/@types+which@2.0.2/node_modules/@types/which/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/ws",
+      "version": "8.18.1",
+      "license": "MIT",
+      "source": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+      "package_json_sha256": "92f0a87117b71231a0864f7bb7c6a84b7fc91dbdd7d33379fc23d655980ad083",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/@types+ws@8.18.1/node_modules/@types/ws/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/yauzl",
+      "version": "2.10.3",
+      "license": "MIT",
+      "source": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+      "package_json_sha256": "92089d33e457e7c540614966bfd54bd002a23b0830dc4acea261961c1f8c66a7",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/@types+yauzl@2.10.3/node_modules/@types/yauzl/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "@typescript-eslint/eslint-plugin",
       "version": "8.69.0",
       "license": "MIT",
@@ -4540,7 +5110,7 @@
       "package_json_sha256": "f633e627919c67581e3911f5f0257c397f7c68fa0e0a654c1a72a7729b9c6785",
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
-        "node_modules/.pnpm/@typescript-eslint+eslint-p_b1493629126ce68dea3ed598c15f0263/node_modules/@typescript-eslint/eslint-plugin/LICENSE"
+        "node_modules/.pnpm/@typescript-eslint+eslint-p_1d4d1e798e2ffaaab478dfc1a8efaabe/node_modules/@typescript-eslint/eslint-plugin/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -4554,7 +5124,7 @@
       "package_json_sha256": "1724df199f662b1e33dbeefcd709b98c09950b595bde5895a3f12efa012aceb0",
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
-        "node_modules/.pnpm/@typescript-eslint+eslint-p_b1493629126ce68dea3ed598c15f0263/node_modules/@typescript-eslint/parser/LICENSE"
+        "node_modules/.pnpm/@typescript-eslint+eslint-p_1d4d1e798e2ffaaab478dfc1a8efaabe/node_modules/@typescript-eslint/parser/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -4582,7 +5152,7 @@
       "package_json_sha256": "1ed29744f0d5e70aa5b39e22aabcd0347fa72bc5cf1d598dc21a8a21ebf3ae21",
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
-        "node_modules/.pnpm/@typescript-eslint+eslint-p_b1493629126ce68dea3ed598c15f0263/node_modules/@typescript-eslint/scope-manager/LICENSE"
+        "node_modules/.pnpm/@typescript-eslint+eslint-p_1d4d1e798e2ffaaab478dfc1a8efaabe/node_modules/@typescript-eslint/scope-manager/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -4610,7 +5180,7 @@
       "package_json_sha256": "ec911ed912c03db1ff909c36ee0b191392136849f06d29cf8b2763e97bd707e9",
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
-        "node_modules/.pnpm/@typescript-eslint+eslint-p_b1493629126ce68dea3ed598c15f0263/node_modules/@typescript-eslint/type-utils/LICENSE"
+        "node_modules/.pnpm/@typescript-eslint+eslint-p_1d4d1e798e2ffaaab478dfc1a8efaabe/node_modules/@typescript-eslint/type-utils/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -4652,7 +5222,7 @@
       "package_json_sha256": "3d94709d883ca1b31571074b7739255dfa75acbb3c5e7ff2aa698f0611b7ba63",
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
-        "node_modules/.pnpm/@typescript-eslint+eslint-p_b1493629126ce68dea3ed598c15f0263/node_modules/@typescript-eslint/utils/LICENSE"
+        "node_modules/.pnpm/@typescript-eslint+eslint-p_1d4d1e798e2ffaaab478dfc1a8efaabe/node_modules/@typescript-eslint/utils/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -4666,7 +5236,7 @@
       "package_json_sha256": "c5e9fb06eacdc2a088b63557d3e3d3ff94fdcb10ed0c392a2ebc05f3cb4dfe85",
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
-        "node_modules/.pnpm/@typescript-eslint+eslint-p_b1493629126ce68dea3ed598c15f0263/node_modules/@typescript-eslint/visitor-keys/LICENSE"
+        "node_modules/.pnpm/@typescript-eslint+eslint-p_1d4d1e798e2ffaaab478dfc1a8efaabe/node_modules/@typescript-eslint/visitor-keys/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -4785,6 +5355,118 @@
     },
     {
       "ecosystem": "npm",
+      "name": "@wdio/config",
+      "version": "9.30.0",
+      "license": "MIT",
+      "source": "git+https://github.com/webdriverio/webdriverio.git",
+      "package_json_sha256": "26e8baaa65a6e0ff78abe0067d40844955d2fae673f75fad0726e91eba14dc39",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/@wdio+config@9.30.0_supports-color@7.2.0/node_modules/@wdio/config/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@wdio/logger",
+      "version": "9.29.1",
+      "license": "MIT",
+      "source": "git+https://github.com/webdriverio/webdriverio.git",
+      "package_json_sha256": "a22bca9626f7ff4cb782171e3765bad5abee3baadbebf74a1169e81ab277672c",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/@wdio+config@9.30.0_supports-color@7.2.0/node_modules/@wdio/logger/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@wdio/protocols",
+      "version": "9.30.0",
+      "license": "MIT",
+      "source": "git+https://github.com/webdriverio/webdriverio.git",
+      "package_json_sha256": "46cd439f6b3e7f9daa44913f44e0af81dff55958f27e30d62f689f67255bbec2",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/@wdio+protocols@9.30.0/node_modules/@wdio/protocols/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@wdio/repl",
+      "version": "9.16.2",
+      "license": "MIT",
+      "source": "git+https://github.com/webdriverio/webdriverio.git",
+      "package_json_sha256": "a2c8c1307620a665efc5dbbded682fdb02fbbc8add20eee5a0f03f475917e211",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/@wdio+repl@9.16.2/node_modules/@wdio/repl/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@wdio/types",
+      "version": "9.29.1",
+      "license": "MIT",
+      "source": "git+https://github.com/webdriverio/webdriverio.git",
+      "package_json_sha256": "249c4334ceaccea539bed7eafdb409d04faae1e7b8f91af6e95b417f0219f6c8",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/@wdio+config@9.30.0_supports-color@7.2.0/node_modules/@wdio/types/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@wdio/utils",
+      "version": "9.30.0",
+      "license": "MIT",
+      "source": "git+https://github.com/webdriverio/webdriverio.git",
+      "package_json_sha256": "c084c736408a75ba0b0c10b7eb88cf965e2dea5ef7a71ae5de0da2de9fc15127",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/@wdio+config@9.30.0_supports-color@7.2.0/node_modules/@wdio/utils/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@zip.js/zip.js",
+      "version": "2.9.0",
+      "license": "BSD-3-Clause",
+      "source": "git+https://github.com/gildas-lormeau/zip.js.git",
+      "package_json_sha256": "17ce4eccb3760f8d41f42e56885437c1edfe7630223eb50e6db56c85a4619959",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/@zip.js+zip.js@2.9.0/node_modules/@zip.js/zip.js/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "abort-controller",
+      "version": "3.0.0",
+      "license": "MIT",
+      "source": "git+https://github.com/mysticatea/abort-controller.git",
+      "package_json_sha256": "3d64dcdcf9d0a1d045eb6bcaa5013d486f15527a3668e64b1155839a797da164",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/abort-controller@3.0.0/node_modules/abort-controller/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "acorn-jsx",
       "version": "5.3.2",
       "license": "MIT",
@@ -4815,6 +5497,20 @@
     },
     {
       "ecosystem": "npm",
+      "name": "agent-base",
+      "version": "7.1.4",
+      "license": "MIT",
+      "source": "https://github.com/TooTallNate/proxy-agents.git",
+      "package_json_sha256": "7a08cb2fe1d2b788e0a7bf6a9b7597dbeeeae804698c2fbd15de786d284d327c",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/agent-base@7.1.4/node_modules/agent-base/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "ajv",
       "version": "6.15.0",
       "license": "MIT",
@@ -4829,6 +5525,118 @@
     },
     {
       "ecosystem": "npm",
+      "name": "ansi-regex",
+      "version": "5.0.1",
+      "license": "MIT",
+      "source": "chalk/ansi-regex",
+      "package_json_sha256": "8b2dc166f2b74d5098bad38bdd3dd2f4d4775c626199872f5e36dbb48c40931d",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/ansi-regex@5.0.1/node_modules/ansi-regex/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "ansi-regex",
+      "version": "6.3.0",
+      "license": "MIT",
+      "source": "chalk/ansi-regex",
+      "package_json_sha256": "d830a75e5562db83080f23b769f7db26194a746911833504c38de61668882943",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/ansi-regex@6.3.0/node_modules/ansi-regex/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "ansi-styles",
+      "version": "4.3.0",
+      "license": "MIT",
+      "source": "chalk/ansi-styles",
+      "package_json_sha256": "d405f010681d53f77691015e98461f8484b2afe6a9edfdd2ddb27b1e8a8e883d",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/ansi-styles@4.3.0/node_modules/ansi-styles/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "ansi-styles",
+      "version": "6.2.3",
+      "license": "MIT",
+      "source": "chalk/ansi-styles",
+      "package_json_sha256": "0cf1f46ceee4b380298db6e6a54f14d345abe09abd5f650cbc20c8ac2ab27744",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/ansi-styles@6.2.3/node_modules/ansi-styles/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "anynum",
+      "version": "1.0.1",
+      "license": "MIT",
+      "source": "https://github.com/NaturalIntelligence/anynum",
+      "package_json_sha256": "41c5d60f0aa8b5f4133aeff56573a8c4130d4d1c19dc240398ff806b40a4470e",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/anynum@1.0.1/node_modules/anynum/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "archiver-utils",
+      "version": "5.0.2",
+      "license": "MIT",
+      "source": "https://github.com/archiverjs/archiver-utils.git",
+      "package_json_sha256": "98258d40eabc95cbd23718d5b4726a1e3cd496ee5725c8dc4eb693ee224a870e",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/archiver-utils@5.0.2/node_modules/archiver-utils/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "archiver",
+      "version": "7.0.1",
+      "license": "MIT",
+      "source": "https://github.com/archiverjs/node-archiver.git",
+      "package_json_sha256": "71f9d2abd62fc121c3f5c7ccb75a148cf1e8ce0b58ae6b86ea150cf719b86133",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/archiver@7.0.1/node_modules/archiver/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "aria-query",
+      "version": "5.3.2",
+      "license": "Apache-2.0",
+      "source": "git+https://github.com/A11yance/aria-query.git",
+      "package_json_sha256": "3e79dcdafd4e2226a2775c0cf423bb72622dd6890908dddfbba66c10a93606de",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/aria-query@5.3.2/node_modules/aria-query/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "assertion-error",
       "version": "2.0.1",
       "license": "MIT",
@@ -4837,6 +5645,62 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/assertion-error@2.0.1/node_modules/assertion-error/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "ast-types",
+      "version": "0.13.4",
+      "license": "MIT",
+      "source": "git://github.com/benjamn/ast-types.git",
+      "package_json_sha256": "1488a1bcb6fa1ec5484b0e812663184261175e353ca26f6ed4dd82777c0a9ef9",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/ast-types@0.13.4/node_modules/ast-types/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "async",
+      "version": "3.2.6",
+      "license": "MIT",
+      "source": "https://github.com/caolan/async.git",
+      "package_json_sha256": "e010fe63aa861e8a60fb8b9d3e7fb5205e3b8d6001ebe3ff95985996abe581a9",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/async@3.2.6/node_modules/async/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "b4a",
+      "version": "1.8.1",
+      "license": "Apache-2.0",
+      "source": "git+https://github.com/holepunchto/b4a.git",
+      "package_json_sha256": "8bca7126107a091957db1d7f091d636fa54d634f38e3b9f0c66c7c571945bd0a",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/b4a@1.8.1/node_modules/b4a/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "balanced-match",
+      "version": "1.0.2",
+      "license": "MIT",
+      "source": "git://github.com/juliangruber/balanced-match.git",
+      "package_json_sha256": "b30c328501dead1870b894ad604405b2284b571c1f12664cdc61d92a2e3397c2",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/balanced-match@1.0.2/node_modules/balanced-match/LICENSE.md"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -4859,6 +5723,133 @@
     },
     {
       "ecosystem": "npm",
+      "name": "bare-events",
+      "version": "2.9.2",
+      "license": "Apache-2.0",
+      "source": "git+https://github.com/holepunchto/bare-events.git",
+      "package_json_sha256": "90c61548ae5e1ea229a0b8199b82b80e2b99dadf50b07ffc66d96e75949e6ecb",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/bare-events@2.9.2/node_modules/bare-events/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "bare-fs",
+      "version": "4.8.1",
+      "license": "Apache-2.0",
+      "source": "git+https://github.com/holepunchto/bare-fs.git",
+      "package_json_sha256": "052daf587b2cbfe1bb5d36b19f2f40f22edf0f3c81ccf54aeac7d7bd53617cb6",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/bare-fs@4.8.1/node_modules/bare-fs/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "bare-path",
+      "version": "3.1.2",
+      "license": "Apache-2.0",
+      "source": "git+https://github.com/holepunchto/bare-path.git",
+      "package_json_sha256": "c1f20c1714e9e8957a617e9a3c25c115f31ba6cedc1e03eba43c4e7f86556254",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/bare-path@3.1.2/node_modules/bare-path/LICENSE",
+        "node_modules/.pnpm/bare-path@3.1.2/node_modules/bare-path/NOTICE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "bare-stream",
+      "version": "2.13.4",
+      "license": "Apache-2.0",
+      "source": "git+https://github.com/holepunchto/bare-stream.git",
+      "package_json_sha256": "be6d9ae85669929bedb1f5fb52d6948519452e226041b39f8eb832ee1935fa14",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/bare-stream@2.13.4_bare-events@2.9.2/node_modules/bare-stream/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "bare-url",
+      "version": "2.5.3",
+      "license": "Apache-2.0",
+      "source": "git+https://github.com/holepunchto/bare-url.git",
+      "package_json_sha256": "ee199fdc4a2f9393f4c6efefc6998385a5a4d487414db65f669d2c880a7a7c12",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/bare-url@2.5.3/node_modules/bare-url/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "base64-js",
+      "version": "1.5.1",
+      "license": "MIT",
+      "source": "git://github.com/beatgammit/base64-js.git",
+      "package_json_sha256": "9758f3ab8c45e07bb9a368e32f9a8b3729623bbf47cbbb205b32d674ab2a91f0",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/base64-js@1.5.1/node_modules/base64-js/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "basic-ftp",
+      "version": "5.3.1",
+      "license": "MIT",
+      "source": "https://github.com/patrickjuchli/basic-ftp.git",
+      "package_json_sha256": "6c2a67f2980c157130368fc34b25e94f3d63c2731025dab21e21ad26b99aa204",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/basic-ftp@5.3.1/node_modules/basic-ftp/LICENSE.txt"
+      ],
+      "install_scripts": {
+        "prepare": "tsc"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "boolbase",
+      "version": "1.0.0",
+      "license": "ISC",
+      "source": "https://github.com/fb55/boolbase",
+      "package_json_sha256": "ca09c0dccbfc43be6be0ac89e9ffa19b64b30f9c74c64da27f719a7244a25e30",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "brace-expansion",
+      "version": "2.1.4",
+      "license": "MIT",
+      "source": "git://github.com/juliangruber/brace-expansion.git",
+      "package_json_sha256": "0242781e7c6ed4459649b4aca0903ec03690bde675d2e4636538a5956fc9c542",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/brace-expansion@2.1.4/node_modules/brace-expansion/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "brace-expansion",
       "version": "5.0.9",
       "license": "MIT",
@@ -4875,6 +5866,48 @@
     },
     {
       "ecosystem": "npm",
+      "name": "buffer-crc32",
+      "version": "0.2.13",
+      "license": "MIT",
+      "source": "git://github.com/brianloveswords/buffer-crc32.git",
+      "package_json_sha256": "f94d0f0c1be8f8714670c5fee03899bdb6485d430236d81726e24012a3696e6e",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/buffer-crc32@0.2.13/node_modules/buffer-crc32/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "buffer-crc32",
+      "version": "1.0.0",
+      "license": "MIT",
+      "source": "git://github.com/brianloveswords/buffer-crc32.git",
+      "package_json_sha256": "938f1de0f2ad17d651a4e6f981b3ba56ab47b3c1ec18378d1504dd63fadb70d0",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/buffer-crc32@1.0.0/node_modules/buffer-crc32/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "buffer",
+      "version": "6.0.3",
+      "license": "MIT",
+      "source": "git://github.com/feross/buffer.git",
+      "package_json_sha256": "5b105ac0abbf5985cbe62ad28a34032d85c7ef623e0eb01f39441b0feb419004",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/buffer@6.0.3/node_modules/buffer/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "chai",
       "version": "6.2.2",
       "license": "MIT",
@@ -4883,6 +5916,138 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/chai@6.2.2/node_modules/chai/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "chalk",
+      "version": "4.1.2",
+      "license": "MIT",
+      "source": "chalk/chalk",
+      "package_json_sha256": "9cd907d34a45cb73b5c8a459d5602a36ccd456794665c529a3a5b0f02e196f26",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/chalk@4.1.2/node_modules/chalk/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "chalk",
+      "version": "5.6.2",
+      "license": "MIT",
+      "source": "chalk/chalk",
+      "package_json_sha256": "ef029c254479723c952a24c0d8d758378bd8ddf031f5bd6f027f65e1a3d030f3",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "cheerio-select",
+      "version": "2.1.0",
+      "license": "BSD-2-Clause",
+      "source": "git://github.com/cheeriojs/cheerio-select.git",
+      "package_json_sha256": "d2ec395193c6902c45984f3e238d0ac87d48042a4b980a2d842a4891e27fc78e",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/cheerio-select@2.1.0/node_modules/cheerio-select/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "npm run build"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "cheerio",
+      "version": "1.2.0",
+      "license": "MIT",
+      "source": "git://github.com/cheeriojs/cheerio.git",
+      "package_json_sha256": "026f4c64a6a1d210e59ad0b6f66988857fc65e3485c24af3358a4196046e8f0c",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/cheerio@1.2.0/node_modules/cheerio/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "husky"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "cliui",
+      "version": "8.0.1",
+      "license": "ISC",
+      "source": "yargs/cliui",
+      "package_json_sha256": "95964483c512a6bf35aa1211dc2c185d72be1b58b1271ddd4a7c2e48836472a9",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/cliui@8.0.1/node_modules/cliui/LICENSE.txt"
+      ],
+      "install_scripts": {
+        "prepare": "npm run compile"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "color-convert",
+      "version": "2.0.1",
+      "license": "MIT",
+      "source": "Qix-/color-convert",
+      "package_json_sha256": "9471d21744ca3137410448da6b3bd7b30ee91d42edce3b82ebcbf84faef74fb4",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/color-convert@2.0.1/node_modules/color-convert/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "color-name",
+      "version": "1.1.4",
+      "license": "MIT",
+      "source": "git@github.com:colorjs/color-name.git",
+      "package_json_sha256": "4a557ea373907e4643badb89ff21b3f4b969d20631086d78eab2e03d05c2efa4",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/color-name@1.1.4/node_modules/color-name/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "commander",
+      "version": "9.5.0",
+      "license": "MIT",
+      "source": "https://github.com/tj/commander.js.git",
+      "package_json_sha256": "a1f1a163d7958e8b8cbb5fe56f7dbf90b084c301725a523fa0335d1296e469b7",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/commander@9.5.0/node_modules/commander/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "compress-commons",
+      "version": "6.0.2",
+      "license": "MIT",
+      "source": "https://github.com/archiverjs/node-compress-commons.git",
+      "package_json_sha256": "d405726826d0c72939d487c8b81b1a278741e825f7a7e2ea7748c9bd9cb5c57c",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/compress-commons@6.0.2/node_modules/compress-commons/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -4903,6 +6068,48 @@
     },
     {
       "ecosystem": "npm",
+      "name": "core-util-is",
+      "version": "1.0.3",
+      "license": "MIT",
+      "source": "git://github.com/isaacs/core-util-is",
+      "package_json_sha256": "0067bcd4ef1c86da02a45ad770883b39a9d14aa0b00113071609d5fb3dce0bc0",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/core-util-is@1.0.3/node_modules/core-util-is/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "crc-32",
+      "version": "1.2.2",
+      "license": "Apache-2.0",
+      "source": "git://github.com/SheetJS/js-crc32.git",
+      "package_json_sha256": "2a96a3fe106da3dffa3479e8983c01c745f0f8c8f961ec9b6af5fb7ff35ce05d",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/crc-32@1.2.2/node_modules/crc-32/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "crc32-stream",
+      "version": "6.0.0",
+      "license": "MIT",
+      "source": "https://github.com/archiverjs/node-crc32-stream.git",
+      "package_json_sha256": "3a03d023600c71370c046af5079ec3486b945457c95f7f795136780796b3e1e1",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/crc32-stream@6.0.0/node_modules/crc32-stream/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "cross-spawn",
       "version": "7.0.6",
       "license": "MIT",
@@ -4917,6 +6124,64 @@
     },
     {
       "ecosystem": "npm",
+      "name": "css-select",
+      "version": "5.2.2",
+      "license": "BSD-2-Clause",
+      "source": "git://github.com/fb55/css-select.git",
+      "package_json_sha256": "cfc1e661a525ae821a00994ce4d94790b209c21b35f6e19d54e8d1c61556d303",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/css-select@5.2.2/node_modules/css-select/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "npm run build"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "css-shorthand-properties",
+      "version": "1.1.2",
+      "license": "MIT",
+      "source": "git://github.com/gilmoreorless/css-shorthand-properties.git",
+      "package_json_sha256": "d250c50a860b1797ab3254d434ccaeef9b5a8e080d103e01607f8477a44103a7",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/css-shorthand-properties@1.1.2/node_modules/css-shorthand-properties/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "css-value",
+      "version": "0.0.1",
+      "license": "null",
+      "source": "git://github.com/visionmedia/css-value.git",
+      "package_json_sha256": "282a1ef0573ad3b1d7cf99265cd9dbfc1066d742feab431c1fd0b453bccb2d34",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "css-what",
+      "version": "6.2.2",
+      "license": "BSD-2-Clause",
+      "source": "https://github.com/fb55/css-what",
+      "package_json_sha256": "c3c772ed1135cead98192983bf582d404d21ced7c09c5219e7bb94cc54dfab27",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/css-what@6.2.2/node_modules/css-what/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "npm run build"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "csstype",
       "version": "3.2.3",
       "license": "MIT",
@@ -4925,6 +6190,20 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/csstype@3.2.3/node_modules/csstype/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "data-uri-to-buffer",
+      "version": "6.0.2",
+      "license": "MIT",
+      "source": "https://github.com/TooTallNate/proxy-agents.git",
+      "package_json_sha256": "b97f6e03955f0ed5cd11360ce1c58699121f5c543e882d711f895073ddcf8264",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/data-uri-to-buffer@6.0.2/node_modules/data-uri-to-buffer/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -4945,6 +6224,20 @@
     },
     {
       "ecosystem": "npm",
+      "name": "decamelize",
+      "version": "6.0.1",
+      "license": "MIT",
+      "source": "sindresorhus/decamelize",
+      "package_json_sha256": "f76097b6517825eb98bf345a46dee6f6cc7e70101a39680d12666a699264f4e6",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/decamelize@6.0.1/node_modules/decamelize/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "deep-is",
       "version": "0.1.4",
       "license": "MIT",
@@ -4959,6 +6252,34 @@
     },
     {
       "ecosystem": "npm",
+      "name": "deepmerge-ts",
+      "version": "7.1.6",
+      "license": "BSD-3-Clause",
+      "source": "git+https://github.com/RebeccaStevens/deepmerge-ts.git",
+      "package_json_sha256": "5fac613d2fff708ff6409b1d9e2453679b8adafb5dfe9141df4efa243115d940",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/deepmerge-ts@7.1.6/node_modules/deepmerge-ts/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "husky"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "degenerator",
+      "version": "5.0.1",
+      "license": "MIT",
+      "source": "https://github.com/TooTallNate/proxy-agents.git",
+      "package_json_sha256": "449dfa5f225635dbbbb31d69dafcc1426819c22635fe43011557d575efdc3b4d",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "detect-libc",
       "version": "2.1.2",
       "license": "Apache-2.0",
@@ -4967,6 +6288,213 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/detect-libc@2.1.2/node_modules/detect-libc/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "dom-serializer",
+      "version": "2.0.0",
+      "license": "MIT",
+      "source": "git://github.com/cheeriojs/dom-serializer.git",
+      "package_json_sha256": "098603e7fee62c07fb392e31dae4dc151a3e03c72555ce1f9182011fbf898501",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/dom-serializer@2.0.0/node_modules/dom-serializer/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "npm run build"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "domelementtype",
+      "version": "2.3.0",
+      "license": "BSD-2-Clause",
+      "source": "git://github.com/fb55/domelementtype.git",
+      "package_json_sha256": "4ddf28a1e60ae7ec15f62cda0d72eb06bcae05b3819942d971c841b7cc0b6930",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/domelementtype@2.3.0/node_modules/domelementtype/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "npm run build"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "domhandler",
+      "version": "5.0.3",
+      "license": "BSD-2-Clause",
+      "source": "git://github.com/fb55/domhandler.git",
+      "package_json_sha256": "cbb42a446eef285863e04158c7f269e0e7b8e868c1042d6845e996d760f7376c",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/domhandler@5.0.3/node_modules/domhandler/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "npm run build"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "domutils",
+      "version": "3.2.2",
+      "license": "BSD-2-Clause",
+      "source": "git://github.com/fb55/domutils.git",
+      "package_json_sha256": "9a04689cc67f52e9f7323e0dd4d18c8cbe68744c3373ad524d133ddf12bf99ab",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/domutils@3.2.2/node_modules/domutils/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "npm run build"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "eastasianwidth",
+      "version": "0.2.0",
+      "license": "MIT",
+      "source": "git://github.com/komagata/eastasianwidth.git",
+      "package_json_sha256": "51db62f97656d02d4bc9670393cae42930dbd1ed89f5837056851807e602867a",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "edge-paths",
+      "version": "3.0.5",
+      "license": "MIT",
+      "source": "shirshak55/edge-paths",
+      "package_json_sha256": "c8860a85cc5516038392ba8fafae619b6a3a4d25539db40fdf2409a6715292ad",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/edge-paths@3.0.5/node_modules/edge-paths/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "edgedriver",
+      "version": "6.3.0",
+      "license": "MIT",
+      "source": "git://github.com/webdriverio-community/node-edgedriver.git",
+      "package_json_sha256": "aa1decd4700afb7f6b2ed6a8d2a0fb93346b701d55d92cdaed57767831be7a7d",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/edgedriver@6.3.0_supports-color@7.2.0/node_modules/edgedriver/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "husky",
+        "install": "test -f ./dist/install.js && node ./dist/install.js || echo \"Skipping install, project not build!\""
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "emoji-regex",
+      "version": "8.0.0",
+      "license": "MIT",
+      "source": "https://github.com/mathiasbynens/emoji-regex.git",
+      "package_json_sha256": "7bec29b9ca68f2c4becc60e866c2f9342ecdc89fab39841a818ccd9eda15c148",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/emoji-regex@8.0.0/node_modules/emoji-regex/LICENSE-MIT.txt"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "emoji-regex",
+      "version": "9.2.2",
+      "license": "MIT",
+      "source": "https://github.com/mathiasbynens/emoji-regex.git",
+      "package_json_sha256": "181fa046bdbb7d8958c57dcef2e63aea9af667036e218c7222479a8618375f1a",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/emoji-regex@9.2.2/node_modules/emoji-regex/LICENSE-MIT.txt"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "encoding-sniffer",
+      "version": "0.2.1",
+      "license": "MIT",
+      "source": "git://github.com/fb55/encoding-sniffer.git",
+      "package_json_sha256": "dc5b69e0439fcb1e34cb8b963a75c15eb1980bb898bcc81a29d4a5b6a7cd0831",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/encoding-sniffer@0.2.1/node_modules/encoding-sniffer/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "end-of-stream",
+      "version": "1.4.5",
+      "license": "MIT",
+      "source": "git://github.com/mafintosh/end-of-stream.git",
+      "package_json_sha256": "da504d0bef5a5974590b62f58df0003b448eccde6b5fbeb044506b7e43368eb5",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/end-of-stream@1.4.5/node_modules/end-of-stream/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "entities",
+      "version": "4.5.0",
+      "license": "BSD-2-Clause",
+      "source": "git://github.com/fb55/entities.git",
+      "package_json_sha256": "c92f657f679669a91bc32cd98f0b4812b3f4a9c6f3b3af3022a70cb25b7efc7c",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/entities@4.5.0/node_modules/entities/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "npm run build"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "entities",
+      "version": "6.0.1",
+      "license": "BSD-2-Clause",
+      "source": "git://github.com/fb55/entities.git",
+      "package_json_sha256": "2b110e5a5a7a7bcbc843b885105a952630299cb1a7817b4b321d69479cfa7086",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/entities@6.0.1/node_modules/entities/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "entities",
+      "version": "7.0.1",
+      "license": "BSD-2-Clause",
+      "source": "https://github.com/fb55/entities.git",
+      "package_json_sha256": "b33b5d3fd4a8e196d3245c10ebb8feb2e076fc8d392f99a1050377d6e2b8b641",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/entities@7.0.1/node_modules/entities/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -4987,6 +6515,20 @@
     },
     {
       "ecosystem": "npm",
+      "name": "escalade",
+      "version": "3.2.0",
+      "license": "MIT",
+      "source": "lukeed/escalade",
+      "package_json_sha256": "acd22b264ecbea162e320a360dab0ad0f3e5438fa4382288df844fa08b484e73",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/escalade@3.2.0/node_modules/escalade/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "escape-string-regexp",
       "version": "4.0.0",
       "license": "MIT",
@@ -4995,6 +6537,20 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/escape-string-regexp@4.0.0/node_modules/escape-string-regexp/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "escodegen",
+      "version": "2.1.0",
+      "license": "BSD-2-Clause",
+      "source": "http://github.com/estools/escodegen.git",
+      "package_json_sha256": "c8d08b0f4dbb8cd4a30c7183fa247d67003d63749a1c46a430c1a265a8147cf0",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/escodegen@2.1.0/node_modules/escodegen/LICENSE.BSD"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -5073,6 +6629,20 @@
     },
     {
       "ecosystem": "npm",
+      "name": "esprima",
+      "version": "4.0.1",
+      "license": "BSD-2-Clause",
+      "source": "https://github.com/jquery/esprima.git",
+      "package_json_sha256": "860df2e62153db26b370badf352d95edbf18e1eb54bdc2a479429b97155205b2",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/esprima@4.0.1/node_modules/esprima/LICENSE.BSD"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "esquery",
       "version": "1.7.0",
       "license": "BSD-3-Clause",
@@ -5141,6 +6711,48 @@
     },
     {
       "ecosystem": "npm",
+      "name": "event-target-shim",
+      "version": "5.0.1",
+      "license": "MIT",
+      "source": "https://github.com/mysticatea/event-target-shim.git",
+      "package_json_sha256": "980bdd7706c72d04a4df2e3ee2c8ffccf3bc72bd8e7cd13ca38be00cafc6e8db",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/event-target-shim@5.0.1/node_modules/event-target-shim/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "events-universal",
+      "version": "1.0.1",
+      "license": "Apache-2.0",
+      "source": "git+https://github.com/holepunchto/events-universal.git",
+      "package_json_sha256": "8f495538444b4876e5d075b0b7c4156832bf55042ec620dd12bfdc402b7ba11c",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/events-universal@1.0.1/node_modules/events-universal/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "events",
+      "version": "3.3.0",
+      "license": "MIT",
+      "source": "git://github.com/Gozala/events.git",
+      "package_json_sha256": "878ad3687fef7efe3757c1872a3af998c95197129a7445d632486a9591ee542e",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/events@3.3.0/node_modules/events/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "expect-type",
       "version": "1.4.0",
       "license": "Apache-2.0",
@@ -5155,6 +6767,34 @@
     },
     {
       "ecosystem": "npm",
+      "name": "extract-zip",
+      "version": "2.0.1",
+      "license": "BSD-2-Clause",
+      "source": "maxogden/extract-zip",
+      "package_json_sha256": "3e8737deb0089259f282f6a0d625175ac8eb2b06cc8ce67a2956e3f6ec5cca07",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/extract-zip@2.0.1_supports-color@7.2.0/node_modules/extract-zip/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "fast-deep-equal",
+      "version": "2.0.1",
+      "license": "MIT",
+      "source": "git+https://github.com/epoberezkin/fast-deep-equal.git",
+      "package_json_sha256": "1347fdf19c1f68b6cc4ea4bbac9614b1faaaab15d7d9bb2a950aa91c0f53edbd",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/fast-deep-equal@2.0.1/node_modules/fast-deep-equal/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "fast-deep-equal",
       "version": "3.1.3",
       "license": "MIT",
@@ -5163,6 +6803,20 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/fast-deep-equal@3.1.3/node_modules/fast-deep-equal/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "fast-fifo",
+      "version": "1.3.2",
+      "license": "MIT",
+      "source": "https://github.com/mafintosh/fast-fifo.git",
+      "package_json_sha256": "06832be0af1f0e41e83328da56c26db94b95eddc4aee5c4789cfd6ab99296a7e",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/fast-fifo@1.3.2/node_modules/fast-fifo/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -5191,6 +6845,48 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/fast-levenshtein@2.0.6/node_modules/fast-levenshtein/LICENSE.md"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "fast-xml-builder",
+      "version": "1.3.1",
+      "license": "MIT",
+      "source": "git+https://github.com/NaturalIntelligence/fast-xml-builder.git",
+      "package_json_sha256": "304416f412412cd967ee1139f0eadfebaa263e92bfbfa264bedbb37055d5c27e",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/fast-xml-builder@1.3.1/node_modules/fast-xml-builder/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "fast-xml-parser",
+      "version": "5.11.1",
+      "license": "MIT",
+      "source": "git+https://github.com/NaturalIntelligence/fast-xml-parser.git",
+      "package_json_sha256": "41c5f7f2ed20d6ab2b54d3f42730246444685a838cf381d5bf3e1eb93e2fa4cb",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/fast-xml-parser@5.11.1/node_modules/fast-xml-parser/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "fd-slicer",
+      "version": "1.1.0",
+      "license": "MIT",
+      "source": "git://github.com/andrewrk/node-fd-slicer.git",
+      "package_json_sha256": "c765386ed427fcadd9ffd7ae1c7748d7127685098fdb85cde3d98df7e931ed2d",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/fd-slicer@1.1.0/node_modules/fd-slicer/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -5267,6 +6963,97 @@
     },
     {
       "ecosystem": "npm",
+      "name": "foreground-child",
+      "version": "3.3.1",
+      "license": "ISC",
+      "source": "git+https://github.com/tapjs/foreground-child.git",
+      "package_json_sha256": "434959cc3a188aa891e21bc23f5684421425722faf2dec45b7cff2ca2934bd6a",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/foreground-child@3.3.1/node_modules/foreground-child/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "tshy"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "geckodriver",
+      "version": "6.1.1",
+      "license": "MIT",
+      "source": "git+https://github.com/webdriverio-community/node-geckodriver.git",
+      "package_json_sha256": "a5ea0cb086c99b25792ebb4bd30f61153a3bd7596c74f8878e2cf057304ffe1c",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/geckodriver@6.1.1_supports-color@7.2.0/node_modules/geckodriver/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "husky",
+        "postinstall": "test -f ./dist/install.js && node ./dist/install.js || echo \"Skipping install, project not built!\""
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "get-caller-file",
+      "version": "2.0.5",
+      "license": "ISC",
+      "source": "git+https://github.com/stefanpenner/get-caller-file.git",
+      "package_json_sha256": "680a080d2885c05bc51dde429c80784bfb248ca3ef3685438079c5015721e2ae",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/get-caller-file@2.0.5/node_modules/get-caller-file/LICENSE.md"
+      ],
+      "install_scripts": {
+        "prepare": "tsc"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "get-port",
+      "version": "7.2.0",
+      "license": "MIT",
+      "source": "sindresorhus/get-port",
+      "package_json_sha256": "9569420c83a680d0867953866e64a68201b5ba045aead18ce894520b17e5fc04",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/get-port@7.2.0/node_modules/get-port/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "get-stream",
+      "version": "5.2.0",
+      "license": "MIT",
+      "source": "sindresorhus/get-stream",
+      "package_json_sha256": "588755f0a755a95aa4c4700ddacca0dcf14d7f7fbee309d117961ac7582db890",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/get-stream@5.2.0/node_modules/get-stream/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "get-uri",
+      "version": "6.0.5",
+      "license": "MIT",
+      "source": "https://github.com/TooTallNate/proxy-agents.git",
+      "package_json_sha256": "c9c632c1117c12fcf8643f4ada3cc0f503d8949d040057f4a84cf4a15503843c",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/get-uri@6.0.5_supports-color@7.2.0/node_modules/get-uri/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "glob-parent",
       "version": "6.0.2",
       "license": "ISC",
@@ -5275,6 +7062,150 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/glob-parent@6.0.2/node_modules/glob-parent/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "glob",
+      "version": "10.5.0",
+      "license": "ISC",
+      "source": "git://github.com/isaacs/node-glob.git",
+      "package_json_sha256": "5455b1a29f8c3f3b6a41c2c053bf0684f14464bb5360f7b8c8702bf45b2da0bb",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/glob@10.5.0/node_modules/glob/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "tshy"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "graceful-fs",
+      "version": "4.2.11",
+      "license": "ISC",
+      "source": "https://github.com/isaacs/node-graceful-fs",
+      "package_json_sha256": "5747d4ba6b17165c6ecac30ab3a331715f41c7ad546e1f1574dab1bdcb116181",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/graceful-fs@4.2.11/node_modules/graceful-fs/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "grapheme-splitter",
+      "version": "1.0.4",
+      "license": "MIT",
+      "source": "https://github.com/orling/grapheme-splitter.git",
+      "package_json_sha256": "007200fbfa573ac6b3e8ec48623d5d3def61039fc4b80f885f4e64e140125c1a",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/grapheme-splitter@1.0.4/node_modules/grapheme-splitter/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "has-flag",
+      "version": "4.0.0",
+      "license": "MIT",
+      "source": "sindresorhus/has-flag",
+      "package_json_sha256": "3fef4b52efbeabeadfffd5994e90b1025eb24263286e34170675956637d368b1",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/has-flag@4.0.0/node_modules/has-flag/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "htmlfy",
+      "version": "0.8.1",
+      "license": "MIT",
+      "source": "git+https://github.com/j4w8n/htmlfy.git",
+      "package_json_sha256": "f90bb5300e3fa3a1148da48d1828ed98f3c9010d905f4fb5cbd29ad0a8ecf92f",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/htmlfy@0.8.1/node_modules/htmlfy/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "htmlparser2",
+      "version": "10.1.0",
+      "license": "MIT",
+      "source": "git://github.com/fb55/htmlparser2.git",
+      "package_json_sha256": "8aa0d39ff4c9df2d53b02a0fe434d03a6348353cb1d23ea2b448692687b8c8ab",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/htmlparser2@10.1.0/node_modules/htmlparser2/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "npm run build"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "http-proxy-agent",
+      "version": "7.0.2",
+      "license": "MIT",
+      "source": "https://github.com/TooTallNate/proxy-agents.git",
+      "package_json_sha256": "38b61961aa0ba3028f2e120b3d883179281f6ba25fe22ff2214bf9f363161b65",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/http-proxy-agent@7.0.2_supports-color@7.2.0/node_modules/http-proxy-agent/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "https-proxy-agent",
+      "version": "7.0.6",
+      "license": "MIT",
+      "source": "https://github.com/TooTallNate/proxy-agents.git",
+      "package_json_sha256": "b08c1977d38f14f4be7fb5be33aab545e3e5a6e2e12100733a6ad97dec995206",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/https-proxy-agent@7.0.6_supports-color@7.2.0/node_modules/https-proxy-agent/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "iconv-lite",
+      "version": "0.6.3",
+      "license": "MIT",
+      "source": "git://github.com/ashtuchkin/iconv-lite.git",
+      "package_json_sha256": "3a9582fd121f841c245d1fcf84ef0b9e41c94b785b8d7eb63f9f5aec9bad0b98",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/iconv-lite@0.6.3/node_modules/iconv-lite/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "ieee754",
+      "version": "1.2.1",
+      "license": "BSD-3-Clause",
+      "source": "git://github.com/feross/ieee754.git",
+      "package_json_sha256": "a8004b9c8dffe2e1b01a058ecf968a5d50beabcabc43cc98c655184ba6afc050",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/ieee754@1.2.1/node_modules/ieee754/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -5309,6 +7240,34 @@
     },
     {
       "ecosystem": "npm",
+      "name": "immediate",
+      "version": "3.0.6",
+      "license": "MIT",
+      "source": "git://github.com/calvinmetcalf/immediate.git",
+      "package_json_sha256": "1e40d711ce5348d237f7a2093d1707ca7c34fc56369f6be10c8e2dc9bcae0a96",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/immediate@3.0.6/node_modules/immediate/LICENSE.txt"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "import-meta-resolve",
+      "version": "4.2.0",
+      "license": "MIT",
+      "source": "wooorm/import-meta-resolve",
+      "package_json_sha256": "41e75cac3cc4460b5e442cd4ab60907ba24a01b8a081c3fd8a84371b8f76d39b",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/import-meta-resolve@4.2.0/node_modules/import-meta-resolve/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "imurmurhash",
       "version": "0.1.4",
       "license": "MIT",
@@ -5321,6 +7280,36 @@
     },
     {
       "ecosystem": "npm",
+      "name": "inherits",
+      "version": "2.0.4",
+      "license": "ISC",
+      "source": "git://github.com/isaacs/inherits",
+      "package_json_sha256": "be645800bc94fd8de29c8ae91690549b316cc437100108aeea7b2f347693cc80",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/inherits@2.0.4/node_modules/inherits/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "ip-address",
+      "version": "10.7.0",
+      "license": "MIT",
+      "source": "https://github.com/beaugunderson/ip-address.git",
+      "package_json_sha256": "e11a129b22bf8eeb12d7b90e6631b83eafe8c9ea81f48afcda9311a6459ce28f",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/ip-address@10.7.0/node_modules/ip-address/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "git config core.hooksPath hooks || true"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "is-extglob",
       "version": "2.1.1",
       "license": "MIT",
@@ -5329,6 +7318,20 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/is-extglob@2.1.1/node_modules/is-extglob/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "is-fullwidth-code-point",
+      "version": "3.0.0",
+      "license": "MIT",
+      "source": "sindresorhus/is-fullwidth-code-point",
+      "package_json_sha256": "5b48496ca129073ed44a677b777ea3b91366c8bc228bc75fe858749a78ac1a32",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/is-fullwidth-code-point@3.0.0/node_modules/is-fullwidth-code-point/license"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -5349,6 +7352,60 @@
     },
     {
       "ecosystem": "npm",
+      "name": "is-plain-obj",
+      "version": "4.1.0",
+      "license": "MIT",
+      "source": "sindresorhus/is-plain-obj",
+      "package_json_sha256": "ac84142050cd4d1854c489a3d61e0c991550195ae5ae37d9347b736424b09c59",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/is-plain-obj@4.1.0/node_modules/is-plain-obj/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "is-stream",
+      "version": "2.0.1",
+      "license": "MIT",
+      "source": "sindresorhus/is-stream",
+      "package_json_sha256": "07cf93d9490a2d7ed7731810b49b1c314c760291bb66cdfbc0279258ceb65ec9",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/is-stream@2.0.1/node_modules/is-stream/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "is-unsafe",
+      "version": "2.0.2",
+      "license": "MIT",
+      "source": "https://github.com/NaturalIntelligence/is-unsafe",
+      "package_json_sha256": "0fb03fbe6e0df6090d778679929c7c34c9fca298bc72190468217171e8154943",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/is-unsafe@2.0.2/node_modules/is-unsafe/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "isarray",
+      "version": "1.0.0",
+      "license": "MIT",
+      "source": "git://github.com/juliangruber/isarray.git",
+      "package_json_sha256": "93165ce56e458216c18240cd961a522af5b18e51da06f55d88ac552234455d95",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "isexe",
       "version": "2.0.0",
       "license": "ISC",
@@ -5357,6 +7414,52 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/isexe@2.0.0/node_modules/isexe/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "isexe",
+      "version": "4.0.0",
+      "license": "BlueOak-1.0.0",
+      "source": "https://github.com/isaacs/isexe",
+      "package_json_sha256": "1889746f84d1e2a524353a2e31464995b808f24457f0dd55d6fd9da638f978ed",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/isexe@4.0.0/node_modules/isexe/LICENSE.md"
+      ],
+      "install_scripts": {
+        "prepare": "tshy && bash build.sh"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "jackspeak",
+      "version": "3.4.3",
+      "license": "BlueOak-1.0.0",
+      "source": "git+https://github.com/isaacs/jackspeak.git",
+      "package_json_sha256": "3379e9c1be25729a6c7fc160e840108e15895c368e8060e42f68598f9f3065cd",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/jackspeak@3.4.3/node_modules/jackspeak/LICENSE.md"
+      ],
+      "install_scripts": {
+        "prepare": "tshy"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "jiti",
+      "version": "2.7.0",
+      "license": "MIT",
+      "source": "unjs/jiti",
+      "package_json_sha256": "aab8aafc42d9aeec14a6e2fe0e15ea1514c0c205a624055a7e776f2ec456283c",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/jiti@2.7.0/node_modules/jiti/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -5405,6 +7508,20 @@
     },
     {
       "ecosystem": "npm",
+      "name": "jszip",
+      "version": "3.10.1",
+      "license": "(MIT OR GPL-3.0-or-later)",
+      "source": "https://github.com/Stuk/jszip.git",
+      "package_json_sha256": "83569b5b130b5ec27ae281ed80420ad364baf1bf64cb82e6ac8fb891e1b4ec4c",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/jszip@3.10.1/node_modules/jszip/LICENSE.markdown"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "keyv",
       "version": "4.5.4",
       "license": "MIT",
@@ -5419,6 +7536,20 @@
     },
     {
       "ecosystem": "npm",
+      "name": "lazystream",
+      "version": "1.0.1",
+      "license": "MIT",
+      "source": "https://github.com/jpommerening/node-lazystream.git",
+      "package_json_sha256": "cf0860e26be0d5c9098d1bd0ce5c5faf1e02d6c6b050a14bbb40c2fc1c087fec",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/lazystream@1.0.1/node_modules/lazystream/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "levn",
       "version": "0.4.1",
       "license": "MIT",
@@ -5427,6 +7558,20 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/levn@0.4.1/node_modules/levn/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "lie",
+      "version": "3.3.0",
+      "license": "MIT",
+      "source": "https://github.com/calvinmetcalf/lie.git",
+      "package_json_sha256": "3faafb3b558146534b1849e6d2ed8a9c9c88eff27ef868827d8de17b979cf701",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/lie@3.3.0/node_modules/lie/license.md"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -5463,6 +7608,20 @@
     },
     {
       "ecosystem": "npm",
+      "name": "locate-app",
+      "version": "2.5.0",
+      "license": "Apache-2.0",
+      "source": "https://github.com/hejny/locate-app",
+      "package_json_sha256": "f3cdafc6617507fa964ca92210c35b27c103cf29a4296b8fb2587895cb406eb0",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/locate-app@2.5.0/node_modules/locate-app/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "locate-path",
       "version": "6.0.0",
       "license": "MIT",
@@ -5473,6 +7632,108 @@
         "node_modules/.pnpm/locate-path@6.0.0/node_modules/locate-path/license"
       ],
       "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "lodash.clonedeep",
+      "version": "4.5.0",
+      "license": "MIT",
+      "source": "lodash/lodash",
+      "package_json_sha256": "22b59a30a5d36feacbd04288d7b34cd6d0eaa6fdde50aa359c5d6b0913ff0424",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/lodash.clonedeep@4.5.0/node_modules/lodash.clonedeep/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "lodash.zip",
+      "version": "4.2.0",
+      "license": "MIT",
+      "source": "lodash/lodash",
+      "package_json_sha256": "85588ceb6b4e40c69d3a3232e16f089f71f58c2a25080d90a38c3d742dc2f1d1",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/lodash.zip@4.2.0/node_modules/lodash.zip/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "lodash",
+      "version": "4.18.1",
+      "license": "MIT",
+      "source": "lodash/lodash",
+      "package_json_sha256": "5ef0a453b679125b155af19e1477f93b577ea826a57e1545f77608d326966e6a",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/lodash@4.18.1/node_modules/lodash/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "loglevel-plugin-prefix",
+      "version": "0.8.4",
+      "license": "MIT",
+      "source": "git@github.com:kutuluk/loglevel-plugin-prefix.git",
+      "package_json_sha256": "cfb0687fd3b3c20e9b43d92ec68f9fec9928f792c77a16ea8f6094034f6f6e4c",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/loglevel-plugin-prefix@0.8.4/node_modules/loglevel-plugin-prefix/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "loglevel",
+      "version": "1.9.2",
+      "license": "MIT",
+      "source": "git://github.com/pimterry/loglevel.git",
+      "package_json_sha256": "aa689ceb5c6fa7468424cc5734d221eeb1aabc99cb37702942307018866e0685",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/loglevel@1.9.2/node_modules/loglevel/LICENSE-MIT"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "lru-cache",
+      "version": "10.4.3",
+      "license": "ISC",
+      "source": "git://github.com/isaacs/node-lru-cache.git",
+      "package_json_sha256": "a7e05794a5dc81dfc79a0f186c5219f442f2f735b08a3e9b91aba59833badc2d",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/lru-cache@10.4.3/node_modules/lru-cache/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "tshy && bash fixup.sh"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "lru-cache",
+      "version": "7.18.3",
+      "license": "ISC",
+      "source": "git://github.com/isaacs/node-lru-cache.git",
+      "package_json_sha256": "08bdb4e1fe6f5bfbdc0183d3ad6086dc22cade3ce0d6466c6116584387ad9550",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/lru-cache@7.18.3/node_modules/lru-cache/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "node ./scripts/transpile-to-esm.js"
+      },
       "scripts_executed": false
     },
     {
@@ -5503,6 +7764,80 @@
       "install_scripts": {
         "prepare": "tshy"
       },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "minimatch",
+      "version": "5.1.9",
+      "license": "ISC",
+      "source": "git://github.com/isaacs/minimatch.git",
+      "package_json_sha256": "dc1b9424c2ec4c845ba05e7402f7d22807f4ac85d31725892fd3dcafaa08f800",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/minimatch@5.1.9/node_modules/minimatch/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "minimatch",
+      "version": "9.0.9",
+      "license": "ISC",
+      "source": "git://github.com/isaacs/minimatch.git",
+      "package_json_sha256": "07347ae64d38f4cc1be3ffcc83322ec40d4609f5f3e9dc027ae91a4617239ac2",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/minimatch@9.0.9/node_modules/minimatch/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "tshy"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "minipass",
+      "version": "7.1.3",
+      "license": "BlueOak-1.0.0",
+      "source": "https://github.com/isaacs/minipass",
+      "package_json_sha256": "b8ab116187d5e9375d494f17437eb862cbee4b329c21f15412c6a5170ec2f55c",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/minipass@7.1.3/node_modules/minipass/LICENSE.md"
+      ],
+      "install_scripts": {
+        "prepare": "tshy"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "mitt",
+      "version": "3.0.1",
+      "license": "MIT",
+      "source": "developit/mitt",
+      "package_json_sha256": "99966ad2891dfe56614f039f5d03ada4bda6dba810952272ae57359abb527b91",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/mitt@3.0.1/node_modules/mitt/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "modern-tar",
+      "version": "0.7.7",
+      "license": "MIT",
+      "source": "git+https://github.com/ayuhito/modern-tar.git",
+      "package_json_sha256": "1630dfdeca687f4feb7bd4e663ae933ae4e100602833917c9a8c471c15da9f7d",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/modern-tar@0.7.7/node_modules/modern-tar/LICENSE"
+      ],
+      "install_scripts": {},
       "scripts_executed": false
     },
     {
@@ -5547,6 +7882,50 @@
     },
     {
       "ecosystem": "npm",
+      "name": "netmask",
+      "version": "2.1.1",
+      "license": "MIT",
+      "source": "git://github.com/rs/node-netmask.git",
+      "package_json_sha256": "810c8412ffece15656490e93ebe7c6b91c2b6e93d1f6e8e99ad9568654159974",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/netmask@2.1.1/node_modules/netmask/LICENSE.md"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "normalize-path",
+      "version": "3.0.0",
+      "license": "MIT",
+      "source": "jonschlinkert/normalize-path",
+      "package_json_sha256": "284ea445a01a454ab1235a08101445fe16592303167090815f4a75b54d6fba04",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/normalize-path@3.0.0/node_modules/normalize-path/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "nth-check",
+      "version": "2.1.1",
+      "license": "BSD-2-Clause",
+      "source": "https://github.com/fb55/nth-check",
+      "package_json_sha256": "4e6d8f4a3a8170c031465e79d30a3f47c97e115944d6d656dd087086b2da04f1",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/nth-check@2.1.1/node_modules/nth-check/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "npm run build"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "obug",
       "version": "2.1.4",
       "license": "MIT",
@@ -5555,6 +7934,20 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/obug@2.1.4/node_modules/obug/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "once",
+      "version": "1.4.0",
+      "license": "ISC",
+      "source": "git://github.com/isaacs/once",
+      "package_json_sha256": "33840d74c14c94bfb75c76374765b635531b1eacb88d7f1f2f380c94d0ea1328",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/once@1.4.0/node_modules/once/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -5603,6 +7996,106 @@
     },
     {
       "ecosystem": "npm",
+      "name": "pac-proxy-agent",
+      "version": "7.2.0",
+      "license": "MIT",
+      "source": "https://github.com/TooTallNate/proxy-agents.git",
+      "package_json_sha256": "71d945ac62c2f4624abf3b1e105b198268d03513ac4467d9605a7ee73aff0bb5",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/pac-proxy-agent@7.2.0_supports-color@7.2.0/node_modules/pac-proxy-agent/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "pac-resolver",
+      "version": "7.0.1",
+      "license": "MIT",
+      "source": "https://github.com/TooTallNate/proxy-agents.git",
+      "package_json_sha256": "395b48f125e0c8d83bcfcfb1d5afed0f549fe489e8b6438d0431905adb239bb1",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/pac-resolver@7.0.1/node_modules/pac-resolver/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "package-json-from-dist",
+      "version": "1.0.1",
+      "license": "BlueOak-1.0.0",
+      "source": "git+https://github.com/isaacs/package-json-from-dist.git",
+      "package_json_sha256": "38fdaf168bc63a6422a7dbe7e41a7b52b02326edef8b14019e0333ef60b37b47",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/package-json-from-dist@1.0.1/node_modules/package-json-from-dist/LICENSE.md"
+      ],
+      "install_scripts": {
+        "prepare": "tshy"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "pako",
+      "version": "1.0.11",
+      "license": "(MIT AND Zlib)",
+      "source": "nodeca/pako",
+      "package_json_sha256": "0014f350a6834ed6a2d1211e0a2e3aa471cb426edf63379c785f9647ea2b4e01",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/pako@1.0.11/node_modules/pako/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "parse5-htmlparser2-tree-adapter",
+      "version": "7.1.0",
+      "license": "MIT",
+      "source": "git://github.com/inikulin/parse5.git",
+      "package_json_sha256": "c4bab08899e9769bd165b370bb01b54ba45430aa397e34f3f57e49b50a82b725",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/parse5-htmlparser2-tree-adapter@7.1.0/node_modules/parse5-htmlparser2-tree-adapter/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "parse5-parser-stream",
+      "version": "7.1.2",
+      "license": "MIT",
+      "source": "git://github.com/inikulin/parse5.git",
+      "package_json_sha256": "5e9d6835130e5e9fb3adf106e335c096d5daf402fdb682715d91b009bd64c28c",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/parse5-parser-stream@7.1.2/node_modules/parse5-parser-stream/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "parse5",
+      "version": "7.3.0",
+      "license": "MIT",
+      "source": "git://github.com/inikulin/parse5.git",
+      "package_json_sha256": "8196284780fe95c3245a40e3c17b45fc85ef709f1211775987d037e5e873fe95",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/parse5@7.3.0/node_modules/parse5/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "path-exists",
       "version": "4.0.0",
       "license": "MIT",
@@ -5611,6 +8104,20 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/path-exists@4.0.0/node_modules/path-exists/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "path-expression-matcher",
+      "version": "1.6.2",
+      "license": "MIT",
+      "source": "https://github.com/NaturalIntelligence/path-expression-matcher",
+      "package_json_sha256": "625ca3a27a289160508a79773ddfd7bf678a6401bd96321cac0bc43ebebe01f8",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/path-expression-matcher@1.6.2/node_modules/path-expression-matcher/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -5631,6 +8138,22 @@
     },
     {
       "ecosystem": "npm",
+      "name": "path-scurry",
+      "version": "1.11.1",
+      "license": "BlueOak-1.0.0",
+      "source": "git+https://github.com/isaacs/path-scurry",
+      "package_json_sha256": "eda5ff683c26f88a134198fa2700b371abc9092c61a81474226bdfc6f9348c14",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/path-scurry@1.11.1/node_modules/path-scurry/LICENSE.md"
+      ],
+      "install_scripts": {
+        "prepare": "tshy"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "pathe",
       "version": "2.0.3",
       "license": "MIT",
@@ -5639,6 +8162,20 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/pathe@2.0.3/node_modules/pathe/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "pend",
+      "version": "1.2.0",
+      "license": "MIT",
+      "source": "git://github.com/andrewrk/node-pend.git",
+      "package_json_sha256": "1e4f01d39cc13c261f7ab81d0509d36bd98d8eceaf9ed75f2ab274286f3c3920",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/pend@1.2.0/node_modules/pend/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -5701,6 +8238,90 @@
     },
     {
       "ecosystem": "npm",
+      "name": "process-nextick-args",
+      "version": "2.0.1",
+      "license": "MIT",
+      "source": "https://github.com/calvinmetcalf/process-nextick-args.git",
+      "package_json_sha256": "6d6d93d057f39bc3173d53e694b61833fd0ce89c1d669156169136d31a968131",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/process-nextick-args@2.0.1/node_modules/process-nextick-args/license.md"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "process",
+      "version": "0.11.10",
+      "license": "MIT",
+      "source": "git://github.com/shtylman/node-process.git",
+      "package_json_sha256": "8501b4909630e60c9e9f68c4ca8ccb1964688500e61c60408a26d5480a9dd3d4",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/process@0.11.10/node_modules/process/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "progress",
+      "version": "2.0.3",
+      "license": "MIT",
+      "source": "git://github.com/visionmedia/node-progress",
+      "package_json_sha256": "3f58cfd421f075cda1017006c3cd287d0ad925466cb04af14caf0ee55c1ac54d",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/progress@2.0.3/node_modules/progress/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "proxy-agent",
+      "version": "6.5.0",
+      "license": "MIT",
+      "source": "https://github.com/TooTallNate/proxy-agents.git",
+      "package_json_sha256": "b5c3284e3162778b2d51e3df433a7f32d5f92afb0529f637fa34bf1cb460a4ac",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/proxy-agent@6.5.0_supports-color@7.2.0/node_modules/proxy-agent/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "proxy-from-env",
+      "version": "1.1.0",
+      "license": "MIT",
+      "source": "https://github.com/Rob--W/proxy-from-env.git",
+      "package_json_sha256": "a99da95a16d2dcc5e8006883f53721cc6224a8706863b20bf0a334170a1fe0ca",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/proxy-from-env@1.1.0/node_modules/proxy-from-env/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "pump",
+      "version": "3.0.4",
+      "license": "MIT",
+      "source": "git://github.com/mafintosh/pump.git",
+      "package_json_sha256": "d369a9c97d4aaca4a637af77b6ead9169146809ff3c27268e62151b613cae016",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/pump@3.0.4/node_modules/pump/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "punycode",
       "version": "2.3.1",
       "license": "MIT",
@@ -5709,6 +8330,20 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/punycode@2.3.1/node_modules/punycode/LICENSE-MIT.txt"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "query-selector-shadow-dom",
+      "version": "1.0.1",
+      "license": "MIT",
+      "source": "https://github.com/webdriverio/query-selector-shadow-dom",
+      "package_json_sha256": "6c8d6facaaf3334f7a218912bd6bd8ab077f59bfb9209ad7b0a54b6502bf9dfc",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/query-selector-shadow-dom@1.0.1/node_modules/query-selector-shadow-dom/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -5743,6 +8378,106 @@
     },
     {
       "ecosystem": "npm",
+      "name": "readable-stream",
+      "version": "2.3.8",
+      "license": "MIT",
+      "source": "git://github.com/nodejs/readable-stream",
+      "package_json_sha256": "67bde829e31cba3f50c77d14a30fa0f2295223b7ffa07f3b84606a5a79bb97f8",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/readable-stream@2.3.8/node_modules/readable-stream/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "readable-stream",
+      "version": "4.7.0",
+      "license": "MIT",
+      "source": "git://github.com/nodejs/readable-stream",
+      "package_json_sha256": "246e18f32bc77525436b73f8ac600560f246f9bc05a36dedc07f448ae19239ac",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/readable-stream@4.7.0/node_modules/readable-stream/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "readdir-glob",
+      "version": "1.1.3",
+      "license": "Apache-2.0",
+      "source": "git://github.com/Yqnn/node-readdir-glob.git",
+      "package_json_sha256": "f4d1ca263400d5b9dbf26313e0fd2304c32b8b80eb5a47d78968849c43464da1",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/readdir-glob@1.1.3/node_modules/readdir-glob/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "require-directory",
+      "version": "2.1.1",
+      "license": "MIT",
+      "source": "git://github.com/troygoode/node-require-directory.git",
+      "package_json_sha256": "5690bdddd6eb4abd795fa5319df7552279508df9d562d571e3132ddff3045a71",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/require-directory@2.1.1/node_modules/require-directory/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "resq",
+      "version": "1.11.0",
+      "license": "MIT",
+      "source": "https://github.com/baruchvlz/resq",
+      "package_json_sha256": "f66f4b1aef8d57f1f2381d416da4a906203179cc96040fa1ee887f2b68dbab35",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/resq@1.11.0/node_modules/resq/LICENSE.md"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "ret",
+      "version": "0.5.0",
+      "license": "MIT",
+      "source": "git://github.com/fent/ret.js.git",
+      "package_json_sha256": "36dc226e29dab997383a4b7b607467ebb9070eceff70470b26f9fa74e94ee52a",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/ret@0.5.0/node_modules/ret/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "tsc"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "rgb2hex",
+      "version": "0.2.5",
+      "license": "MIT",
+      "source": "git://github.com/christian-bromann/rgb2hex.git",
+      "package_json_sha256": "6eef08ce0974c1fa4cc02100791913eb346c3f1746b66bbfa7d9a427672dec57",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/rgb2hex@0.2.5/node_modules/rgb2hex/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "rolldown",
       "version": "1.2.6",
       "license": "MIT",
@@ -5751,6 +8486,78 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/rolldown@1.2.6/node_modules/rolldown/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "safaridriver",
+      "version": "1.0.1",
+      "license": "MIT",
+      "source": "git+https://github.com/webdriverio-community/node-safaridriver.git",
+      "package_json_sha256": "006a3655b9707fb152dce21a2861067c9e68f08adb4f62b2ec676671ed313676",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/safaridriver@1.0.1/node_modules/safaridriver/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "husky install"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "safe-buffer",
+      "version": "5.1.2",
+      "license": "MIT",
+      "source": "git://github.com/feross/safe-buffer.git",
+      "package_json_sha256": "3d8b6d944be9e931a178914afbb3d6b79bfa199c032872b687bed41ed996c747",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/safe-buffer@5.1.2/node_modules/safe-buffer/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "safe-buffer",
+      "version": "5.2.1",
+      "license": "MIT",
+      "source": "git://github.com/feross/safe-buffer.git",
+      "package_json_sha256": "e4018fdbfe625433371f48274fee26f520bbe865e0d8c85bf3aa07424134b90c",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/safe-buffer@5.2.1/node_modules/safe-buffer/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "safe-regex2",
+      "version": "5.1.1",
+      "license": "MIT",
+      "source": "git://github.com/fastify/safe-regex2.git",
+      "package_json_sha256": "094d70f42d75e995e38b70d55d42fbde0074bac995feaf67de4b02877d6a3d0a",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/safe-regex2@5.1.1/node_modules/safe-regex2/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "safer-buffer",
+      "version": "2.1.2",
+      "license": "MIT",
+      "source": "git+https://github.com/ChALkeR/safer-buffer.git",
+      "package_json_sha256": "4247a3a63c45a6a7ced1557fe4dd9d2a163af4915d594b95e5867b69a53edb52",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/safer-buffer@2.1.2/node_modules/safer-buffer/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -5779,6 +8586,34 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/semver@7.8.5/node_modules/semver/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "serialize-error",
+      "version": "12.0.0",
+      "license": "MIT",
+      "source": "sindresorhus/serialize-error",
+      "package_json_sha256": "3cf67fff2b8d2281f656bb22e83289c7b236bb864f580ae6c09eb8dcec184e75",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/serialize-error@12.0.0/node_modules/serialize-error/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "setimmediate",
+      "version": "1.0.5",
+      "license": "MIT",
+      "source": "YuzuJS/setImmediate",
+      "package_json_sha256": "56c7968c8062ad56e94b8ddb477e514098e0fa34b060aa86b67232fdb12e184d",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/setimmediate@1.0.5/node_modules/setimmediate/LICENSE.txt"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -5827,6 +8662,64 @@
     },
     {
       "ecosystem": "npm",
+      "name": "signal-exit",
+      "version": "4.1.0",
+      "license": "ISC",
+      "source": "https://github.com/tapjs/signal-exit.git",
+      "package_json_sha256": "cd1c6cfa95782e432dd2affaa88c3a6dda7f46c8088d91f3acc0fba79dce5075",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/signal-exit@4.1.0/node_modules/signal-exit/LICENSE.txt"
+      ],
+      "install_scripts": {
+        "prepare": "tsc -p tsconfig.json && tsc -p tsconfig-esm.json && bash ./scripts/fixup.sh"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "smart-buffer",
+      "version": "4.2.0",
+      "license": "MIT",
+      "source": "https://github.com/JoshGlazebrook/smart-buffer.git",
+      "package_json_sha256": "188644cdf467d6a768ad25ed3ee8eb845dc5cb29aadc4c88ca7c5cb5f631d66a",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/smart-buffer@4.2.0/node_modules/smart-buffer/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "socks-proxy-agent",
+      "version": "8.0.5",
+      "license": "MIT",
+      "source": "https://github.com/TooTallNate/proxy-agents.git",
+      "package_json_sha256": "5667d50ea8b62c802757a3a2737a6515edbae3129bb3ef0980ca5d15c91ed99f",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/socks-proxy-agent@8.0.5_supports-color@7.2.0/node_modules/socks-proxy-agent/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "socks",
+      "version": "2.8.9",
+      "license": "MIT",
+      "source": "git+https://github.com/JoshGlazebrook/socks.git",
+      "package_json_sha256": "eaddd44b758b8d53f4a9c11807748a7372319ef6b4ee680ac5e48ca64aece161",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/socks@2.8.9/node_modules/socks/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "source-map-js",
       "version": "1.2.1",
       "license": "BSD-3-Clause",
@@ -5835,6 +8728,48 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/source-map-js@1.2.1/node_modules/source-map-js/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "source-map",
+      "version": "0.6.1",
+      "license": "BSD-3-Clause",
+      "source": "http://github.com/mozilla/source-map.git",
+      "package_json_sha256": "3fdebd9f5c0107bcf7b73e0d17e0147042bcfb74884106e4428afbf17171ef06",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/source-map@0.6.1/node_modules/source-map/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "spacetrim",
+      "version": "0.11.59",
+      "license": "Apache-2.0",
+      "source": "https://github.com/hejny/spacetrim",
+      "package_json_sha256": "8ffe1eb87c36e809cf133718cd35b19b06e4b786022b423778b326080efcdf2a",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/spacetrim@0.11.59/node_modules/spacetrim/LICENSE.md"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "split2",
+      "version": "4.2.0",
+      "license": "ISC",
+      "source": "https://github.com/mcollina/split2.git",
+      "package_json_sha256": "87b734c3087c8d9ed5d76d1bff00db30f960831ba8705dd18d73b180d08d2140",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/split2@4.2.0/node_modules/split2/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -5861,6 +8796,188 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/std-env@4.2.0/node_modules/std-env/LICENCE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "streamx",
+      "version": "2.28.1",
+      "license": "MIT",
+      "source": "https://github.com/mafintosh/streamx.git",
+      "package_json_sha256": "59851cb46943a4eb8ac8bce1c30bff55aad5a178ab5619be1ad625c97c4e0172",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/streamx@2.28.1/node_modules/streamx/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "string_decoder",
+      "version": "1.1.1",
+      "license": "MIT",
+      "source": "git://github.com/nodejs/string_decoder.git",
+      "package_json_sha256": "e278ca18803862a6d1b6bedc6a3394159ac86e5c4a162614fef006c79dcda3a2",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/string_decoder@1.1.1/node_modules/string_decoder/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "string_decoder",
+      "version": "1.3.0",
+      "license": "MIT",
+      "source": "git://github.com/nodejs/string_decoder.git",
+      "package_json_sha256": "31984c85cd4f3df0aa75075acdec98c25961496897d1f46d04ed4a701f129c54",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/string_decoder@1.3.0/node_modules/string_decoder/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "string-width",
+      "version": "4.2.3",
+      "license": "MIT",
+      "source": "sindresorhus/string-width",
+      "package_json_sha256": "6457a02418f004fe5d3fbbb19c7cbcc1450a8b887ff9a471dc6985ac83a48d36",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/string-width@4.2.3/node_modules/string-width/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "string-width",
+      "version": "5.1.2",
+      "license": "MIT",
+      "source": "sindresorhus/string-width",
+      "package_json_sha256": "adbcb3b95ea29c1f2a91a0af600fd9136ce408a38622332848ba4630dc473659",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/string-width@5.1.2/node_modules/string-width/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "strip-ansi",
+      "version": "6.0.1",
+      "license": "MIT",
+      "source": "chalk/strip-ansi",
+      "package_json_sha256": "0130850b9da0584f54cc20d3dab6365c807e9436ac78e016d5009efa99bd0530",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/strip-ansi@6.0.1/node_modules/strip-ansi/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "strip-ansi",
+      "version": "7.2.0",
+      "license": "MIT",
+      "source": "chalk/strip-ansi",
+      "package_json_sha256": "228b214dd06ca80ab3c36e2b890a8696a39cea65585f6d61498c922c615e18a0",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/strip-ansi@7.2.0/node_modules/strip-ansi/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "strnum",
+      "version": "2.4.2",
+      "license": "MIT",
+      "source": "https://github.com/NaturalIntelligence/strnum",
+      "package_json_sha256": "38bf3bf508c5f454549308baf2b4c56ed01c14dfa29bb3efd51308cecb8efd70",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/strnum@2.4.2/node_modules/strnum/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "supports-color",
+      "version": "7.2.0",
+      "license": "MIT",
+      "source": "chalk/supports-color",
+      "package_json_sha256": "d410a772f9f64b224482ec13815a4bbf1837c533e1be04b3687755c48b2efa1f",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/supports-color@7.2.0/node_modules/supports-color/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "tar-fs",
+      "version": "3.1.3",
+      "license": "MIT",
+      "source": "https://github.com/mafintosh/tar-fs.git",
+      "package_json_sha256": "29745b5c0605d659405c2d4f2efcde4fb8845139464a4d6a489c3ebb36271443",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/tar-fs@3.1.3/node_modules/tar-fs/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "tar-stream",
+      "version": "3.2.1",
+      "license": "MIT",
+      "source": "git+https://github.com/mafintosh/tar-stream.git",
+      "package_json_sha256": "1cc0f028c086c697b40636b530ed1006923631df813e13f1d717f2ebd5e0ff47",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/tar-stream@3.2.1/node_modules/tar-stream/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "teex",
+      "version": "1.0.1",
+      "license": "MIT",
+      "source": "https://github.com/mafintosh/teex.git",
+      "package_json_sha256": "b37a78b9a1e3339c1267a738131066b71125866823df6cc704fdb5fbaa923337",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/teex@1.0.1/node_modules/teex/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "text-decoder",
+      "version": "1.2.7",
+      "license": "Apache-2.0",
+      "source": "git+https://github.com/holepunchto/text-decoder.git",
+      "package_json_sha256": "a5ceb9918cdaad08ce57e7dcd9424525b6923b785b4167ecf04a62b9fa308155",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/text-decoder@1.2.7/node_modules/text-decoder/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -5941,6 +9058,20 @@
     },
     {
       "ecosystem": "npm",
+      "name": "tslib",
+      "version": "2.8.1",
+      "license": "0BSD",
+      "source": "https://github.com/Microsoft/tslib.git",
+      "package_json_sha256": "f02b4851df316f29bdfcd404aa1eb41e4e216b5859015f81fcd3e91caf8be931",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/tslib@2.8.1/node_modules/tslib/LICENSE.txt"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "type-check",
       "version": "0.4.0",
       "license": "MIT",
@@ -5949,6 +9080,33 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/type-check@0.4.0/node_modules/type-check/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "type-fest",
+      "version": "4.26.0",
+      "license": "(MIT OR CC0-1.0)",
+      "source": "sindresorhus/type-fest",
+      "package_json_sha256": "13f98b0181a09a7007cc35c553fc0bb84f92549e7308fe6c4fcaa09edd441a51",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "type-fest",
+      "version": "4.41.0",
+      "license": "(MIT OR CC0-1.0)",
+      "source": "sindresorhus/type-fest",
+      "package_json_sha256": "8c10f8a78aa5d18858b15696cd908cafd118286f11e13c4fdab32ea782160666",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/type-fest@4.41.0/node_modules/type-fest/license-cc0",
+        "node_modules/.pnpm/type-fest@4.41.0/node_modules/type-fest/license-mit"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -5983,6 +9141,52 @@
     },
     {
       "ecosystem": "npm",
+      "name": "undici-types",
+      "version": "6.21.0",
+      "license": "MIT",
+      "source": "git+https://github.com/nodejs/undici.git",
+      "package_json_sha256": "11f873b423b96a5ad444a099685ca6b9de1379dcd83fd8d368e757ddb53658e4",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/undici-types@6.21.0/node_modules/undici-types/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "undici",
+      "version": "6.28.0",
+      "license": "MIT",
+      "source": "git+https://github.com/nodejs/undici.git",
+      "package_json_sha256": "f529aa8b145f6e270a72700ceb6c8dd3b87f742313078ea9f774a9d2ce8c865d",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/undici@6.28.0/node_modules/undici/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "husky && node ./scripts/platform-shell.js"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "undici",
+      "version": "7.29.0",
+      "license": "MIT",
+      "source": "git+https://github.com/nodejs/undici.git",
+      "package_json_sha256": "d2fb5736b5adad6a74c3fba9345d756258e1e953a3a2a13c03fca1bd6c9f6c52",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/undici@7.29.0/node_modules/undici/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "husky && node ./scripts/platform-shell.js"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "uri-js",
       "version": "4.4.1",
       "license": "BSD-2-Clause",
@@ -5991,6 +9195,48 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/uri-js@4.4.1/node_modules/uri-js/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "urlpattern-polyfill",
+      "version": "10.1.0",
+      "license": "MIT",
+      "source": "https://github.com/kenchris/urlpattern-polyfill",
+      "package_json_sha256": "87f9762cdb913eb7ff5a432cdc253884e60bfd251e9f4a9b594525ffa02ec99b",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/urlpattern-polyfill@10.1.0/node_modules/urlpattern-polyfill/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "userhome",
+      "version": "1.0.1",
+      "license": "MIT",
+      "source": "git://github.com/shama/userhome.git",
+      "package_json_sha256": "e70486092a7247198c4f4c99a419ab9bab23acb7047e5d54204945daf956e496",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/userhome@1.0.1/node_modules/userhome/LICENSE-MIT"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "util-deprecate",
+      "version": "1.0.2",
+      "license": "MIT",
+      "source": "git://github.com/TooTallNate/util-deprecate.git",
+      "package_json_sha256": "7bba467f049074957e693fc06672848b040c38fa071b6eed8690f5fbe090a8b2",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/util-deprecate@1.0.2/node_modules/util-deprecate/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -6018,7 +9264,79 @@
       "package_json_sha256": "a28126d97bcaf567da5bed69443b7f3bcd9a7a8c38c8b66e554686b6bb2c10e0",
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
-        "node_modules/.pnpm/vitest@4.1.11_vite@8.2.2/node_modules/vitest/LICENSE.md"
+        "node_modules/.pnpm/vitest@4.1.11_@types+node@2_e5e8a505bb484e61fb350cfbc8ccd034/node_modules/vitest/LICENSE.md"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "wait-port",
+      "version": "1.1.0",
+      "license": "MIT",
+      "source": "git+https://github.com/dwmkerr/wait-port.git",
+      "package_json_sha256": "1065e4a45c186cf6472588ae1a507508f431c061025fe4074558a695807a7802",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/wait-port@1.1.0_supports-color@7.2.0/node_modules/wait-port/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "webdriver",
+      "version": "9.30.0",
+      "license": "MIT",
+      "source": "git+https://github.com/webdriverio/webdriverio.git",
+      "package_json_sha256": "73360aaaf0a1fc71ca0706ac6e8cbd971956ecc3529ff34f2287b233f1be0f2e",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/webdriver@9.30.0_supports-color@7.2.0/node_modules/webdriver/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "webdriverio",
+      "version": "9.30.0",
+      "license": "MIT",
+      "source": "git+https://github.com/webdriverio/webdriverio.git",
+      "package_json_sha256": "5c135a819caf00bb792a1c2c68e3b8ef537c52a9922b43d5217a12aa2536eff2",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/webdriverio@9.30.0_supports-color@7.2.0/node_modules/webdriverio/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "whatwg-encoding",
+      "version": "3.1.1",
+      "license": "MIT",
+      "source": "jsdom/whatwg-encoding",
+      "package_json_sha256": "207f2db76f561b68705a0b36d05b838728e425f994cbd89ed030da179e88bbf4",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/whatwg-encoding@3.1.1/node_modules/whatwg-encoding/LICENSE.txt"
+      ],
+      "install_scripts": {
+        "prepare": "node scripts/update.js"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "whatwg-mimetype",
+      "version": "4.0.0",
+      "license": "MIT",
+      "source": "jsdom/whatwg-mimetype",
+      "package_json_sha256": "6a93238d0e3aba0d633c948ac670bf022b091e0f502203482ed2bc759d8668ff",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/whatwg-mimetype@4.0.0/node_modules/whatwg-mimetype/LICENSE.txt"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -6033,6 +9351,20 @@
       "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
       "license_files": [
         "node_modules/.pnpm/which@2.0.2/node_modules/which/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "which",
+      "version": "6.0.1",
+      "license": "ISC",
+      "source": "git+https://github.com/npm/node-which.git",
+      "package_json_sha256": "a587811d0c730bfc8be6a78adc62c8ca4d55f80a253c88d5d827fd5b3e97703d",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/which@6.0.1/node_modules/which/LICENSE"
       ],
       "install_scripts": {},
       "scripts_executed": false
@@ -6067,6 +9399,138 @@
     },
     {
       "ecosystem": "npm",
+      "name": "wrap-ansi",
+      "version": "7.0.0",
+      "license": "MIT",
+      "source": "chalk/wrap-ansi",
+      "package_json_sha256": "0b0cf0bf62bd0cc71da2128e3269e63edd566feffdd501aa3692acd6db93c3c9",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/wrap-ansi@7.0.0/node_modules/wrap-ansi/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "wrap-ansi",
+      "version": "8.1.0",
+      "license": "MIT",
+      "source": "chalk/wrap-ansi",
+      "package_json_sha256": "609dd6ab176847e57e799dba2e4c4ad355abe463ec67a5ab0dccec08b67e6761",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/wrap-ansi@8.1.0/node_modules/wrap-ansi/license"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "wrappy",
+      "version": "1.0.2",
+      "license": "ISC",
+      "source": "https://github.com/npm/wrappy",
+      "package_json_sha256": "712ac9c4c3cef8bc79f42cf6075ff18551f4cb768f35158214fd643853ad7abc",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/wrappy@1.0.2/node_modules/wrappy/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "ws",
+      "version": "8.21.3",
+      "license": "MIT",
+      "source": "git+https://github.com/websockets/ws.git",
+      "package_json_sha256": "a56a3fd55945a3ce177e3ca165dafae6f7eb03b7aefd58c092ac723d5741a6fb",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/ws@8.21.3/node_modules/ws/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "xml-naming",
+      "version": "0.3.0",
+      "license": "MIT",
+      "source": "https://github.com/NaturalIntelligence/xml-naming",
+      "package_json_sha256": "e6ff1758837bca3ca6877308c0d51f9e3e47efd07497fa62c8291fd88ab8216f",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/xml-naming@0.3.0/node_modules/xml-naming/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "y18n",
+      "version": "5.0.8",
+      "license": "ISC",
+      "source": "yargs/y18n",
+      "package_json_sha256": "f65855d14daaf57947e398e132caa246f93bbf045ff3f8f9627114714729ad29",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/y18n@5.0.8/node_modules/y18n/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "npm run compile"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "yargs-parser",
+      "version": "21.1.1",
+      "license": "ISC",
+      "source": "https://github.com/yargs/yargs-parser.git",
+      "package_json_sha256": "b6ee1fa4e1881d6f5388a3a52e34c2499a4c01d81615b69f08f12ca35289880b",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/yargs-parser@21.1.1/node_modules/yargs-parser/LICENSE.txt"
+      ],
+      "install_scripts": {
+        "prepare": "npm run compile"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "yargs",
+      "version": "17.7.3",
+      "license": "MIT",
+      "source": "https://github.com/yargs/yargs.git",
+      "package_json_sha256": "357c9c2e7725d86a137de13fa68441f88a750b5083313cc1482a7969bcb81584",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/yargs@17.7.3/node_modules/yargs/LICENSE"
+      ],
+      "install_scripts": {
+        "prepare": "npm run compile"
+      },
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "yauzl",
+      "version": "2.10.0",
+      "license": "MIT",
+      "source": "https://github.com/thejoshwolfe/yauzl.git",
+      "package_json_sha256": "9119ac0c70d33b16e3c69dbc5cdeab71eb513124a04d961f2c9e7402c9fec8eb",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/yauzl@2.10.0/node_modules/yauzl/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
+    },
+    {
+      "ecosystem": "npm",
       "name": "yocto-queue",
       "version": "0.1.0",
       "license": "MIT",
@@ -6078,79 +9542,20 @@
       ],
       "install_scripts": {},
       "scripts_executed": false
-    }
-  ],
-  "tooling": [
-    {
-      "classification": "BUILD_TOOLING",
-      "name": "NSIS",
-      "version": "3.12",
-      "source": "https://github.com/NSIS-Dev/nsis.git",
-      "source_tag": "v312",
-      "source_commit": "e3f60402bcdf7be822d159b531c6e38ddf32de12",
-      "licenses": [
-        "zlib/libpng for NSIS core, nsDialogs and System",
-        "CPL-1.0 with NSIS special exception for LZMA",
-        "Zlib for zlib 1.3.2"
-      ],
-      "license_files": [
-        "tools/packaging/nsis/3.12/COPYING",
-        "tools/packaging/nsis/3.12/LICENSES/LZMA-CPL-1.0-with-NSIS-exception.txt",
-        "tools/packaging/nsis/3.12/LICENSES/zlib-LICENSE.txt"
-      ],
-      "runtime_on_end_user_machine": false
-    }
-  ],
-  "external_engines": [
-    {
-      "classification": "EXTERNAL_ENGINES",
-      "name": "YARA-X",
-      "version": "1.20.0",
-      "source": "https://github.com/VirusTotal/yara-x/tree/v1.20.0",
-      "license": "BSD-3-Clause",
-      "license_sha256": "fdf05444c9178e662fa28810d94a1fa6ec32d7be798241c98094213317265880",
-      "archive_sha256": "b1e2840bac593aea353d2b2b341f5a862c9d61c0c406d9abbbad9e1fa35163a1",
-      "executable_sha256": "d3e648651f3eaa5e833faeb394fc7dc7dfb583a31dd5fc572ab6cae7ac41f3fd",
-      "redistribution": "permitted_with_notice",
-      "runtime_on_end_user_machine": true
     },
     {
-      "classification": "EXTERNAL_ENGINES",
-      "name": "Gitleaks",
-      "version": "8.30.0",
-      "source": "https://github.com/gitleaks/gitleaks/tree/v8.30.0",
+      "ecosystem": "npm",
+      "name": "zip-stream",
+      "version": "6.0.1",
       "license": "MIT",
-      "license_sha256": "e3884b252b3bfc045e55be43a34d1e80da070bc6f804ac95bf4660e97d62ebc6",
-      "license_files": ["tools/engines/gitleaks/8.30.0/payload/LICENSE"],
-      "archive_sha256": "54fe94f644b832dd08e8c3a5915efb3bfa862386d59fb27ca0792cb687a83573",
-      "executable_sha256": "9d08e3f5cfb35a98f230b97bcda24f8d3fc66363c91868ffc98dac0afebdcb72",
-      "redistribution": "permitted_with_notice",
-      "runtime_on_end_user_machine": true
-    },
-    {
-      "classification": "EXTERNAL_ENGINES",
-      "name": "Trivy",
-      "version": "0.74.0",
-      "source": "https://github.com/aquasecurity/trivy/tree/v0.74.0",
-      "license": "Apache-2.0",
-      "license_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
-      "license_files": ["tools/engines/trivy/0.74.0/payload/LICENSE"],
-      "archive_sha256": "94c40e0696e4b907a74b7b2e1438d5d72ebaca83115817407f568a002d520842",
-      "executable_sha256": "4c532e1f28f53282dc364671e87381cd77760fa9cafab143f576449c2207cdd5",
-      "redistribution": "permitted_with_license_and_notice_review",
-      "runtime_on_end_user_machine": true
-    },
-    {
-      "classification": "EXTERNAL_ENGINES",
-      "name": "OSV-Scanner",
-      "version": "2.5.1",
-      "source": "https://github.com/google/osv-scanner/tree/v2.5.1",
-      "license": "Apache-2.0",
-      "license_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
-      "archive_sha256": "25e42f5ef6711fd8c0fb45390972205891dd44c6bd02ac93f0f63e8e98d9bfb6",
-      "executable_sha256": "25e42f5ef6711fd8c0fb45390972205891dd44c6bd02ac93f0f63e8e98d9bfb6",
-      "redistribution": "permitted_with_license_and_notice_review",
-      "runtime_on_end_user_machine": true
+      "source": "https://github.com/archiverjs/node-zip-stream.git",
+      "package_json_sha256": "83ad75d717b4403a74b909e05363f6f7696eefdec04b49e783bf4546e84dab7f",
+      "integrity_evidence": "pnpm-lock.yaml + frozen install/store integrity verification",
+      "license_files": [
+        "node_modules/.pnpm/zip-stream@6.0.1/node_modules/zip-stream/LICENSE"
+      ],
+      "install_scripts": {},
+      "scripts_executed": false
     }
   ]
 }

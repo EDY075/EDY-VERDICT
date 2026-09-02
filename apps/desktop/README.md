@@ -1,14 +1,14 @@
 # Desktop Level 0 host
 
-This host exposes only the controlled Level 0 synthetic workflow. The React UI reads
+This host exposes the controlled Level 0 through Level 3 workflows. The React UI reads
 foundation/engine status, starts the enumerated `synthetic-target-a` fixture, polls progress,
 cancels an active synthetic run, lists scans/findings and renders deterministic reports. It
 does not accept an arbitrary path, URL, command, query or provider request.
 
-Ten purpose-specific IPC commands are generated into the explicit `AppManifest` and local
-`main` capability: `get_foundation_status`, `get_engine_status`, `create_synthetic_scan`,
-`get_scan`, `list_scans`, `get_scan_progress`, `cancel_scan`, `list_findings`, `get_finding`
-and `generate_report`. The dependency-free Isolation hook validates exact payload shapes;
+Twenty-five purpose-specific IPC commands are generated into the explicit `AppManifest` and
+local `main` capability. Level 3 adds preview/authorization/create/inventory/application,
+provider-status and confirmed public-data-refresh commands; it exposes no generic registry or
+HTTP command. The dependency-free Isolation hook validates every exact payload shape;
 native code independently validates window label, origin, typed IDs, enum values and bounds.
 There are no generic shell, fs, SQL, HTTP, store or updater plugins.
 

@@ -1,9 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import path from 'node:path';
 
-const metadata = JSON.parse(execFileSync('cargo', ['metadata', '--no-deps', '--locked', '--format-version', '1'], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }));
+const projectRoot=path.resolve('.');
+const rustupHome=path.join(projectRoot,'.local','rustup');const cargoHome=path.join(projectRoot,'.local','cargo');
+const toolchainBin=path.join(rustupHome,'toolchains','1.98.0-x86_64-pc-windows-msvc','bin');const cargoExe=path.join(toolchainBin,'cargo.exe');
+assert(existsSync(cargoExe),'project-local Cargo toolchain required');
+const rustEnv={...process.env,RUSTUP_HOME:rustupHome,CARGO_HOME:cargoHome,RUSTC:path.join(toolchainBin,'rustc.exe'),RUSTDOC:path.join(toolchainBin,'rustdoc.exe'),PATH:`${toolchainBin}${path.delimiter}${process.env.PATH??''}`};
+const cargo=(args,options={})=>execFileSync(cargoExe,args,{encoding:'utf8',env:rustEnv,...options});
+const metadata = JSON.parse(cargo(['metadata', '--no-deps', '--locked', '--format-version', '1'], { maxBuffer: 16 * 1024 * 1024 }));
 const allowed = {
   'edy-core': [],
   'edy-repository': ['edy-core'],
@@ -27,7 +34,7 @@ test('core cannot depend on infrastructure directly or transitively', () => {
   assert.deepEqual(core.dependencies.map(d=>d.name).sort(),['serde','serde_json']);
   assert.match(readFileSync('crates/edy-core/src/lib.rs','utf8'),/forbid\(unsafe_code\)/);
   assert.doesNotMatch(readFileSync('crates/edy-core/src/lib.rs','utf8'),/\b(tauri|tokio|rusqlite|reqwest|webview2)\s*::/i);
-  const full=JSON.parse(execFileSync('cargo',['metadata','--locked','--format-version','1','--filter-platform','x86_64-pc-windows-msvc'],{encoding:'utf8',maxBuffer:64*1024*1024}));
+  const full=JSON.parse(cargo(['metadata','--locked','--format-version','1','--filter-platform','x86_64-pc-windows-msvc'],{maxBuffer:64*1024*1024}));
   const byId=new Map(full.packages.map(p=>[p.id,p]));const nodes=new Map(full.resolve.nodes.map(n=>[n.id,n]));
   const pending=[core.id];const seen=new Set();
   while(pending.length){const id=pending.pop();if(seen.has(id))continue;seen.add(id);assert.doesNotMatch(byId.get(id).name,/^(tauri|tokio|rusqlite|libsqlite3|reqwest|webview|wry|edy-(?!core))/);pending.push(...(nodes.get(id)?.dependencies||[]));}
@@ -50,7 +57,7 @@ test('no dangerous capability, generic IPC or plugin can be added silently', () 
   const cap=JSON.parse(readFileSync('apps/desktop/src-tauri/capabilities/main.json'));
   assert.deepEqual(cap.windows,['main']);
   assert.equal(cap.remote,undefined);
-  const commands=['get-foundation-status','get-engine-status','authorize-repository-target','inspect-repository-target','create-repository-scan','get-repository-inventory','inspect-file-target','authorize-file-target','create-file-scan','get-file-analysis','create-synthetic-scan','get-scan','list-scans','get-scan-progress','cancel-scan','list-findings','get-finding','generate-report'];
+  const commands=['get-foundation-status','get-engine-status','authorize-repository-target','inspect-repository-target','create-repository-scan','get-repository-inventory','inspect-file-target','authorize-file-target','create-file-scan','get-file-analysis','preview-installed-applications','authorize-installed-applications','create-installed-application-scan','get-installed-application-inventory','get-installed-application','get-vulnerability-provider-status','refresh-public-vulnerability-data','create-synthetic-scan','get-scan','list-scans','get-scan-progress','cancel-scan','list-findings','get-finding','generate-report'];
   assert.deepEqual(cap.permissions,commands.map(command=>`allow-${command}`));
   for(const p of metadata.packages) {
     const plugins=p.dependencies.filter(d=>d.name.startsWith('tauri-plugin-'));
@@ -72,7 +79,7 @@ test('native driver is opt-in debug-only and absent from the default production 
   const source=readFileSync('apps/desktop/src-tauri/src/main.rs','utf8');
   assert.match(source,/#\[cfg\(all\(feature = "native-e2e", not\(debug_assertions\)\)\)\]\s*compile_error!/);
   assert.match(source,/#\[cfg\(all\(feature = "native-e2e", debug_assertions\)\)\]\s*let builder = \{[\s\S]*?native_qa_size.is_none\(\)[\s\S]*?builder.plugin\(tauri_plugin_wdio_webdriver::init_with_port\(4445\)\)/);
-  const tree=execFileSync('cargo',['tree','-p','edy-desktop','--locked','--edges','normal','--prefix','none'],{encoding:'utf8'});
+  const tree=cargo(['tree','-p','edy-desktop','--locked','--edges','normal','--prefix','none']);
   assert.doesNotMatch(tree,/tauri-plugin-wdio|\baxum\b/);
   for(const name of ['main.tsx','App.tsx']) assert.doesNotMatch(readFileSync(`apps/desktop/src/${name}`,'utf8'),/wdio|webdriver|__TAURI_INTERNALS__/);
 });

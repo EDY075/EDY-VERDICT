@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseEngineStatus, parseFileAnalysisView, parseFileAuthorization, parseFileTargetPreview, parseFinding, parseReport, parseScanProgress, parseScanSummary } from "./level0-api";
+import { parseEngineStatus, parseFileAnalysisView, parseFileAuthorization, parseFileTargetPreview, parseFinding, parseInstalledApplicationInventory, parseInstalledApplicationPreview, parseReport, parseScanProgress, parseScanSummary } from "./level0-api";
 
 const scanId = "018f4c2a-1d3b-7abc-8def-0123456789ab";
 
@@ -54,5 +54,17 @@ describe("Level 0 IPC response validation", () => {
 
   it("rejects unsafe Level 2 hash and identity shapes", () => {
     expect(()=>parseFileTargetPreview({preview_id:scanId,requested_path:"D:/fixture.bin",canonical_path:"D:/fixture.bin",file_name:"fixture.bin",identity:{volume_id:1,file_id:2,size:3,last_write_time:4,attributes:32},detected_type:"unknown_binary",proposed_checks:[],policy_limitations:[],max_file_size:268435456})).toThrow();
+  });
+
+  it("validates Level 3 inventory, identity, provider and affected-only finding contracts",()=>{
+    const coverage={registry_machine_64:true,registry_machine_32:true,registry_current_user_64:true,registry_current_user_32:true,msix_current_user:true,other_users:false,portable_applications:false,filesystem_crawl:false,limitations:["Other users outside coverage"]};
+    expect(parseInstalledApplicationPreview({preview_id:scanId,application_count:1,system_component_count:0,inventory_fingerprint:"a".repeat(64),coverage,requires_confirmation:true}).requires_confirmation).toBe(true);
+    const application={application_id:`appv1-${"b".repeat(32)}`,name:"Fixture App",normalized_name:"fixture app",publisher:"Fixture Corp.",normalized_publisher:"fixture corp",version:{raw:"1.0.0",kind:"sem_ver",canonical:"1.0.0",numeric:[1,0,0]},sources:[{kind:"registry",scope:"machine",view:"registry64",source_id:"fixture"}],product_code:null,package_family_name:null,install_location:null,display_icon:null,display_icon_signature:null,install_date_reported:"20260902",system_component:false,release_type:null,identity:{state:"curated",cpe:"cpe:2.3:a:fixture:app:*:*:*:*:*:*:*:*",purl:"pkg:generic/fixture",reason:"versioned curated alias matched",alias_dataset:"IDENTITY_ALIAS_DATA_V1"}};
+    const provider_status=["NVD","CISA_KEV","EPSS"].map(provider=>({provider,state:"ready",dataset_version:"fixture",fetched_at_utc:null,sha256:"c".repeat(64),freshness:"synthetic_fixture"}));
+    const finding={fingerprint_version:"INSTALLED_APP_VULNERABILITY_V1",fingerprint:`iav1-${"d".repeat(32)}`,application_id:application.application_id,application_name:application.name,installed_version:"1.0.0",cve:"CVE-2099-0001",affected:"affected",identity_state:"curated",priority:"immediate",priority_reasons:["KEV elevates priority"],cvss_score:9.8,cvss_severity:"CRITICAL",kev:{cve:"CVE-2099-0001",date_added:"2099-01-01",due_date:null,required_action:null},epss:{cve:"CVE-2099-0001",probability:0.9,percentile:0.99,score_date:"2099-01-01",model_version:"v1"},fixed_version:"2.0.0",sources:["NVD","VENDOR_FIXTURE"],limitations:["Availability not established"]};
+    const parsed=parseInstalledApplicationInventory({scan_id:scanId,state:"completed",snapshot:{schema:"INSTALLED_APPLICATION_SNAPSHOT_V1",applications:[application],coverage},findings:[finding],provider_status});
+    expect(parsed.snapshot.applications[0]?.identity.state).toBe("curated");expect(parsed.findings[0]?.kev?.cve).toBe("CVE-2099-0001");
+    expect(()=>parseInstalledApplicationInventory({scan_id:scanId,state:"completed",snapshot:{schema:"INSTALLED_APPLICATION_SNAPSHOT_V1",applications:[application],coverage},findings:[{...finding,affected:"unknown"}],provider_status})).toThrow();
+    expect(()=>parseInstalledApplicationPreview({preview_id:scanId,application_count:1,system_component_count:0,inventory_fingerprint:"a".repeat(64),coverage,requires_confirmation:false})).toThrow();
   });
 });
