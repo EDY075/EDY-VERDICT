@@ -136,6 +136,13 @@ function text(value: unknown, maximum = 512): string {
   return value;
 }
 
+function jsonText(value: unknown, maximum: number): string {
+  // Pretty JSON legitimately contains TAB/CR/LF. All other C0/DEL controls remain refused.
+  if (typeof value !== "string" || value.length === 0 || value.length > maximum
+    || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value)) throw new Error("Backend response rejected");
+  return value;
+}
+
 function member<const T extends readonly string[]>(value: unknown, values: T): T[number] {
   if (typeof value !== "string" || !values.includes(value)) throw new Error("Backend response rejected");
   return value as T[number];
@@ -235,7 +242,7 @@ export function parseFinding(value: unknown): FindingView {
 export function parseReport(value: unknown): ReportView {
   const item = record(value);
   exact(item, ["scan_id", "kind", "schema", "json"]);
-  const json = text(item.json, 2 * 1024 * 1024);
+  const json = jsonText(item.json, 2 * 1024 * 1024);
   JSON.parse(json);
   if (item.schema !== "REPORT_SCHEMA_V2") throw new Error("Backend response rejected");
   return Object.freeze({

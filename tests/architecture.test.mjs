@@ -52,10 +52,29 @@ test('no dangerous capability, generic IPC or plugin can be added silently', () 
   assert.equal(cap.remote,undefined);
   const commands=['get-foundation-status','get-engine-status','authorize-repository-target','inspect-repository-target','create-repository-scan','get-repository-inventory','inspect-file-target','authorize-file-target','create-file-scan','get-file-analysis','create-synthetic-scan','get-scan','list-scans','get-scan-progress','cancel-scan','list-findings','get-finding','generate-report'];
   assert.deepEqual(cap.permissions,commands.map(command=>`allow-${command}`));
-  for(const p of metadata.packages) assert(!p.dependencies.some(d=>d.name.startsWith('tauri-plugin-')));
+  for(const p of metadata.packages) {
+    const plugins=p.dependencies.filter(d=>d.name.startsWith('tauri-plugin-'));
+    if(p.name !== 'edy-desktop') assert.deepEqual(plugins,[]);
+    else {
+      assert.equal(plugins.length,1);
+      assert.equal(plugins[0].name,'tauri-plugin-wdio-webdriver');
+      assert.equal(plugins[0].req,'=1.3.0');
+      assert.equal(plugins[0].optional,true);
+      assert.deepEqual(p.features.default,[]);
+      assert.deepEqual(p.features['native-e2e'],['dep:tauri-plugin-wdio-webdriver']);
+    }
+  }
   const source=readFileSync('apps/desktop/src-tauri/src/main.rs','utf8');
   for(const command of commands) assert.match(source,new RegExp(`\\b${command.replaceAll('-','_')}\\b`));
   assert.equal((source.match(/#\[tauri::command\]/g)||[]).length,commands.length);
+});
+test('native driver is opt-in debug-only and absent from the default production graph',()=>{
+  const source=readFileSync('apps/desktop/src-tauri/src/main.rs','utf8');
+  assert.match(source,/#\[cfg\(all\(feature = "native-e2e", not\(debug_assertions\)\)\)\]\s*compile_error!/);
+  assert.match(source,/#\[cfg\(all\(feature = "native-e2e", debug_assertions\)\)\]\s*let builder = \{[\s\S]*?native_qa_size.is_none\(\)[\s\S]*?builder.plugin\(tauri_plugin_wdio_webdriver::init_with_port\(4445\)\)/);
+  const tree=execFileSync('cargo',['tree','-p','edy-desktop','--locked','--edges','normal','--prefix','none'],{encoding:'utf8'});
+  assert.doesNotMatch(tree,/tauri-plugin-wdio|\baxum\b/);
+  for(const name of ['main.tsx','App.tsx']) assert.doesNotMatch(readFileSync(`apps/desktop/src/${name}`,'utf8'),/wdio|webdriver|__TAURI_INTERNALS__/);
 });
 test('approved pins, lockfiles and script restrictions are present', () => {
   const p=JSON.parse(readFileSync('package.json'));

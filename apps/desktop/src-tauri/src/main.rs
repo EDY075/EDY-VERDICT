@@ -1,5 +1,8 @@
 //! Development-only foundation host. No engines, providers or product actions.
 
+#[cfg(all(feature = "native-e2e", not(debug_assertions)))]
+compile_error!("native-e2e is forbidden in release builds");
+
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
@@ -350,7 +353,17 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         smoke,
         smoke_received: AtomicBool::new(false),
     };
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    // Explicit opt-in test build AND synthetic-data launch mode. No production listener,
+    // additional IPC commands, frontend imports, capability changes or debug port.
+    #[cfg(all(feature = "native-e2e", debug_assertions))]
+    let builder = {
+        if native_qa_size.is_none() {
+            return Err("native-e2e requires an explicit Level 2 QA viewport".into());
+        }
+        builder.plugin(tauri_plugin_wdio_webdriver::init_with_port(4445))
+    };
+    builder
         .manage(state)
         .invoke_handler(tauri::generate_handler![
             get_foundation_status,

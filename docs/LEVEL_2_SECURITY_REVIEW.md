@@ -2,7 +2,7 @@
 
 Data: 2026-09-02. Método: revisão manual do código pelo JR, análise de fluxos e testes locais. Não é auditoria independente, certificação ou conclusão do antigo scan externo. Escopo: delta File/Binary desde a tag Level 1 e correções desta rodada.
 
-**PASS no escopo de código e regressões executadas.** Pendentes: Critical 0, High 0, Medium 0, Low 1, Informational 3. O aceite global continua PARTIAL por falta do E2E nativo completo.
+**PASS no escopo de código, harness focal e regressões executadas.** Abertos: Critical 0, High 0, Medium 0, Low 1 aceito, Informational 2. O E2E nativo obrigatório passou.
 
 ## Achados e resolução
 
@@ -14,10 +14,11 @@ Data: 2026-09-02. Método: revisão manual do código pelo JR, análise de fluxo
 | L2-M04 | Medium, corrigido | Signing time não implementado; countersigner sem distinção explícita de timestamp confiável | Parser DER estrito de atributo autenticado, campos separados; ausência real registrada |
 | L2-H01 | High, corrigido durante desenvolvimento, antes de commit | Protótipo de rechecagem SIP com cópia superficial de SIP_SUBJECTINFO causou 0xC0000005 | Protótipo removido; estrutura nova zerada, GUID/path/handle controlados, sem copiar pClientData; positivos/negativos repetidos PASS |
 | L2-F01 | Correção funcional | Host recusava SQLite v2 válido por comparar com literal v1 anterior ao Level 0 | Storage::open valida schema real; envelope IPC continua v1 conforme contrato congelado; três smokes reais PASS |
-| L2-L01 | Low, aberto | WinVerifyTrust/SIP são síncronos; cancelamento cooperativo não interrompe chamada em andamento | Arquivo explícito, limite 256 MiB, offline, cancelamento conferido após retorno. Antes de produção, avaliar worker isolado/timeout; não criar execução genérica nesta rodada |
+| L2-L01 | Low, `ACCEPT_DOCUMENTED_RESIDUAL` | WinVerifyTrust/SIP são síncronos; cancelamento cooperativo não interrompe chamada em andamento | Exige arquivo explicitamente autorizado dentro da chamada OS. Impacto: atraso no cancelamento, sem ampliar alvo nem publicar veredito após cancelamento. Controles: 256 MiB, offline/cache-only, RAII, checagem antes/depois, commit terminal serializado e sem stale write. Aceitável no escopo local sintético. Gatilho: antes de readiness de produção ou se latência/DoS real for observado, mover para worker isolado com watchdog/terminação segura. |
 | L2-I01 | Informational | Cinco advisories unic-* herdados | Release bloqueado; sem exceção ou mudança de pin |
-| L2-I02 | Informational / validation debt | E2E File/Binary no WebView e matriz visual incompletos por falhas de automação | Evidência concreta no ledger; smokes de infraestrutura/render tests não equivalem a E2E |
+| L2-I02 | Informational, resolvido | Harness de captura antigo dependia de `IGraphicsCaptureSession3`, ausente no build 19045 | Substituído por WebDriver W3C embarcado test-only; 21 fluxos e 150 asserções semânticas reais PASS |
 | L2-I03 | Informational / limite | Signatário primário da assinatura PE embutida; confiança offline sem revogação atual não garante segurança | Não reivindica catálogos, todas as assinaturas aninhadas ou resistência a administrador/kernel comprometido |
+| L2-F02 | Correção funcional | Validador frontend rejeitava JSON pretty-print por TAB/CR/LF | Parser JSON dedicado permite somente whitespace JSON e recusa demais controles; UI/IPC/report real PASS |
 
 As contagens de aceite são de achados abertos. O High intermediário foi corrigido antes de integrar código. Uma tentativa do teste de corrida também encontrou UNIQUE do SQLite; foram corrigidos os IDs da fixture, sem enfraquecer a restrição.
 
@@ -36,7 +37,8 @@ As contagens de aceite são de achados abertos. O High intermediário foi corrig
 | SQLite | Só resultados/metadados, sem file bytes/chaves/credenciais/DER completo; transações, revisões, hash, até 256 snapshots | PASS do fluxo; SHA detecta corrupção, não autentica contra usuário que reescreve o banco |
 | Terminais | Cancelamento/commit serializados, terminal não reabre; cancelado/TARGET_CHANGED sem análise/veredito; reinício invalida pendentes | PASS backend |
 | Relatório | JSON e escaping de caracteres HTML; script/img/onerror nunca viram HTML ativo | PASS |
-| IPC | 18 comandos específicos, UUID/limites, preview/confirmação; sem read/fs/shell/process genérico | PASS revisão/testes; fluxo File/Binary nativo ainda pendente |
+| IPC | 18 comandos específicos, UUID/limites, preview/confirmação; sem read/fs/shell/process genérico | PASS revisão, testes e fluxo File/Binary nativo |
+| Harness E2E | Feature opcional exata, debug-only, exige viewport sintético; listener loopback somente nesse perfil | PASS; build release default sem plugin e release+feature recusado por compile gate |
 | Isolation/capabilities | Hook de validação fechado; main/local; guard de label/URL | PASS, configs preservadas |
 | Navegação/CSP | URL local exata; sem janela nova/download/CDN/remotos; assets locais | PASS |
 | Devtools/clipboard | Devtools false, clipboard não habilitado; shell/fs negados no frontend | PASS |
@@ -70,4 +72,4 @@ SigningTime vem apenas de AuthAttrs PKCS#9, DER UTC/GeneralizedTime estrito, dat
 
 ## Aceite
 
-A revisão manual de código está encerrada no escopo documentado. Isso não fecha E2E nativo, não habilita engines/providers, não promove Tauri e não libera produção. Próximo trabalho: concluir a validação nativa do Level 2 em mecanismo de automação funcional ou sessão manual observada. Não iniciar Level 3.
+A revisão manual focal está encerrada no escopo documentado. Critical/High/Medium abertos são zero. O Low L2-L01 foi aceito com condições e controles explícitos. O harness não expõe driver, eval, porta, mock ou IPC de teste no release. Isso não habilita engines/providers, não promove Tauri e não libera produção. Level 2 pode ser congelado; Level 3 não foi iniciado.

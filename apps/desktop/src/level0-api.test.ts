@@ -9,13 +9,14 @@ describe("Level 0 IPC response validation", () => {
     expect(parseScanSummary({ id: scanId, state: "partial", verdict: "needs_review", risk: "high", confidence: "low", coverage: { total: 4, completed: 2, failed: 1, unavailable: 1, skipped: 0 } }).confidence).toBe("low");
     expect(parseScanProgress({ scan_id: scanId, phase: "engine", completed_tasks: 1, total_tasks: 4, percent: 25, elapsed_ms: 10, current_engine: "yara-x", status: "running" }).percent).toBe(25);
     expect(parseFinding({ id: "018f4c2a-1d3b-7abc-8def-0123456789ac", scan_id: scanId, title: "Synthetic", category: "fixture", severity: "high", risk: "high", confidence: "medium", status: "open", sources: ["yara-x"], affected_component: "fixture.bin", rule_ids: ["RULE-1"], evidence_ids: ["018f4c2a-1d3b-7abc-8def-0123456789ad"], remediation_guidance: "Review safely", limitations: ["Synthetic only"] }).sources).toEqual(["yara-x"]);
-    expect(parseReport({ scan_id: scanId, kind: "technical", schema: "REPORT_SCHEMA_V2", json: "{}" }).kind).toBe("technical");
+    expect(parseReport({ scan_id: scanId, kind: "technical", schema: "REPORT_SCHEMA_V2", json: "{\n  \"kind\": \"technical\"\n}" }).kind).toBe("technical");
   });
 
   it("rejects invalid ids, oversized progress and malformed report JSON", () => {
     expect(() => parseScanSummary({ id: "../../etc", state: "completed", verdict: null, risk: null, confidence: null, coverage: { total: 0, completed: 0, failed: 0, unavailable: 0, skipped: 0 } })).toThrow();
     expect(() => parseScanProgress({ scan_id: scanId, phase: "x", completed_tasks: 2, total_tasks: 1, percent: 101, elapsed_ms: 0, current_engine: null, status: "running" })).toThrow();
     expect(() => parseReport({ scan_id: scanId, kind: "technical", schema: "REPORT_SCHEMA_V2", json: "<script>" })).toThrow();
+    expect(() => parseReport({ scan_id: scanId, kind: "technical", schema: "REPORT_SCHEMA_V2", json: "{\"x\":\"\u0001\"}" })).toThrow();
     expect(() => parseEngineStatus({ id: "yara-x", version: "1.20.0", state: "ready", detail_safe: "ok", secret: "unexpected" })).toThrow();
     expect(() => parseScanSummary({ id: scanId, state: "completed", verdict: null, risk: null, confidence: null, coverage: { total: 0, completed: 0, failed: 0, unavailable: 0, skipped: 0, clean: true } })).toThrow();
   });
