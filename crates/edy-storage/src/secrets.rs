@@ -116,7 +116,10 @@ mod tests {
             .duration_since(std::time::UNIX_EPOCH)
             .expect("test clock is valid")
             .as_nanos();
-        format!("EDY-VERDICT-LEVEL0-TEST-{case}-{}-{nonce}", std::process::id())
+        format!(
+            "EDY-VERDICT-LEVEL0-TEST-{case}-{}-{nonce}",
+            std::process::id()
+        )
     }
     struct Cleanup(String);
     impl Drop for Cleanup {
@@ -162,11 +165,8 @@ mod tests {
         let cleanup_target = target.clone();
         let result = std::panic::catch_unwind(|| {
             let _cleanup = Cleanup(cleanup_target.clone());
-            CredentialStore::write(
-                &cleanup_target,
-                &SecretValue(Zeroizing::new(vec![42; 16])),
-            )
-            .unwrap();
+            CredentialStore::write(&cleanup_target, &SecretValue(Zeroizing::new(vec![42; 16])))
+                .unwrap();
             panic!("Synthetic failure without secret value");
         });
         assert!(result.is_err());
