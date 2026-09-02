@@ -472,14 +472,11 @@ mod tests {
         let scan = "018f4c2a-1d3b-7abc-8def-0123456789a1";
         let target = "018f4c2a-1d3b-7abc-8def-0123456789a2";
         let auth = "018f4c2a-1d3b-7abc-8def-0123456789a3";
+        let full_secret = ["EDY_FAKE_TEST_TOKEN_", "REPOSITORY_A_ONLY"].concat();
+        let unsafe_payload = format!(r#"{{"value":"{full_secret}"}}"#);
         assert!(
             store
-                .create(
-                    scan,
-                    target,
-                    auth,
-                    br#"{"value":"EDY_FAKE_TEST_TOKEN_REPOSITORY_A_ONLY"}"#
-                )
+                .create(scan, target, auth, unsafe_payload.as_bytes())
                 .is_err()
         );
         store

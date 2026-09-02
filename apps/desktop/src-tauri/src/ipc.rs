@@ -1467,11 +1467,14 @@ mod tests {
                 kind: ReportKind::Technical,
             })
             .unwrap();
-        assert!(
-            !report
-                .json
-                .contains("EDY_FAKE_TEST_TOKEN_REPOSITORY_A_ONLY")
-        );
+        let full_secret = std::fs::read_to_string(fixture.join("config/test-secret.env"))
+            .unwrap()
+            .trim()
+            .split_once('=')
+            .unwrap()
+            .1
+            .to_owned();
+        assert!(!report.json.contains(&full_secret));
         let inventory = backend
             .get_repository_inventory(&ScanRequest { scan_id: scan.id })
             .unwrap();

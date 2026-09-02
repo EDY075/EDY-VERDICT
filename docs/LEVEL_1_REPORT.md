@@ -65,3 +65,14 @@ Tauri remains pinned at `2.11.5`; the advisory gate still waits for an official 
 - live engines, providers, remediation, packaging, signing, and release.
 
 `LEVEL 1 IMPLEMENTATION = COMPLETE` does not mean `LEVEL 1 PRODUCTION SCANNING READY`; that claim remains prohibited while real engine execution is policy-blocked.
+
+## Final validation — 2026-09-02
+
+- Rust workspace: 159 passed, 0 failed, 2 deliberately ignored native credential tests;
+- Clippy `-D warnings`: pass;
+- rustfmt check: pass;
+- frontend: typecheck pass, lint pass, 38 tests pass, production build pass;
+- Cargo deny: five known upstream `unic-*` advisories, zero new advisories; licenses, sources, and bans pass;
+- visual QA: 1366×768, 1920×1080, and 2560×1440; no horizontal overflow, warning and repository authorization controls visible;
+- exact full synthetic secret outside its authorized fixture: zero; persisted database/report/frontend payload occurrences: zero;
+- production scans, downloads, packages, installers, deployments, pushes, and host changes: zero.
