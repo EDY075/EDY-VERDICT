@@ -10,10 +10,12 @@ Allowed internal dependencies:
 - edy-cli and desktop Rust: the five library crates, not each other.
 
 All contracts are structural, snake_case serde enums, severity != confidence.
-Unavailable != clean. No numeric priority/verdict algorithm. Providers are fakes.
+Unavailable != clean. Level 0 adds a documented, versioned numeric risk/confidence model;
+providers remain fakes until their later levels.
 Wire envelope schema_version=1, producer_version, generated_at_utc, data.
-IDs/timestamps are opaque structural strings in this infrastructure phase; validated
-UUIDv7/RFC3339 constructors and production domain validation are later work.
+The earlier infrastructure envelope keeps opaque strings for backward compatibility. Level 0
+domain entities use fail-closed UUIDv7 IDs, normalized UTC timestamps and validated aggregate
+deserialization; these do not silently change the infrastructure envelope schema.
 
 Storage API required by desktop: `Storage::open(&Path) -> Result<Storage, ...>`.
 It creates only infrastructure schema. `schema_version()` returns its version.

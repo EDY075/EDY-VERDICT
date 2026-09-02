@@ -22,6 +22,8 @@ tests deterministic and makes policy decisions auditable.
 - Evidence and findings expose read-only getters; state changes pass through lifecycle methods.
 - Scan coverage is recorded per `(engine, target)`, so reusing one engine for many targets is not
   collapsed into a single check.
+- Planned provider availability is part of coverage and cannot remain `complete` when a provider
+  is unavailable, offline, rate-limited, unconfigured or policy-blocked.
 - Failed, skipped or cancelled checks never become complete coverage.
 - Risk and confidence are separately range-checked values.
 - `NoKnownIndicators` means only that all planned checks completed and observed no indicators. It
@@ -38,7 +40,8 @@ the core ships no host mutation.
 
 Domain events are serializable integration messages, not a durable event store. Persistence must
 write envelopes transactionally, preserve schema versions and reject invalid payloads before
-reconstructing domain state.
+reconstructing domain state. Public aggregate deserialization re-applies constructors and
+cross-field invariants rather than trusting serialized private fields.
 
 ## Level 0 readiness
 

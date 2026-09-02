@@ -15,13 +15,13 @@ pub enum ReportKind {
     Developer,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct ReportEvidence {
-    pub id: String,
-    pub summary: String,
-    pub provenance: String,
-    pub redacted: bool,
+    id: String,
+    summary: String,
+    provenance: String,
+    redacted: bool,
 }
 
 impl ReportEvidence {
@@ -41,6 +41,13 @@ impl ReportEvidence {
             provenance: provenance.into(),
             redacted: contains_sensitive_data,
         }
+    }
+
+    fn enforce_redaction(mut self) -> Self {
+        if self.redacted {
+            self.summary = "[REDACTED]".into();
+        }
+        self
     }
 }
 
@@ -77,7 +84,27 @@ pub struct FindingSummary {
     pub last_seen: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(tag = "contract", content = "details", rename_all = "snake_case")]
+pub enum ReportContract {
+    Executive {
+        major_finding_ids: Vec<String>,
+        business_impact: Vec<String>,
+    },
+    Technical {
+        engine_runs: Vec<String>,
+        affected_components: Vec<String>,
+        errors_or_partial_checks: Vec<String>,
+    },
+    Developer {
+        components_and_rules: Vec<String>,
+        remediation_guidance: Vec<String>,
+        verification_steps: Vec<String>,
+        rescan_status: Vec<String>,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct ReportDocument {
     pub schema: String,
@@ -95,6 +122,7 @@ pub struct ReportDocument {
     pub findings: Vec<FindingSummary>,
     pub evidence: Vec<ReportEvidence>,
     pub explanation: Vec<String>,
+    pub contract: ReportContract,
 }
 
 impl ReportDocument {
@@ -129,6 +157,10 @@ impl ReportDocument {
         );
         limitations.sort();
         limitations.dedup();
+        evidence = evidence
+            .into_iter()
+            .map(ReportEvidence::enforce_redaction)
+            .collect();
         evidence.sort_by(|left, right| left.id.cmp(&right.id));
         evidence.dedup_by(|left, right| left.id == right.id);
         let mut findings: Vec<_> = result
@@ -198,6 +230,7 @@ impl ReportDocument {
         let mut explanation = result.verdict.reasons.clone();
         explanation.extend(result.verdict.risk.reasons.clone());
         explanation.extend(result.verdict.confidence.reasons.clone());
+        let contract = build_contract(kind, result, &findings, &coverage);
         Self {
             schema: REPORT_SCHEMA.into(),
             kind,
@@ -214,6 +247,7 @@ impl ReportDocument {
             findings,
             evidence,
             explanation,
+            contract,
         }
     }
 
@@ -222,12 +256,132 @@ impl ReportDocument {
     }
 }
 
+fn build_contract(
+    kind: ReportKind,
+    result: &ScanResult,
+    findings: &[FindingSummary],
+    coverage: &CoverageSummary,
+) -> ReportContract {
+    match kind {
+        ReportKind::Executive => {
+            let major_finding_ids = findings
+                .iter()
+                .filter(|finding| {
+                    finding.status != FindingStatus::Resolved && finding.severity >= Severity::High
+                })
+                .map(|finding| finding.id.clone())
+                .collect();
+            let mut business_impact = Vec::new();
+            if findings.iter().any(|finding| {
+                finding.status != FindingStatus::Resolved && finding.severity >= Severity::Critical
+            }) {
+                business_impact.push(
+                    "Critical technical exposure may materially affect operations or data; validate scope immediately."
+                        .into(),
+                );
+            } else if findings.iter().any(|finding| {
+                finding.status != FindingStatus::Resolved && finding.severity >= Severity::High
+            }) {
+                business_impact.push(
+                    "High technical exposure may affect operations or data; prioritize validation."
+                        .into(),
+                );
+            } else {
+                business_impact.push(
+                    "No material impact was established by the completed checks; this is not a security guarantee."
+                        .into(),
+                );
+            }
+            if !coverage.complete {
+                business_impact.push(
+                    "Incomplete coverage limits business-impact assessment and requires additional checks."
+                        .into(),
+                );
+            }
+            ReportContract::Executive {
+                major_finding_ids,
+                business_impact,
+            }
+        }
+        ReportKind::Technical => {
+            let mut engine_runs = result
+                .coverage
+                .engine_results()
+                .iter()
+                .map(|run| format!("{}:{}:{:?}", run.engine, run.target_id, run.state))
+                .collect::<Vec<_>>();
+            engine_runs.sort();
+            let mut affected_components = findings
+                .iter()
+                .map(|finding| finding.target_id.clone())
+                .collect::<Vec<_>>();
+            affected_components.sort();
+            affected_components.dedup();
+            let errors_or_partial_checks = result
+                .coverage
+                .engine_results()
+                .iter()
+                .filter(|run| run.state != EngineRunState::Passed)
+                .map(|run| format!("{}:{}:{:?}", run.engine, run.target_id, run.state))
+                .collect();
+            ReportContract::Technical {
+                engine_runs,
+                affected_components,
+                errors_or_partial_checks,
+            }
+        }
+        ReportKind::Developer => {
+            let components_and_rules = findings
+                .iter()
+                .map(|finding| {
+                    format!(
+                        "{}:{}:{}",
+                        finding.target_id,
+                        finding.category,
+                        finding.rule_ids.join(",")
+                    )
+                })
+                .collect();
+            let remediation_guidance = findings
+                .iter()
+                .filter(|finding| finding.status != FindingStatus::Resolved)
+                .map(|finding| {
+                    if finding.remediation_ids.is_empty() {
+                        format!("{}: manual review required", finding.id)
+                    } else {
+                        format!(
+                            "{}: follow remediation plan {}",
+                            finding.id,
+                            finding.remediation_ids.join(",")
+                        )
+                    }
+                })
+                .collect();
+            let verification_steps = findings
+                .iter()
+                .map(|finding| format!("{}: verify evidence then rescan target", finding.id))
+                .collect();
+            let rescan_status = findings
+                .iter()
+                .map(|finding| format!("{}:{:?}", finding.id, finding.status))
+                .collect();
+            ReportContract::Developer {
+                components_and_rules,
+                remediation_guidance,
+                verification_steps,
+                rescan_status,
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use edy_core::{
-        ConfidenceAssessment, ConfidenceScore, CoverageTask, EngineCoverage, EngineId,
-        RiskAssessment, RiskScore, ScanCoverage, ScanId, TargetId, Verdict,
+        ConfidenceAssessment, ConfidenceScore, CoverageTask, EngineCoverage, EngineId, EvidenceId,
+        Finding, FindingDraft, FindingFingerprint, FindingId, RiskAssessment, RiskScore,
+        ScanCoverage, ScanId, TargetId, Timestamp, Verdict,
     };
 
     fn fixture(complete: bool) -> ScanResult {
@@ -308,6 +462,22 @@ mod tests {
         .unwrap();
         assert!(json.contains("[REDACTED]"));
         assert!(!json.contains("FAKE_SECRET_VALUE"));
+
+        let malformed = ReportEvidence {
+            id: "e-2".into(),
+            summary: "FAKE_SECRET_BYPASS".into(),
+            provenance: "fixture".into(),
+            redacted: true,
+        };
+        let json = ReportDocument::build(
+            ReportKind::Technical,
+            &fixture(true),
+            vec![malformed],
+            vec![],
+        )
+        .to_json_pretty()
+        .unwrap();
+        assert!(!json.contains("FAKE_SECRET_BYPASS"));
     }
 
     #[test]
@@ -356,16 +526,70 @@ mod tests {
 
     #[test]
     fn all_three_report_contracts_are_versioned() {
-        for kind in [
-            ReportKind::Executive,
-            ReportKind::Technical,
-            ReportKind::Developer,
-        ] {
-            assert_eq!(
-                ReportDocument::build(kind, &fixture(true), vec![], vec![]).schema,
-                REPORT_SCHEMA
-            );
-        }
+        let executive =
+            ReportDocument::build(ReportKind::Executive, &fixture(true), vec![], vec![]);
+        let technical =
+            ReportDocument::build(ReportKind::Technical, &fixture(true), vec![], vec![]);
+        let developer =
+            ReportDocument::build(ReportKind::Developer, &fixture(true), vec![], vec![]);
+        assert_eq!(executive.schema, REPORT_SCHEMA);
+        assert_eq!(technical.schema, REPORT_SCHEMA);
+        assert_eq!(developer.schema, REPORT_SCHEMA);
+        assert!(matches!(
+            executive.contract,
+            ReportContract::Executive { .. }
+        ));
+        assert!(matches!(
+            technical.contract,
+            ReportContract::Technical { .. }
+        ));
+        assert!(matches!(
+            developer.contract,
+            ReportContract::Developer { .. }
+        ));
+        assert_ne!(
+            executive.to_json_pretty().unwrap(),
+            technical.to_json_pretty().unwrap()
+        );
         assert_eq!(HTML_RENDERER_STATUS, "DEFERRED");
+    }
+
+    #[test]
+    fn resolved_findings_are_history_not_active_priorities() {
+        let mut input = fixture(true);
+        let mut finding = Finding::new(FindingDraft {
+            id: FindingId::new("018f4c2a-1d3b-7abc-8def-0123456789ad").unwrap(),
+            scan_id: input.request_id.clone(),
+            target_id: TargetId::new("018f4c2a-1d3b-7abc-8def-0123456789ac").unwrap(),
+            source_engine: EngineId::new("a").unwrap(),
+            rule_id: "fixture-rule".into(),
+            title: "Resolved fixture".into(),
+            description: "Synthetic resolved finding".into(),
+            category: "fixture".into(),
+            severity: Severity::High,
+            confidence: Confidence::High,
+            fingerprint: FindingFingerprint::parse("ffp1-0123456789abcdef0123456789abcdef")
+                .unwrap(),
+            observed_at: Timestamp::new("2026-09-02T03:00:00Z").unwrap(),
+            evidence_id: EvidenceId::new("018f4c2a-1d3b-7abc-8def-0123456789ae").unwrap(),
+        })
+        .unwrap();
+        for status in [
+            FindingStatus::Investigating,
+            FindingStatus::Remediating,
+            FindingStatus::VerificationPending,
+            FindingStatus::Resolved,
+        ] {
+            finding.change_status(status).unwrap();
+        }
+        input.findings.push(finding);
+
+        let report = ReportDocument::build(ReportKind::Developer, &input, vec![], vec![]);
+        assert!(report.recommended_priorities.is_empty());
+        assert!(matches!(
+            &report.contract,
+            ReportContract::Developer { rescan_status, .. }
+                if rescan_status.iter().any(|status| status.ends_with(":Resolved"))
+        ));
     }
 }

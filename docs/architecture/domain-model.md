@@ -47,5 +47,10 @@ must never be silently reinterpreted.
 
 Constructors reject empty/oversized text, duplicate structured keys, incoherent locator kinds,
 invalid digests and invalid lifecycle transitions. Deserialization provides strict unknown-field
-handling and validated scalar identity types. External adapters must still call domain constructors
-or validation methods before publishing engine observations; serialized input is not authorization.
+handling and re-enters aggregate validation for targets, evidence, findings, coverage, engine tasks,
+scan plans and remediation workflows. External adapters must still call domain constructors or
+validation methods before publishing engine observations; serialized input is not authorization.
+
+Provider coverage is recorded separately from `(engine, target)` execution. Every planned provider
+has an explicit availability result. Any result other than `available` makes total scan coverage
+incomplete and must be mirrored by the verdict's unavailable-check list.

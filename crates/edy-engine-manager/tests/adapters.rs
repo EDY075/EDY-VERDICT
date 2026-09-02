@@ -18,6 +18,21 @@ fn local_target(kind: TargetKind, path: &str) -> Target {
     .unwrap()
 }
 
+fn approved(path: &'static str) -> ApprovedLocalPath<'static> {
+    ApprovedLocalPath::new(path).unwrap()
+}
+
+fn preparation(target: &Target) -> AdapterPreparation<'_> {
+    AdapterPreparation {
+        target,
+        project_root: approved("D:/EDY-Projects/EDY-VERDICT"),
+        yara_rules_path: None,
+        gitleaks_config_path: None,
+        gitleaks_ignore_path: None,
+        trivy_cache_dir: None,
+    }
+}
+
 const YARA: &[u8] = br#"{
   "version":"1.20.0",
   "matches":[
@@ -206,12 +221,11 @@ fn adapters_declare_their_supported_targets() {
 #[test]
 fn preparation_is_pure_offline_and_redacted_by_default() {
     let repository = local_target(TargetKind::Repository, "D:/fixture/repository");
-    let yara = YaraXAdapter
-        .prepare_arguments(&AdapterPreparation {
-            target: &repository,
-            yara_rules_path: Some("D:/fixture/rules"),
-        })
-        .unwrap();
+    let mut yara_preparation = preparation(&repository);
+    yara_preparation.yara_rules_path = Some(approved(
+        "D:/EDY-Projects/EDY-VERDICT/.local/engine-config/yara/rules",
+    ));
+    let yara = YaraXAdapter.prepare_arguments(&yara_preparation).unwrap();
     assert_eq!(
         yara,
         [
@@ -219,69 +233,88 @@ fn preparation_is_pure_offline_and_redacted_by_default() {
             "--output-format=json",
             "--no-mmap",
             "--recursive",
-            "D:/fixture/rules",
+            "D:/EDY-Projects/EDY-VERDICT/.local/engine-config/yara/rules",
             "D:/fixture/repository"
         ]
     );
 
-    let cases: [(&dyn EngineAdapter, &[&str]); 3] = [
-        (
-            &GitleaksAdapter,
-            &[
-                "dir",
-                "--no-banner",
-                "--no-color",
-                "--redact=100",
-                "--report-format=json",
-                "--report-path=-",
-                "--exit-code=1",
-                "D:/fixture/repository",
-            ],
-        ),
-        (
-            &TrivyAdapter,
-            &[
-                "filesystem",
-                "--format=json",
-                "--offline-scan",
-                "--skip-db-update",
-                "--scanners=vuln",
-                "D:/fixture/repository",
-            ],
-        ),
-        (
-            &OsvScannerAdapter,
-            &[
-                "scan",
-                "--format=json",
-                "--offline",
-                "--recursive",
-                "D:/fixture/repository",
-            ],
-        ),
-    ];
-    for (adapter, expected) in cases {
-        let actual = adapter
-            .prepare_arguments(&AdapterPreparation {
-                target: &repository,
-                yara_rules_path: None,
-            })
-            .unwrap();
-        assert_eq!(actual, expected);
-    }
+    let mut gitleaks_preparation = preparation(&repository);
+    gitleaks_preparation.gitleaks_config_path = Some(approved(
+        "D:/EDY-Projects/EDY-VERDICT/.local/engine-config/gitleaks/config.toml",
+    ));
+    gitleaks_preparation.gitleaks_ignore_path = Some(approved(
+        "D:/EDY-Projects/EDY-VERDICT/.local/engine-config/gitleaks/empty.ignore",
+    ));
+    assert_eq!(
+        GitleaksAdapter
+            .prepare_arguments(&gitleaks_preparation)
+            .unwrap(),
+        [
+            "dir",
+            "--no-banner",
+            "--no-color",
+            "--redact=100",
+            "--config=D:/EDY-Projects/EDY-VERDICT/.local/engine-config/gitleaks/config.toml",
+            "--gitleaks-ignore-path=D:/EDY-Projects/EDY-VERDICT/.local/engine-config/gitleaks/empty.ignore",
+            "--ignore-gitleaks-allow",
+            "--report-format=json",
+            "--report-path=-",
+            "--exit-code=1",
+            "D:/fixture/repository",
+        ]
+    );
+
+    let mut trivy_preparation = preparation(&repository);
+    trivy_preparation.trivy_cache_dir = Some(approved(
+        "D:/EDY-Projects/EDY-VERDICT/.local/engine-cache/trivy",
+    ));
+    assert_eq!(
+        TrivyAdapter.prepare_arguments(&trivy_preparation).unwrap(),
+        [
+            "filesystem",
+            "--format=json",
+            "--offline-scan",
+            "--skip-db-update",
+            "--scanners=vuln",
+            "--cache-dir=D:/EDY-Projects/EDY-VERDICT/.local/engine-cache/trivy",
+            "D:/fixture/repository",
+        ]
+    );
+
+    assert_eq!(
+        OsvScannerAdapter
+            .prepare_arguments(&preparation(&repository))
+            .unwrap(),
+        [
+            "scan",
+            "source",
+            "--format=json",
+            "--offline",
+            "--offline-vulnerabilities",
+            "--recursive",
+            "D:/fixture/repository",
+        ]
+    );
+
+    let lockfile = local_target(TargetKind::File, "D:/fixture/Cargo.lock");
+    assert_eq!(
+        OsvScannerAdapter
+            .prepare_arguments(&preparation(&lockfile))
+            .unwrap(),
+        [
+            "scan",
+            "source",
+            "--format=json",
+            "--offline",
+            "--offline-vulnerabilities",
+            "--lockfile",
+            "D:/fixture/Cargo.lock",
+        ]
+    );
 }
 
 #[test]
 fn argument_preparation_fails_closed() {
-    let file = local_target(TargetKind::File, "-untrusted-option");
-    assert_eq!(
-        TrivyAdapter.prepare_arguments(&AdapterPreparation {
-            target: &file,
-            yara_rules_path: None,
-        }),
-        Err(AdapterError::InvalidArgument)
-    );
-
     let application = Target::new(
         TargetId::new("018f4c2a-1d3b-7abc-8def-0123456789ad").unwrap(),
         TargetKind::InstalledApplication,
@@ -289,24 +322,75 @@ fn argument_preparation_fails_closed() {
     )
     .unwrap();
     assert_eq!(
-        GitleaksAdapter.prepare_arguments(&AdapterPreparation {
-            target: &application,
-            yara_rules_path: None,
-        }),
+        GitleaksAdapter.prepare_arguments(&preparation(&application)),
         Err(AdapterError::UnsupportedTarget)
     );
     assert_eq!(
-        YaraXAdapter.prepare_arguments(&AdapterPreparation {
-            target: &local_target(TargetKind::Binary, "D:/fixture/sample.bin"),
-            yara_rules_path: None,
-        }),
+        YaraXAdapter.prepare_arguments(&preparation(&local_target(
+            TargetKind::Binary,
+            "D:/fixture/sample.bin",
+        ))),
         Err(AdapterError::MissingRules)
     );
+    let repository = local_target(TargetKind::Repository, "D:/fixture/repository");
     assert_eq!(
-        TrivyAdapter.prepare_arguments(&AdapterPreparation {
-            target: &local_target(TargetKind::Repository, "D:/fixture/repository"),
-            yara_rules_path: Some("D:/fixture/rules"),
-        }),
+        GitleaksAdapter.prepare_arguments(&preparation(&repository)),
+        Err(AdapterError::MissingGitleaksConfig)
+    );
+    let mut only_config = preparation(&repository);
+    only_config.gitleaks_config_path = Some(approved(
+        "D:/EDY-Projects/EDY-VERDICT/.local/engine-config/gitleaks/config.toml",
+    ));
+    assert_eq!(
+        GitleaksAdapter.prepare_arguments(&only_config),
+        Err(AdapterError::MissingGitleaksIgnorePolicy)
+    );
+    assert_eq!(
+        TrivyAdapter.prepare_arguments(&preparation(&repository)),
+        Err(AdapterError::MissingTrivyCache)
+    );
+    let mut unexpected = preparation(&repository);
+    unexpected.yara_rules_path = Some(approved(
+        "D:/EDY-Projects/EDY-VERDICT/.local/engine-config/yara/rules",
+    ));
+    assert_eq!(
+        TrivyAdapter.prepare_arguments(&unexpected),
+        Err(AdapterError::InvalidArgument)
+    );
+}
+
+#[test]
+fn engine_paths_are_absolute_local_and_project_confined() {
+    for invalid in [
+        "relative/path",
+        "//server/share/file",
+        r"\\server\share\file",
+        r"\\?\D:\device\file",
+        "D:drive-relative",
+        "D:/path/../file",
+        "D:/path/file:stream",
+        "D:/path/NUL.txt",
+        "D:/path/file*",
+    ] {
+        assert_eq!(
+            ApprovedLocalPath::new(invalid),
+            Err(AdapterError::InvalidArgument),
+            "{invalid}"
+        );
+    }
+    assert!(ApprovedLocalPath::new("D:/approved/path").is_ok());
+
+    let repository = local_target(TargetKind::Repository, "D:/fixture/repository");
+    let mut outside_project = preparation(&repository);
+    outside_project.trivy_cache_dir = Some(approved("D:/EDY-Projects/other/cache"));
+    assert_eq!(
+        TrivyAdapter.prepare_arguments(&outside_project),
+        Err(AdapterError::InvalidArgument)
+    );
+
+    let remote = local_target(TargetKind::File, "//server/share/Cargo.lock");
+    assert_eq!(
+        OsvScannerAdapter.prepare_arguments(&preparation(&remote)),
         Err(AdapterError::InvalidArgument)
     );
 }

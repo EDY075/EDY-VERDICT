@@ -47,6 +47,7 @@ pub enum TargetKind {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(try_from = "TargetLocatorWire")]
 #[serde(tag = "type", content = "value", rename_all = "snake_case")]
 pub enum TargetLocator {
     LocalPath(String),
@@ -54,14 +55,40 @@ pub enum TargetLocator {
     HttpsUrl(String),
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(tag = "type", content = "value", rename_all = "snake_case")]
+enum TargetLocatorWire {
+    LocalPath(String),
+    InstalledApplicationId(String),
+    HttpsUrl(String),
+}
+
+impl TryFrom<TargetLocatorWire> for TargetLocator {
+    type Error = DomainError;
+
+    fn try_from(wire: TargetLocatorWire) -> Result<Self, Self::Error> {
+        match wire {
+            TargetLocatorWire::LocalPath(value) => Self::new_local_path(value),
+            TargetLocatorWire::InstalledApplicationId(value) => Self::new_application_id(value),
+            TargetLocatorWire::HttpsUrl(value) => Self::new_https_url(value),
+        }
+    }
+}
+
 impl TargetLocator {
     pub fn new_local_path(value: impl Into<String>) -> Result<Self, DomainError> {
         let value = value.into();
         validation::bounded_text("local_path", &value, 4096)?;
         let normalized = value.replace('\\', "/");
-        if normalized
-            .split('/')
-            .any(|part| part == ".." || part == ".")
+        let absolute = normalized.starts_with('/')
+            || (normalized.len() >= 3
+                && normalized.as_bytes()[0].is_ascii_alphabetic()
+                && normalized.as_bytes()[1] == b':'
+                && normalized.as_bytes()[2] == b'/');
+        if !absolute
+            || normalized
+                .split('/')
+                .any(|part| part == ".." || part == ".")
         {
             return Err(DomainError::new(
                 "local_path",
@@ -86,12 +113,41 @@ impl TargetLocator {
                 ValidationErrorKind::InvalidFormat,
             ));
         };
-        let authority = authority_and_path.split('/').next().unwrap_or("");
+        if value.bytes().any(|byte| byte.is_ascii_whitespace()) || !value.is_ascii() {
+            return Err(DomainError::new(
+                "https_url",
+                ValidationErrorKind::InvalidFormat,
+            ));
+        }
+        let authority_end = authority_and_path
+            .find(['/', '?'])
+            .unwrap_or(authority_and_path.len());
+        let authority = &authority_and_path[..authority_end];
+        let (host, port) = authority
+            .rsplit_once(':')
+            .map_or((authority, None), |(host, port)| (host, Some(port)));
+        let valid_host = !host.is_empty()
+            && host.len() <= 253
+            && host.split('.').all(|label| {
+                !label.is_empty()
+                    && label.len() <= 63
+                    && !label.starts_with('-')
+                    && !label.ends_with('-')
+                    && label
+                        .bytes()
+                        .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+            });
+        let valid_port = port.is_none_or(|port| {
+            !port.is_empty()
+                && port.bytes().all(|byte| byte.is_ascii_digit())
+                && port.parse::<u16>().is_ok_and(|value| value != 0)
+        });
         if authority.is_empty()
             || authority.contains('@')
-            || authority.starts_with('.')
-            || authority.ends_with('.')
+            || !valid_host
+            || !valid_port
             || value.contains('#')
+            || authority_and_path[authority_end..].contains('\\')
         {
             return Err(DomainError::new(
                 "https_url",
@@ -105,7 +161,16 @@ impl TargetLocator {
         match self {
             Self::LocalPath(value) => value.to_ascii_lowercase(),
             Self::InstalledApplicationId(value) => value.trim().to_ascii_lowercase(),
-            Self::HttpsUrl(value) => value.to_ascii_lowercase(),
+            Self::HttpsUrl(value) => {
+                let suffix_start = value[8..]
+                    .find(['/', '?'])
+                    .map_or(value.len(), |index| index + 8);
+                format!(
+                    "{}{}",
+                    value[..suffix_start].to_ascii_lowercase(),
+                    &value[suffix_start..]
+                )
+            }
         }
     }
 }
@@ -221,11 +286,28 @@ pub enum EvidenceKind {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(try_from = "StructuredFactWire")]
 #[serde(deny_unknown_fields)]
 pub struct StructuredFact {
     pub key: String,
     pub value: String,
     pub redacted: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct StructuredFactWire {
+    key: String,
+    value: String,
+    redacted: bool,
+}
+
+impl TryFrom<StructuredFactWire> for StructuredFact {
+    type Error = DomainError;
+
+    fn try_from(wire: StructuredFactWire) -> Result<Self, Self::Error> {
+        Self::new(wire.key, wire.value, wire.redacted)
+    }
 }
 
 impl StructuredFact {
@@ -255,6 +337,7 @@ pub struct EvidenceProvenance {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(try_from = "EvidenceDraft")]
 #[serde(deny_unknown_fields)]
 pub struct Evidence {
     id: EvidenceId,
@@ -300,6 +383,12 @@ impl Evidence {
         } = draft;
         validation::bounded_text("evidence_source", &source, 256)?;
         validation::bounded_text("evidence_summary", &summary, 1024)?;
+        validation::bounded_text("evidence_producer", &provenance.producer, 256)?;
+        validation::bounded_text(
+            "evidence_producer_version",
+            &provenance.producer_version,
+            64,
+        )?;
         if structured_payload.len() > 128 {
             return Err(DomainError::new(
                 "structured_payload",
@@ -366,6 +455,14 @@ impl Evidence {
     }
 }
 
+impl TryFrom<EvidenceDraft> for Evidence {
+    type Error = DomainError;
+
+    fn try_from(draft: EvidenceDraft) -> Result<Self, Self::Error> {
+        Self::new(draft)
+    }
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ObservationSignal {
@@ -384,6 +481,7 @@ pub enum EvidenceStrength {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(try_from = "EngineObservationWire")]
 #[serde(deny_unknown_fields)]
 pub struct EngineObservation {
     pub engine: EngineId,
@@ -401,6 +499,24 @@ pub struct EngineObservation {
     pub parser_confidence: Confidence,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct EngineObservationWire {
+    engine: EngineId,
+    engine_version: String,
+    target_id: TargetId,
+    rule_id: String,
+    semantic_key: String,
+    category: String,
+    severity: Severity,
+    location: String,
+    message: String,
+    evidence_id: EvidenceId,
+    signal: ObservationSignal,
+    evidence_strength: EvidenceStrength,
+    parser_confidence: Confidence,
+}
+
 impl EngineObservation {
     pub fn validate(&self) -> Result<(), DomainError> {
         validation::bounded_text("engine_version", &self.engine_version, 64)?;
@@ -409,6 +525,30 @@ impl EngineObservation {
         validation::canonical_token("category", &self.category, 64)?;
         validation::bounded_text("location", &self.location, 4096)?;
         validation::bounded_text("message", &self.message, 2048)
+    }
+}
+
+impl TryFrom<EngineObservationWire> for EngineObservation {
+    type Error = DomainError;
+
+    fn try_from(wire: EngineObservationWire) -> Result<Self, Self::Error> {
+        let observation = Self {
+            engine: wire.engine,
+            engine_version: wire.engine_version,
+            target_id: wire.target_id,
+            rule_id: wire.rule_id,
+            semantic_key: wire.semantic_key,
+            category: wire.category,
+            severity: wire.severity,
+            location: wire.location,
+            message: wire.message,
+            evidence_id: wire.evidence_id,
+            signal: wire.signal,
+            evidence_strength: wire.evidence_strength,
+            parser_confidence: wire.parser_confidence,
+        };
+        observation.validate()?;
+        Ok(observation)
     }
 }
 
@@ -438,10 +578,52 @@ pub struct EngineCoverage {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(try_from = "ProviderCoverageWire")]
+#[serde(deny_unknown_fields)]
+pub struct ProviderCoverage {
+    pub id: String,
+    pub availability: Availability,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ProviderCoverageWire {
+    id: String,
+    availability: Availability,
+}
+
+impl TryFrom<ProviderCoverageWire> for ProviderCoverage {
+    type Error = DomainError;
+
+    fn try_from(wire: ProviderCoverageWire) -> Result<Self, Self::Error> {
+        Self::new(wire.id, wire.availability)
+    }
+}
+
+impl ProviderCoverage {
+    pub fn new(id: impl Into<String>, availability: Availability) -> Result<Self, DomainError> {
+        let id = id.into();
+        validation::canonical_token("provider_id", &id, 64)?;
+        Ok(Self { id, availability })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(try_from = "ScanCoverageWire")]
 #[serde(deny_unknown_fields)]
 pub struct ScanCoverage {
     expected_tasks: Vec<CoverageTask>,
     engine_results: Vec<EngineCoverage>,
+    provider_results: Vec<ProviderCoverage>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ScanCoverageWire {
+    expected_tasks: Vec<CoverageTask>,
+    engine_results: Vec<EngineCoverage>,
+    #[serde(default)]
+    provider_results: Vec<ProviderCoverage>,
 }
 
 impl ScanCoverage {
@@ -484,7 +666,35 @@ impl ScanCoverage {
         Ok(Self {
             expected_tasks,
             engine_results,
+            provider_results: Vec::new(),
         })
+    }
+
+    pub fn with_provider_results(
+        mut self,
+        mut provider_results: Vec<ProviderCoverage>,
+    ) -> Result<Self, DomainError> {
+        if provider_results.len() > 64 {
+            return Err(DomainError::new(
+                "provider_results",
+                ValidationErrorKind::LimitExceeded,
+            ));
+        }
+        for result in &provider_results {
+            validation::canonical_token("provider_id", &result.id, 64)?;
+        }
+        provider_results.sort_by(|left, right| left.id.cmp(&right.id));
+        if provider_results
+            .windows(2)
+            .any(|pair| pair[0].id == pair[1].id)
+        {
+            return Err(DomainError::new(
+                "provider_results",
+                ValidationErrorKind::Duplicate,
+            ));
+        }
+        self.provider_results = provider_results;
+        Ok(self)
     }
 
     pub fn expected_tasks(&self) -> &[CoverageTask] {
@@ -493,6 +703,10 @@ impl ScanCoverage {
 
     pub fn engine_results(&self) -> &[EngineCoverage] {
         &self.engine_results
+    }
+
+    pub fn provider_results(&self) -> &[ProviderCoverage] {
+        &self.provider_results
     }
 
     pub fn passed_count(&self) -> usize {
@@ -511,16 +725,40 @@ impl ScanCoverage {
 
     pub fn is_complete(&self) -> bool {
         self.passed_count() == self.expected_tasks.len()
+            && self
+                .provider_results
+                .iter()
+                .all(|result| result.availability == Availability::Available)
     }
 
     pub fn has_failures(&self) -> bool {
+        self.has_engine_failures() || self.has_provider_failures()
+    }
+
+    pub fn has_engine_failures(&self) -> bool {
         self.engine_results
             .iter()
             .any(|result| result.state != EngineRunState::Passed)
     }
+
+    pub fn has_provider_failures(&self) -> bool {
+        self.provider_results
+            .iter()
+            .any(|result| result.availability != Availability::Available)
+    }
+}
+
+impl TryFrom<ScanCoverageWire> for ScanCoverage {
+    type Error = DomainError;
+
+    fn try_from(wire: ScanCoverageWire) -> Result<Self, Self::Error> {
+        Self::new(wire.expected_tasks, wire.engine_results)?
+            .with_provider_results(wire.provider_results)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(try_from = "FindingWire")]
 #[serde(deny_unknown_fields)]
 pub struct Finding {
     pub(crate) id: FindingId,
@@ -539,6 +777,27 @@ pub struct Finding {
     pub(crate) last_seen: Timestamp,
     pub(crate) evidence_ids: Vec<EvidenceId>,
     pub(crate) remediation_ids: Vec<RemediationId>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct FindingWire {
+    id: FindingId,
+    scan_id: ScanId,
+    target_id: TargetId,
+    source_engines: Vec<EngineId>,
+    rule_ids: Vec<String>,
+    title: String,
+    description: String,
+    category: String,
+    severity: Severity,
+    confidence: Confidence,
+    status: FindingStatus,
+    fingerprint: FindingFingerprint,
+    first_seen: Timestamp,
+    last_seen: Timestamp,
+    evidence_ids: Vec<EvidenceId>,
+    remediation_ids: Vec<RemediationId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -696,7 +955,70 @@ impl Finding {
     }
 }
 
+impl TryFrom<FindingWire> for Finding {
+    type Error = DomainError;
+
+    fn try_from(mut wire: FindingWire) -> Result<Self, Self::Error> {
+        validation::bounded_text("title", &wire.title, 256)?;
+        validation::bounded_text("description", &wire.description, 4096)?;
+        validation::canonical_token("category", &wire.category, 64)?;
+        if wire.source_engines.is_empty()
+            || wire.source_engines.len() > 64
+            || wire.rule_ids.is_empty()
+            || wire.rule_ids.len() > 128
+            || wire.evidence_ids.is_empty()
+            || wire.evidence_ids.len() > 256
+            || wire.remediation_ids.len() > 128
+            || wire.first_seen > wire.last_seen
+        {
+            return Err(DomainError::new("finding", ValidationErrorKind::Incoherent));
+        }
+        for rule_id in &wire.rule_ids {
+            validation::bounded_text("rule_id", rule_id, 256)?;
+        }
+        let unique = |length: usize, unique_length: usize| length == unique_length;
+        if !unique(
+            wire.source_engines.len(),
+            wire.source_engines.iter().collect::<BTreeSet<_>>().len(),
+        ) || !unique(
+            wire.rule_ids.len(),
+            wire.rule_ids.iter().collect::<BTreeSet<_>>().len(),
+        ) || !unique(
+            wire.evidence_ids.len(),
+            wire.evidence_ids.iter().collect::<BTreeSet<_>>().len(),
+        ) || !unique(
+            wire.remediation_ids.len(),
+            wire.remediation_ids.iter().collect::<BTreeSet<_>>().len(),
+        ) {
+            return Err(DomainError::new("finding", ValidationErrorKind::Duplicate));
+        }
+        wire.source_engines.sort();
+        wire.rule_ids.sort();
+        wire.evidence_ids.sort();
+        wire.remediation_ids.sort();
+        Ok(Self {
+            id: wire.id,
+            scan_id: wire.scan_id,
+            target_id: wire.target_id,
+            source_engines: wire.source_engines,
+            rule_ids: wire.rule_ids,
+            title: wire.title,
+            description: wire.description,
+            category: wire.category,
+            severity: wire.severity,
+            confidence: wire.confidence,
+            status: wire.status,
+            fingerprint: wire.fingerprint,
+            first_seen: wire.first_seen,
+            last_seen: wire.last_seen,
+            evidence_ids: wire.evidence_ids,
+            remediation_ids: wire.remediation_ids,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(try_from = "ScanWire")]
 #[serde(deny_unknown_fields)]
 pub struct Scan {
     pub id: ScanId,
@@ -705,6 +1027,57 @@ pub struct Scan {
     pub created_at: Timestamp,
     pub started_at: Option<Timestamp>,
     pub finished_at: Option<Timestamp>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ScanWire {
+    id: ScanId,
+    targets: Vec<Target>,
+    state: ScanState,
+    created_at: Timestamp,
+    started_at: Option<Timestamp>,
+    finished_at: Option<Timestamp>,
+}
+
+impl TryFrom<ScanWire> for Scan {
+    type Error = DomainError;
+
+    fn try_from(wire: ScanWire) -> Result<Self, Self::Error> {
+        if wire
+            .started_at
+            .as_ref()
+            .is_some_and(|started| started < &wire.created_at)
+            || wire.finished_at.as_ref().is_some_and(|finished| {
+                finished < wire.started_at.as_ref().unwrap_or(&wire.created_at)
+            })
+        {
+            return Err(DomainError::new(
+                "scan_timestamps",
+                ValidationErrorKind::Incoherent,
+            ));
+        }
+        let coherent_state = match wire.state {
+            ScanState::Queued => wire.started_at.is_none() && wire.finished_at.is_none(),
+            ScanState::Preparing | ScanState::CancellationRequested => wire.finished_at.is_none(),
+            ScanState::Running => wire.started_at.is_some() && wire.finished_at.is_none(),
+            ScanState::Cancelled
+            | ScanState::Completed
+            | ScanState::Partial
+            | ScanState::Failed => wire.finished_at.is_some(),
+        };
+        if !coherent_state {
+            return Err(DomainError::new(
+                "scan_state",
+                ValidationErrorKind::Incoherent,
+            ));
+        }
+        let mut scan = Self::new(wire.id, wire.targets, wire.created_at)?;
+        scan.state = wire.state;
+        scan.started_at = wire.started_at;
+        scan.finished_at = wire.finished_at;
+        Ok(scan)
+    }
 }
 
 impl Scan {
@@ -769,10 +1142,40 @@ impl Scan {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(try_from = "UnavailableCheckWire")]
 #[serde(deny_unknown_fields)]
 pub struct UnavailableCheck {
     pub id: String,
     pub availability: Availability,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct UnavailableCheckWire {
+    id: String,
+    availability: Availability,
+}
+
+impl UnavailableCheck {
+    pub fn new(id: impl Into<String>, availability: Availability) -> Result<Self, DomainError> {
+        let id = id.into();
+        validation::canonical_token("unavailable_check_id", &id, 64)?;
+        if availability == Availability::Available {
+            return Err(DomainError::new(
+                "unavailable_check",
+                ValidationErrorKind::Incoherent,
+            ));
+        }
+        Ok(Self { id, availability })
+    }
+}
+
+impl TryFrom<UnavailableCheckWire> for UnavailableCheck {
+    type Error = DomainError;
+
+    fn try_from(wire: UnavailableCheckWire) -> Result<Self, Self::Error> {
+        Self::new(wire.id, wire.availability)
+    }
 }
 
 #[cfg(test)]
@@ -803,6 +1206,16 @@ mod tests {
             .is_err()
         );
         assert!(TargetLocator::new_https_url("http://example.invalid").is_err());
+        assert!(TargetLocator::new_https_url("https://bad host.invalid").is_err());
+        assert!(TargetLocator::new_local_path("relative/path").is_err());
+        assert_ne!(
+            TargetLocator::new_https_url("https://example.invalid/Case")
+                .unwrap()
+                .canonical(),
+            TargetLocator::new_https_url("https://example.invalid/case")
+                .unwrap()
+                .canonical()
+        );
     }
 
     #[test]
@@ -838,6 +1251,14 @@ mod tests {
         .unwrap();
         assert!(!coverage.is_complete());
         assert!(coverage.has_failures());
+        let serialized = serde_json::to_value(&coverage).unwrap();
+        assert_eq!(
+            serde_json::from_value::<ScanCoverage>(serialized.clone()).unwrap(),
+            coverage
+        );
+        let mut invalid = serialized;
+        invalid["engine_results"] = serde_json::json!([]);
+        assert!(serde_json::from_value::<ScanCoverage>(invalid).is_err());
     }
 
     #[test]
@@ -862,5 +1283,81 @@ mod tests {
             })
             .is_err()
         );
+    }
+
+    #[test]
+    fn deserialization_reapplies_domain_validation() {
+        let invalid_target = r#"{
+            "id":"018f4c2a-1d3b-7abc-8def-0123456789ab",
+            "kind":"website",
+            "locator":{"type":"https_url","value":"http://example.invalid"}
+        }"#;
+        assert!(serde_json::from_str::<Target>(invalid_target).is_err());
+
+        let evidence = Evidence::new(EvidenceDraft {
+            id: id(EvidenceId::new, "ac"),
+            kind: EvidenceKind::EngineOutput,
+            source: "fixture".into(),
+            timestamp: Timestamp::new("2026-09-02T03:00:00Z").unwrap(),
+            digest: Sha256Digest::new("a".repeat(64)).unwrap(),
+            summary: "summary".into(),
+            structured_payload: vec![StructuredFact::new("key", "value", false).unwrap()],
+            raw_reference: None,
+            provenance: EvidenceProvenance {
+                producer: "fixture".into(),
+                producer_version: "1".into(),
+                observed_at: Timestamp::new("2026-09-02T03:00:00Z").unwrap(),
+            },
+            redacted: false,
+        })
+        .unwrap();
+        let evidence_value = serde_json::to_value(&evidence).unwrap();
+        assert_eq!(
+            serde_json::from_value::<Evidence>(evidence_value.clone()).unwrap(),
+            evidence
+        );
+        let mut invalid_evidence = evidence_value;
+        invalid_evidence["summary"] = serde_json::json!("");
+        assert!(serde_json::from_value::<Evidence>(invalid_evidence).is_err());
+
+        let finding = Finding::new(FindingDraft {
+            id: id(FindingId::new, "ae"),
+            scan_id: id(ScanId::new, "ab"),
+            target_id: id(TargetId::new, "ad"),
+            source_engine: EngineId::new("fixture").unwrap(),
+            rule_id: "rule-1".into(),
+            title: "synthetic finding".into(),
+            description: "synthetic description".into(),
+            category: "test".into(),
+            severity: Severity::Medium,
+            confidence: Confidence::Medium,
+            fingerprint: FindingFingerprint::parse("ffp1-00000000000000000000000000000000")
+                .unwrap(),
+            observed_at: Timestamp::new("2026-09-02T03:00:00Z").unwrap(),
+            evidence_id: id(EvidenceId::new, "af"),
+        })
+        .unwrap();
+        let finding_value = serde_json::to_value(&finding).unwrap();
+        assert_eq!(
+            serde_json::from_value::<Finding>(finding_value.clone()).unwrap(),
+            finding
+        );
+        let mut invalid_finding = finding_value;
+        invalid_finding["source_engines"] = serde_json::json!([]);
+        assert!(serde_json::from_value::<Finding>(invalid_finding).is_err());
+
+        let invalid_scan = r#"{
+            "id":"018f4c2a-1d3b-7abc-8def-0123456789ab",
+            "targets":[{
+                "id":"018f4c2a-1d3b-7abc-8def-0123456789ac",
+                "kind":"file",
+                "locator":{"type":"local_path","value":"D:/fixture"}
+            }],
+            "state":"queued",
+            "created_at":"2026-09-02T03:00:00Z",
+            "started_at":null,
+            "finished_at":"2026-09-02T03:01:00Z"
+        }"#;
+        assert!(serde_json::from_str::<Scan>(invalid_scan).is_err());
     }
 }

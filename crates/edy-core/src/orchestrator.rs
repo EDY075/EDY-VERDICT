@@ -8,11 +8,28 @@ use std::collections::BTreeSet;
 pub const MAX_ENGINE_TASKS: usize = 64;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(try_from = "EngineTaskWire")]
 #[serde(deny_unknown_fields)]
 pub struct EngineTask {
     pub engine: EngineId,
     pub target_id: TargetId,
     pub timeout_ms: u64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct EngineTaskWire {
+    engine: EngineId,
+    target_id: TargetId,
+    timeout_ms: u64,
+}
+
+impl TryFrom<EngineTaskWire> for EngineTask {
+    type Error = DomainError;
+
+    fn try_from(wire: EngineTaskWire) -> Result<Self, Self::Error> {
+        Self::new(wire.engine, wire.target_id, wire.timeout_ms)
+    }
 }
 
 impl EngineTask {
@@ -36,10 +53,26 @@ impl EngineTask {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(try_from = "ScanPlanWire")]
 #[serde(deny_unknown_fields)]
 pub struct ScanPlan {
     pub scan_id: ScanId,
     pub tasks: Vec<EngineTask>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ScanPlanWire {
+    scan_id: ScanId,
+    tasks: Vec<EngineTask>,
+}
+
+impl TryFrom<ScanPlanWire> for ScanPlan {
+    type Error = DomainError;
+
+    fn try_from(wire: ScanPlanWire) -> Result<Self, Self::Error> {
+        Self::new(wire.scan_id, wire.tasks)
+    }
 }
 
 impl ScanPlan {
@@ -187,6 +220,7 @@ impl ScanJob {
         let mut observations = Vec::new();
         let mut results = Vec::with_capacity(self.plan.tasks.len());
         let mut elapsed = 0_u64;
+        let mut processed_tasks = 0_u32;
         let mut cleanup_confirmed = true;
 
         for (index, task) in self.plan.tasks.iter().enumerate() {
@@ -219,19 +253,23 @@ impl ScanJob {
                     observations: task_observations,
                     elapsed_ms,
                 } => {
-                    if task_observations.iter().any(|observation| {
-                        observation.validate().is_err()
-                            || observation.engine != task.engine
-                            || observation.target_id != task.target_id
-                    }) {
-                        return Err(DomainError::new(
-                            "observations",
-                            ValidationErrorKind::InvalidFormat,
-                        ));
+                    if elapsed_ms > task.timeout_ms {
+                        (EngineRunState::Failed, 0, elapsed_ms)
+                    } else {
+                        if task_observations.iter().any(|observation| {
+                            observation.validate().is_err()
+                                || observation.engine != task.engine
+                                || observation.target_id != task.target_id
+                        }) {
+                            return Err(DomainError::new(
+                                "observations",
+                                ValidationErrorKind::InvalidFormat,
+                            ));
+                        }
+                        let evidence = task_observations.len() as u32;
+                        observations.extend(task_observations);
+                        (EngineRunState::Passed, evidence, elapsed_ms)
                     }
-                    let evidence = task_observations.len() as u32;
-                    observations.extend(task_observations);
-                    (EngineRunState::Passed, evidence, elapsed_ms)
                 }
                 EngineTaskOutcome::Failed { reason, elapsed_ms } => {
                     validation::bounded_text("engine_failure", &reason, 512)?;
@@ -254,6 +292,7 @@ impl ScanJob {
                 }
             };
             elapsed = elapsed.saturating_add(task_elapsed);
+            processed_tasks = (index + 1) as u32;
             results.push(EngineCoverage {
                 engine: task.engine.clone(),
                 target_id: task.target_id.clone(),
@@ -312,7 +351,7 @@ impl ScanJob {
         progress.push(ProgressEvent::new(
             progress.len() as u32,
             ProgressPhase::Finalizing,
-            total,
+            processed_tasks,
             total,
             elapsed,
             None,
@@ -458,6 +497,49 @@ mod tests {
     }
 
     #[test]
+    fn elapsed_time_beyond_task_timeout_is_failed_coverage() {
+        let mut runner = FakeRunner {
+            outcomes: vec![
+                EngineTaskOutcome::Completed {
+                    observations: vec![],
+                    elapsed_ms: 1_001,
+                },
+                EngineTaskOutcome::Completed {
+                    observations: vec![],
+                    elapsed_ms: 1,
+                },
+            ],
+        };
+        let result = ScanJob::new(plan())
+            .execute(&mut runner, &mut CancellationState::Active)
+            .unwrap();
+        assert_eq!(result.state, ScanState::Partial);
+        assert_eq!(result.coverage.passed_count(), 1);
+        assert_eq!(
+            result.coverage.engine_results()[0].state,
+            EngineRunState::Failed
+        );
+    }
+
+    #[test]
+    fn deserialized_tasks_and_plans_reapply_limits() {
+        let valid = plan();
+        let json = serde_json::to_string(&valid).unwrap();
+        assert_eq!(serde_json::from_str::<ScanPlan>(&json).unwrap(), valid);
+        let invalid_task = r#"{
+            "engine":"a",
+            "target_id":"018f4c2a-1d3b-7abc-8def-0123456789ac",
+            "timeout_ms":0
+        }"#;
+        assert!(serde_json::from_str::<EngineTask>(invalid_task).is_err());
+        let invalid_plan = r#"{
+            "scan_id":"018f4c2a-1d3b-7abc-8def-0123456789ab",
+            "tasks":[]
+        }"#;
+        assert!(serde_json::from_str::<ScanPlan>(invalid_plan).is_err());
+    }
+
+    #[test]
     fn cancel_requires_cleanup_confirmation() {
         let mut cancelled = FakeRunner {
             outcomes: vec![EngineTaskOutcome::Cancelled {
@@ -491,5 +573,7 @@ mod tests {
             .unwrap();
         assert_eq!(result.state, ScanState::Cancelled);
         assert_eq!(result.coverage.passed_count(), 0);
+        assert_eq!(result.progress.last().unwrap().completed_tasks, 0);
+        assert_eq!(result.progress.last().unwrap().percent, Some(0));
     }
 }

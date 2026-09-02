@@ -33,6 +33,7 @@ pub enum Reversibility {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(try_from = "RemediationStepWire")]
 #[serde(deny_unknown_fields)]
 pub struct RemediationStep {
     pub sequence: u16,
@@ -41,6 +42,34 @@ pub struct RemediationStep {
     pub safety_class: SafetyClass,
     pub requires_confirmation: RequiresConfirmation,
     pub reversibility: Reversibility,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RemediationStepWire {
+    sequence: u16,
+    title: String,
+    instruction: String,
+    safety_class: SafetyClass,
+    requires_confirmation: RequiresConfirmation,
+    reversibility: Reversibility,
+}
+
+impl TryFrom<RemediationStepWire> for RemediationStep {
+    type Error = DomainError;
+
+    fn try_from(wire: RemediationStepWire) -> Result<Self, Self::Error> {
+        let step = Self {
+            sequence: wire.sequence,
+            title: wire.title,
+            instruction: wire.instruction,
+            safety_class: wire.safety_class,
+            requires_confirmation: wire.requires_confirmation,
+            reversibility: wire.reversibility,
+        };
+        step.validate()?;
+        Ok(step)
+    }
 }
 
 impl RemediationStep {
@@ -74,11 +103,34 @@ impl RemediationStep {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(try_from = "VerificationPlanWire")]
 #[serde(deny_unknown_fields)]
 pub struct VerificationPlan {
     pub expected_fingerprint: FindingFingerprint,
     pub required_engines: Vec<EngineId>,
     pub description: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct VerificationPlanWire {
+    expected_fingerprint: FindingFingerprint,
+    required_engines: Vec<EngineId>,
+    description: String,
+}
+
+impl TryFrom<VerificationPlanWire> for VerificationPlan {
+    type Error = DomainError;
+
+    fn try_from(wire: VerificationPlanWire) -> Result<Self, Self::Error> {
+        let plan = Self {
+            expected_fingerprint: wire.expected_fingerprint,
+            required_engines: wire.required_engines,
+            description: wire.description,
+        };
+        plan.validate()?;
+        Ok(plan)
+    }
 }
 
 impl VerificationPlan {
@@ -102,6 +154,7 @@ impl VerificationPlan {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(try_from = "RemediationPlanWire")]
 #[serde(deny_unknown_fields)]
 pub struct RemediationPlan {
     pub id: RemediationId,
@@ -109,6 +162,30 @@ pub struct RemediationPlan {
     pub created_at: Timestamp,
     pub steps: Vec<RemediationStep>,
     pub verification: VerificationPlan,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RemediationPlanWire {
+    id: RemediationId,
+    finding_id: FindingId,
+    created_at: Timestamp,
+    steps: Vec<RemediationStep>,
+    verification: VerificationPlan,
+}
+
+impl TryFrom<RemediationPlanWire> for RemediationPlan {
+    type Error = DomainError;
+
+    fn try_from(wire: RemediationPlanWire) -> Result<Self, Self::Error> {
+        Self::new(
+            wire.id,
+            wire.finding_id,
+            wire.created_at,
+            wire.steps,
+            wire.verification,
+        )
+    }
 }
 
 impl RemediationPlan {
@@ -185,11 +262,50 @@ pub struct WorkflowTransition {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(try_from = "RemediationWorkflowWire")]
 #[serde(deny_unknown_fields)]
 pub struct RemediationWorkflow {
     pub plan_id: RemediationId,
     pub state: RemediationWorkflowState,
     pub history: Vec<WorkflowTransition>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RemediationWorkflowWire {
+    plan_id: RemediationId,
+    state: RemediationWorkflowState,
+    history: Vec<WorkflowTransition>,
+}
+
+impl TryFrom<RemediationWorkflowWire> for RemediationWorkflow {
+    type Error = DomainError;
+
+    fn try_from(wire: RemediationWorkflowWire) -> Result<Self, Self::Error> {
+        if wire.history.len() > 64 {
+            return Err(DomainError::new(
+                "remediation_history",
+                ValidationErrorKind::LimitExceeded,
+            ));
+        }
+        let mut workflow = Self::new(wire.plan_id);
+        for transition in wire.history {
+            if transition.from != workflow.state {
+                return Err(DomainError::new(
+                    "remediation_history",
+                    ValidationErrorKind::Incoherent,
+                ));
+            }
+            workflow.transition(transition.to, transition.at, transition.reason)?;
+        }
+        if workflow.state != wire.state {
+            return Err(DomainError::new(
+                "remediation_state",
+                ValidationErrorKind::Incoherent,
+            ));
+        }
+        Ok(workflow)
+    }
 }
 
 impl RemediationWorkflow {
@@ -336,6 +452,11 @@ mod tests {
             .unwrap();
         assert_eq!(workflow.state, RemediationWorkflowState::Resolved);
         assert_eq!(workflow.history.len(), 4);
+        let json = serde_json::to_string(&workflow).unwrap();
+        assert_eq!(
+            serde_json::from_str::<RemediationWorkflow>(&json).unwrap(),
+            workflow
+        );
     }
 
     #[test]
@@ -373,8 +494,33 @@ mod tests {
         )
         .unwrap();
         let mut fake = Fake { called: false };
+        let json = serde_json::to_string(&plan).unwrap();
+        assert_eq!(
+            serde_json::from_str::<RemediationPlan>(&json).unwrap(),
+            plan
+        );
         fake.execute(&plan).unwrap();
         assert!(fake.called);
         assert_eq!(plan.automatic_steps().count(), 0);
+    }
+
+    #[test]
+    fn deserialization_rejects_unsafe_steps_and_forged_workflows() {
+        let invalid_step = r#"{
+            "sequence":1,
+            "title":"synthetic",
+            "instruction":"do not execute",
+            "safety_class":"confirmation_required",
+            "requires_confirmation":"no",
+            "reversibility":"backup_required"
+        }"#;
+        assert!(serde_json::from_str::<RemediationStep>(invalid_step).is_err());
+
+        let forged_workflow = r#"{
+            "plan_id":"018f4c2a-1d3b-7abc-8def-0123456789ab",
+            "state":"resolved",
+            "history":[]
+        }"#;
+        assert!(serde_json::from_str::<RemediationWorkflow>(forged_workflow).is_err());
     }
 }

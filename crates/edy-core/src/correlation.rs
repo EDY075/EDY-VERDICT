@@ -190,8 +190,9 @@ impl VerdictModel {
         unavailable: &[UnavailableCheck],
         signals: &RiskSignals,
     ) -> Result<Verdict, DomainError> {
+        validate_verdict_inputs(findings, observations, coverage, unavailable)?;
         let risk = assess_risk(findings, signals)?;
-        let confidence = assess_confidence(observations, coverage, unavailable)?;
+        let confidence = assess_confidence(findings, observations, coverage, unavailable)?;
         let strong_malicious = observations.iter().any(|observation| {
             observation.signal == ObservationSignal::Malicious
                 && observation.evidence_strength == EvidenceStrength::Strong
@@ -226,7 +227,7 @@ impl VerdictModel {
                 VerdictKind::NeedsReview => "observations require analyst review",
                 VerdictKind::NoKnownIndicators => "no indicators were found by all planned checks",
                 VerdictKind::InsufficientCoverage => {
-                    if coverage.is_complete() {
+                    if coverage.has_provider_failures() && !coverage.has_engine_failures() {
                         "required external checks were unavailable"
                     } else {
                         "planned checks did not achieve complete coverage"
@@ -235,9 +236,12 @@ impl VerdictModel {
             }
             .to_owned(),
         ];
-        if coverage.has_failures() {
+        if coverage.has_engine_failures() {
             reasons
                 .push("one or more engine checks failed, were skipped, or were cancelled".into());
+        }
+        if coverage.has_provider_failures() {
+            reasons.push("one or more planned provider checks were unavailable".into());
         }
         let evidence_ids = observations
             .iter()
@@ -255,6 +259,92 @@ impl VerdictModel {
             unavailable_checks,
         })
     }
+}
+
+fn validate_verdict_inputs(
+    findings: &[Finding],
+    observations: &[EngineObservation],
+    coverage: &ScanCoverage,
+    unavailable: &[UnavailableCheck],
+) -> Result<(), DomainError> {
+    if findings
+        .iter()
+        .map(Finding::scan_id)
+        .collect::<BTreeSet<_>>()
+        .len()
+        > 1
+    {
+        return Err(DomainError::new(
+            "verdict_findings",
+            ValidationErrorKind::Incoherent,
+        ));
+    }
+    for finding in findings {
+        if finding.source_engines().iter().any(|engine| {
+            !coverage
+                .expected_tasks()
+                .iter()
+                .any(|task| &task.engine == engine && &task.target_id == finding.target_id())
+        }) {
+            return Err(DomainError::new(
+                "verdict_findings",
+                ValidationErrorKind::Incoherent,
+            ));
+        }
+    }
+    for observation in observations {
+        observation.validate()?;
+        let passed = coverage.engine_results().iter().any(|result| {
+            result.engine == observation.engine
+                && result.target_id == observation.target_id
+                && result.state == crate::EngineRunState::Passed
+        });
+        let correlated = findings.iter().any(|finding| {
+            finding.target_id() == &observation.target_id
+                && finding.source_engines().contains(&observation.engine)
+                && finding.rule_ids().contains(&observation.rule_id)
+                && finding.evidence_ids().contains(&observation.evidence_id)
+        });
+        if !passed || !correlated {
+            return Err(DomainError::new(
+                "verdict_observations",
+                ValidationErrorKind::Incoherent,
+            ));
+        }
+    }
+    let expected_unavailable = coverage
+        .provider_results()
+        .iter()
+        .filter(|provider| provider.availability != crate::Availability::Available)
+        .collect::<Vec<_>>();
+    for check in unavailable {
+        crate::validation::canonical_token("unavailable_check_id", &check.id, 64)?;
+    }
+    if unavailable.len() != expected_unavailable.len()
+        || unavailable
+            .iter()
+            .map(|check| &check.id)
+            .collect::<BTreeSet<_>>()
+            .len()
+            != unavailable.len()
+        || unavailable.iter().any(|check| {
+            check.availability == crate::Availability::Available
+                || !expected_unavailable.iter().any(|provider| {
+                    provider.id == check.id && provider.availability == check.availability
+                })
+        })
+        || expected_unavailable.iter().any(|provider| {
+            !unavailable
+                .iter()
+                .any(|check| provider.id == check.id && provider.availability == check.availability)
+        })
+    {
+        return Err(DomainError::new(
+            "unavailable_checks",
+            ValidationErrorKind::Incoherent,
+        ));
+    }
+    Ok(())
 }
 
 fn assess_risk(findings: &[Finding], signals: &RiskSignals) -> Result<RiskAssessment, DomainError> {
@@ -279,12 +369,10 @@ fn assess_risk(findings: &[Finding], signals: &RiskSignals) -> Result<RiskAssess
             reasons.push(format!("+{points} {reason}"));
         }
     }
-    let independent_sources = findings
+    if findings
         .iter()
-        .flat_map(Finding::source_engines)
-        .collect::<BTreeSet<_>>()
-        .len();
-    if independent_sources > 1 {
+        .any(|finding| finding.source_engines().len() > 1)
+    {
         score = score.saturating_add(5).min(100);
         reasons.push("+5 multiple independent engine sources".into());
     }
@@ -303,6 +391,7 @@ fn assess_risk(findings: &[Finding], signals: &RiskSignals) -> Result<RiskAssess
 }
 
 fn assess_confidence(
+    findings: &[Finding],
     observations: &[EngineObservation],
     coverage: &ScanCoverage,
     unavailable: &[UnavailableCheck],
@@ -329,12 +418,20 @@ fn assess_confidence(
         score = score.saturating_add(evidence_points);
         reasons.push(format!("+{evidence_points} evidence strength"));
     }
-    let sources = observations
+    let parser_points = match observations.iter().map(|item| item.parser_confidence).min() {
+        Some(Confidence::Low) => 0,
+        Some(Confidence::Medium) => 5,
+        Some(Confidence::High) => 10,
+        None => 0,
+    };
+    if parser_points > 0 {
+        score = score.saturating_add(parser_points);
+        reasons.push(format!("+{parser_points} parser confidence"));
+    }
+    if findings
         .iter()
-        .map(|item| &item.engine)
-        .collect::<BTreeSet<_>>()
-        .len();
-    if sources > 1 {
+        .any(|finding| finding.source_engines().len() > 1)
+    {
         score = score.saturating_add(5);
         reasons.push("+5 independent source agreement".into());
     }
@@ -359,7 +456,7 @@ fn assess_confidence(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Availability, CoverageTask, EngineId, EngineRunState, TargetId};
+    use crate::{Availability, CoverageTask, EngineId, EngineRunState, ProviderCoverage, TargetId};
 
     fn coverage(passed: usize) -> ScanCoverage {
         let target_id = TargetId::new("018f4c2a-1d3b-7abc-8def-0123456789ad").unwrap();
@@ -390,6 +487,55 @@ mod tests {
         ScanCoverage::new(expected, results).unwrap()
     }
 
+    fn observation(
+        engine: &str,
+        semantic_key: &str,
+        parser_confidence: Confidence,
+        evidence_suffix: &str,
+    ) -> EngineObservation {
+        EngineObservation {
+            engine: EngineId::new(engine).unwrap(),
+            engine_version: "1.0.0".into(),
+            target_id: TargetId::new("018f4c2a-1d3b-7abc-8def-0123456789ad").unwrap(),
+            rule_id: format!("{engine}-rule"),
+            semantic_key: semantic_key.into(),
+            category: "vulnerability".into(),
+            severity: Severity::High,
+            location: "Cargo.lock".into(),
+            message: "synthetic vulnerable dependency".into(),
+            evidence_id: EvidenceId::new(format!(
+                "018f4c2a-1d3b-7abc-8def-0123456789{evidence_suffix}"
+            ))
+            .unwrap(),
+            signal: ObservationSignal::Vulnerability,
+            evidence_strength: EvidenceStrength::Strong,
+            parser_confidence,
+        }
+    }
+
+    fn correlated(observations: &[EngineObservation]) -> Vec<Finding> {
+        struct Ids;
+        impl FindingIdSource for Ids {
+            fn next_id(&mut self) -> FindingId {
+                FindingId::new("018f4c2a-1d3b-7abc-8def-0123456789aa").unwrap()
+            }
+        }
+        let target = Target::new(
+            TargetId::new("018f4c2a-1d3b-7abc-8def-0123456789ad").unwrap(),
+            crate::TargetKind::Repository,
+            crate::TargetLocator::new_local_path("D:/fixture").unwrap(),
+        )
+        .unwrap();
+        CorrelationEngine::correlate(
+            &ScanId::new("018f4c2a-1d3b-7abc-8def-0123456789ab").unwrap(),
+            &target,
+            observations,
+            &Timestamp::new("2026-09-02T03:00:00Z").unwrap(),
+            &mut Ids,
+        )
+        .unwrap()
+    }
+
     #[test]
     fn zero_findings_low_coverage_is_insufficient_not_clean() {
         let verdict =
@@ -415,10 +561,15 @@ mod tests {
     fn unavailable_provider_reduces_confidence_not_risk() {
         let baseline =
             VerdictModel::evaluate(&[], &[], &coverage(4), &[], &RiskSignals::default()).unwrap();
+        let provider_coverage = coverage(4)
+            .with_provider_results(vec![
+                ProviderCoverage::new("nvd", Availability::Unavailable).unwrap(),
+            ])
+            .unwrap();
         let unavailable = VerdictModel::evaluate(
             &[],
             &[],
-            &coverage(4),
+            &provider_coverage,
             &[UnavailableCheck {
                 id: "nvd".into(),
                 availability: Availability::Unavailable,
@@ -429,6 +580,13 @@ mod tests {
         assert_eq!(baseline.risk, unavailable.risk);
         assert!(unavailable.confidence.score < baseline.confidence.score);
         assert_eq!(unavailable.kind, VerdictKind::InsufficientCoverage);
+        assert!(!provider_coverage.is_complete());
+        assert!(
+            unavailable
+                .reasons
+                .iter()
+                .any(|reason| reason.contains("provider"))
+        );
     }
 
     #[test]
@@ -437,6 +595,63 @@ mod tests {
         assert!(ConfidenceScore::new(101).is_err());
         assert_eq!(RiskScore::new(90).unwrap().value(), 90);
         assert_eq!(ConfidenceScore::new(10).unwrap().band(), Confidence::Low);
+    }
+
+    #[test]
+    fn verdict_rejects_unplanned_or_uncorrelated_observations() {
+        let observation = observation("a", "cve-2099-0001", Confidence::High, "ae");
+        assert!(
+            VerdictModel::evaluate(
+                &[],
+                &[observation],
+                &coverage(4),
+                &[],
+                &RiskSignals::default()
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn parser_confidence_contributes_to_confidence_score() {
+        let low = observation("a", "cve-2099-0001", Confidence::Low, "ae");
+        let high = observation("a", "cve-2099-0001", Confidence::High, "af");
+        let low_findings = correlated(std::slice::from_ref(&low));
+        let high_findings = correlated(std::slice::from_ref(&high));
+        let low_verdict = VerdictModel::evaluate(
+            &low_findings,
+            &[low],
+            &coverage(4),
+            &[],
+            &RiskSignals::default(),
+        )
+        .unwrap();
+        let high_verdict = VerdictModel::evaluate(
+            &high_findings,
+            &[high],
+            &coverage(4),
+            &[],
+            &RiskSignals::default(),
+        )
+        .unwrap();
+        assert!(high_verdict.confidence.score > low_verdict.confidence.score);
+    }
+
+    #[test]
+    fn independent_confirmation_requires_one_correlated_finding() {
+        let first = observation("a", "cve-2099-0001", Confidence::High, "ae");
+        let second_distinct = observation("b", "cve-2099-0002", Confidence::High, "af");
+        let mut separate = correlated(std::slice::from_ref(&first));
+        separate.extend(correlated(std::slice::from_ref(&second_distinct)));
+        let separate_risk = assess_risk(&separate, &RiskSignals::default()).unwrap();
+
+        let second_same = observation("b", "cve-2099-0001", Confidence::High, "af");
+        let confirmed = correlated(&[first, second_same]);
+        let confirmed_risk = assess_risk(&confirmed, &RiskSignals::default()).unwrap();
+        assert_eq!(
+            confirmed_risk.score.value(),
+            separate_risk.score.value() + 5
+        );
     }
 
     #[test]

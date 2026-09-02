@@ -21,7 +21,9 @@ regression operation.
 
 ## Pure job model
 
-A `ScanPlan` contains 1..64 unique `(engine, target)` tasks. Each task has a bounded timeout.
+A `ScanPlan` contains 1..64 unique `(engine, target)` tasks. Each task has a bounded timeout;
+an adapter result whose elapsed time exceeds that bound is classified as failed coverage even if
+the adapter labels it completed.
 `ScanJob` executes through `EngineTaskRunner`; the in-memory model is sequential to make ordering,
 progress and fake tests deterministic. A future concurrent scheduler must preserve these observable
 contracts:
@@ -30,6 +32,7 @@ contracts:
 - percentage always in `0..=100` and derived only from completed tasks;
 - no fabricated ETA (`eta_ms` remains absent until measured historical data exists);
 - one coverage result for every planned `(engine, target)` pair;
+- explicit provider availability; any unavailable planned provider makes coverage incomplete;
 - invalid engine observations fail closed;
 - timeouts are unsuccessful coverage;
 - cancellation without cleanup confirmation is a failure, never a clean cancellation.
@@ -42,7 +45,8 @@ its process containment primitive, perform bounded termination/wait, and return
 
 The event contract includes scan creation/start/completion/partial/failure, engine start/progress/
 completion/failure, finding observation/status change, remediation request and verification
-completion. Events carry typed IDs and timestamps and use a tagged serialized representation.
+completion. Engine events carry both engine and target IDs so multi-target plans remain unambiguous.
+Events carry typed IDs and timestamps and use a tagged serialized representation.
 They are facts for persistence/reporting; replay policy and delivery guarantees belong to the
 storage/integration layer.
 

@@ -3,8 +3,12 @@
 
 use edy_engine_manager::manifest::EngineManifest;
 use edy_engine_manager::receipt::{EngineReceipt, IntegrityObservation, ObservedArtifact};
-use std::fs;
+use std::fs::{self, File};
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
+
+const MAX_MANIFEST_BYTES: u64 = 256 * 1024;
+const MAX_RECEIPT_BYTES: u64 = 64 * 1024;
 
 const ENGINES: [(&str, &str); 4] = [
     ("yara-x", "1.20.0"),
@@ -140,14 +144,16 @@ fn inspect_engines(root: &Path) -> Vec<(String, IntegrityStatus)> {
 
 fn inspect_engine(root: &Path, id: &str, version: &str) -> IntegrityStatus {
     let base = root.join("tools/engines").join(id).join(version);
-    let manifest_bytes = match fs::read(base.join("manifest.json")) {
+    let manifest_bytes = match read_bounded(&base.join("manifest.json"), MAX_MANIFEST_BYTES) {
         Ok(bytes) => bytes,
         Err(_) => return IntegrityStatus::Missing,
     };
-    let receipt_bytes = match fs::read(
-        root.join("tools/receipts/engines")
+    let receipt_bytes = match read_bounded(
+        &root
+            .join("tools/receipts/engines")
             .join(id)
             .join(format!("{version}.json")),
+        MAX_RECEIPT_BYTES,
     ) {
         Ok(bytes) => bytes,
         Err(_) => return IntegrityStatus::Missing,
@@ -163,8 +169,18 @@ fn inspect_engine(root: &Path, id: &str, version: &str) -> IntegrityStatus {
     if manifest.identity.id != id || manifest.identity.version != version {
         return IntegrityStatus::Invalid;
     }
+    let manifest_hash = match manifest.canonical_sha256() {
+        Ok(hash) => hash,
+        Err(_) => return IntegrityStatus::Invalid,
+    };
+    if receipt.manifest_sha256 != manifest_hash {
+        return IntegrityStatus::Invalid;
+    }
     let payload = base.join("payload");
-    let entrypoint = match fs::read(payload.join(&manifest.artifact.entrypoint)) {
+    let entrypoint = match read_exact_size(
+        &payload.join(&manifest.artifact.entrypoint),
+        manifest.artifact.entrypoint_size,
+    ) {
         Ok(bytes) => bytes,
         Err(_) => return IntegrityStatus::Missing,
     };
@@ -173,7 +189,7 @@ fn inspect_engine(root: &Path, id: &str, version: &str) -> IntegrityStatus {
         .auxiliary_hashes
         .iter()
         .map(|item| {
-            fs::read(payload.join(&item.relative_path))
+            read_exact_size(&payload.join(&item.relative_path), item.size)
                 .map(|bytes| (item.relative_path.clone(), bytes))
         })
         .collect::<Result<Vec<_>, _>>()
@@ -211,7 +227,7 @@ fn validate_manifest(root: &Path, requested: &Path) -> CommandResult {
         _ => return CommandResult::error(2, "Manifest path must resolve inside tools/engines"),
     };
     let _ = allowed;
-    let bytes = match fs::read(path) {
+    let bytes = match read_bounded(&path, MAX_MANIFEST_BYTES) {
         Ok(bytes) => bytes,
         Err(_) => return CommandResult::error(1, "Manifest could not be read"),
     };
@@ -222,6 +238,38 @@ fn validate_manifest(root: &Path, requested: &Path) -> CommandResult {
         ]),
         Err(_) => CommandResult::error(1, "manifest=INVALID"),
     }
+}
+
+fn read_bounded(path: &Path, maximum: u64) -> io::Result<Vec<u8>> {
+    let metadata = fs::metadata(path)?;
+    if !metadata.is_file() || metadata.len() > maximum {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "file exceeds the permitted size",
+        ));
+    }
+    let mut bytes = Vec::with_capacity(metadata.len() as usize);
+    File::open(path)?
+        .take(maximum.saturating_add(1))
+        .read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > maximum {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "file changed while being read",
+        ));
+    }
+    Ok(bytes)
+}
+
+fn read_exact_size(path: &Path, expected: u64) -> io::Result<Vec<u8>> {
+    let bytes = read_bounded(path, expected)?;
+    if bytes.len() as u64 != expected {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "file size disagrees with trusted manifest",
+        ));
+    }
+    Ok(bytes)
 }
 
 fn present(path: PathBuf) -> &'static str {
@@ -264,5 +312,21 @@ mod tests {
                 ("osv-scanner", "2.5.1")
             ]
         );
+    }
+
+    #[test]
+    fn bounded_reader_rejects_oversized_files_before_consuming_them() {
+        let path = std::env::temp_dir().join(format!(
+            "edy-cli-bounded-{}-{}.tmp",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::write(&path, [0_u8; 8]).unwrap();
+        let error = read_bounded(&path, 4).unwrap_err();
+        fs::remove_file(path).unwrap();
+        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
     }
 }

@@ -24,12 +24,13 @@ Risk is impact/likelihood, bounded to `0..=100`. It starts from maximum finding 
 |---|---:|
 | info | 0 |
 | low | 20 |
-| medium | 45 |
+| medium | 40 |
 | high | 70 |
 | critical | 90 |
 
-Known exploitation adds 10, exposed attack surface adds 10, privileged context adds 5, and trusted
-asset criticality adds 5. Multiple independent finding sources add 5. The result saturates at 100
+Known exploitation adds 10, exposed attack surface adds 10, persistence adds 5, and broad affected
+scope adds 5. A finding confirmed by multiple independent engines adds 5; unrelated single-source
+findings do not receive that bonus. The result saturates at 100
 and maps back to info `0..9`, low `10..29`, medium `30..59`, high `60..84`, critical `85..100`.
 Provider unavailability never changes risk.
 
@@ -37,9 +38,10 @@ Provider unavailability never changes risk.
 
 Confidence expresses evidence quality and coverage, not impact. Passed planned tasks contribute up
 to 70 points proportionally. Complete planned coverage adds 10. Strongest evidence adds 5/10/15
-for weak/moderate/strong. Agreement from more than one source adds 5. Each unavailable external
-check subtracts 5, capped at 20. The final score is `0..=100`: low `0..39`, medium `40..74`, high
-`75..100`.
+for weak/moderate/strong. The minimum parser confidence across contributing observations adds
+0/5/10 for low/medium/high. Agreement inside one correlated finding adds 5. Each unavailable
+external check subtracts 5, capped at 20. The final score is `0..=100`: low `0..39`, medium
+`40..74`, high `75..100`.
 
 Examples:
 

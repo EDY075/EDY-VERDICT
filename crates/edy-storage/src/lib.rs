@@ -3,7 +3,9 @@
 pub mod secrets;
 
 pub use edy_core::{
-    EngineRunState, FindingStatus, RemediationWorkflowState, ScanState, VerificationOutcome,
+    EngineId, EngineRunState, EvidenceId, FindingId, FindingStatus, RemediationId,
+    RemediationWorkflow, RemediationWorkflowState, ScanId, ScanState, TargetId, Timestamp,
+    VerificationId, VerificationOutcome,
 };
 use rusqlite::{Connection, OpenFlags, params};
 use sha2::{Digest, Sha256};
@@ -67,7 +69,7 @@ pub struct NewEvidence<'a> {
     pub finding_id: &'a str,
     pub source: &'a str,
     pub observed_at_utc: &'a str,
-    /// Safe summary only; raw secrets and raw scanner output are forbidden.
+    /// Safe, redacted summary only; raw secrets and raw scanner output are forbidden.
     pub redacted_summary: &'a str,
     pub integrity_sha256: &'a str,
     pub redacted: bool,
@@ -170,8 +172,8 @@ impl Storage {
         reserve_backup(&self.connection, path)
     }
     pub fn create_scan(&self, id: &str, created_at_utc: &str) -> Result<(), StorageError> {
-        validate_text(id, 128, "Invalid scan id")?;
-        validate_text(created_at_utc, 64, "Invalid scan timestamp")?;
+        validate_scan_id(id)?;
+        validate_timestamp(created_at_utc, "Invalid scan timestamp")?;
         self.connection.execute(
             "INSERT INTO scans(id,state,created_at_utc) VALUES (?1,'queued',?2)",
             (id, created_at_utc),
@@ -179,6 +181,7 @@ impl Storage {
         Ok(())
     }
     pub fn get_scan(&self, id: &str) -> Result<ScanRecord, StorageError> {
+        validate_scan_id(id)?;
         self.connection.query_row("SELECT id,state,partial,created_at_utc,started_at_utc,completed_at_utc FROM scans WHERE id=?1", [id], |row| Ok(ScanRecord { id: row.get(0)?, state: row.get(1)?, partial: row.get::<_, i64>(2)? != 0, created_at_utc: row.get(3)?, started_at_utc: row.get(4)?, completed_at_utc: row.get(5)? })).map_err(|error| match error { rusqlite::Error::QueryReturnedNoRows => StorageError::NotFound("Scan not found"), other => StorageError::Sql(other) })
     }
     /// Persists lifecycle state and its audit event atomically.
@@ -188,7 +191,8 @@ impl Storage {
         state: ScanState,
         at_utc: &str,
     ) -> Result<(), StorageError> {
-        validate_text(at_utc, 64, "Invalid scan timestamp")?;
+        validate_scan_id(id)?;
+        validate_timestamp(at_utc, "Invalid scan timestamp")?;
         let transaction = self.connection.transaction()?;
         let current = transaction
             .query_row("SELECT state FROM scans WHERE id=?1", [id], |row| {
@@ -213,6 +217,7 @@ impl Storage {
         Ok(())
     }
     pub fn delete_scan(&self, id: &str) -> Result<(), StorageError> {
+        validate_scan_id(id)?;
         require_changed(
             self.connection
                 .execute("DELETE FROM scans WHERE id=?1", [id])?,
@@ -220,7 +225,8 @@ impl Storage {
         )
     }
     pub fn add_target(&self, target: &NewTarget<'_>) -> Result<(), StorageError> {
-        validate_text(target.id, 128, "Invalid target id")?;
+        validate_target_id(target.id)?;
+        validate_scan_id(target.scan_id)?;
         validate_text(target.kind, 64, "Invalid target kind")?;
         validate_text(target.reference, 4096, "Invalid target reference")?;
         validate_hash(target.fingerprint, "Invalid target fingerprint")?;
@@ -236,17 +242,19 @@ impl Storage {
         )?;
         Ok(())
     }
-    /// Deduplicates within a scan by the caller's normalized SHA-256 fingerprint.
+    /// Deduplicates within a scan by the caller's canonical versioned fingerprint.
     pub fn upsert_finding(&mut self, finding: &NewFinding<'_>) -> Result<String, StorageError> {
         validate_finding_fingerprint(finding.fingerprint)?;
+        validate_finding_id(finding.id)?;
+        validate_scan_id(finding.scan_id)?;
+        validate_target_id(finding.target_id)?;
         for (value, max, message) in [
-            (finding.id, 128, "Invalid finding id"),
             (finding.category, 128, "Invalid finding category"),
             (finding.location_reference, 4096, "Invalid finding location"),
-            (finding.observed_at_utc, 64, "Invalid finding timestamp"),
         ] {
             validate_text(value, max, message)?;
         }
+        validate_timestamp(finding.observed_at_utc, "Invalid finding timestamp")?;
         if !matches!(
             finding.severity,
             "informational" | "low" | "medium" | "high" | "critical"
@@ -269,8 +277,9 @@ impl Storage {
         id: &str,
         lifecycle: FindingStatus,
     ) -> Result<(), StorageError> {
-        let current = self
-            .connection
+        validate_finding_id(id)?;
+        let transaction = self.connection.unchecked_transaction()?;
+        let current = transaction
             .query_row("SELECT lifecycle FROM findings WHERE id=?1", [id], |row| {
                 row.get::<_, String>(0)
             })
@@ -282,22 +291,32 @@ impl Storage {
             .transition(lifecycle)
             .map_err(|_| StorageError::InvalidInput("Invalid finding lifecycle transition"))?;
         require_changed(
-            self.connection.execute(
-                "UPDATE findings SET lifecycle=?2 WHERE id=?1",
-                (id, finding_status_name(lifecycle)),
+            transaction.execute(
+                "UPDATE findings SET lifecycle=?2 WHERE id=?1 AND lifecycle=?3",
+                (id, finding_status_name(lifecycle), current.as_str()),
             )?,
-            "Finding not found",
-        )
+            "Finding changed concurrently",
+        )?;
+        transaction.commit()?;
+        Ok(())
     }
     pub fn add_evidence(&self, evidence: &NewEvidence<'_>) -> Result<(), StorageError> {
+        validate_evidence_id(evidence.id)?;
+        validate_scan_id(evidence.scan_id)?;
+        validate_finding_id(evidence.finding_id)?;
         for (value, max, message) in [
-            (evidence.id, 128, "Invalid evidence id"),
             (evidence.source, 128, "Invalid evidence source"),
-            (evidence.observed_at_utc, 64, "Invalid evidence timestamp"),
             (evidence.redacted_summary, 4096, "Invalid evidence summary"),
         ] {
             validate_text(value, max, message)?;
         }
+        validate_timestamp(evidence.observed_at_utc, "Invalid evidence timestamp")?;
+        if !evidence.redacted {
+            return Err(StorageError::InvalidInput(
+                "Unredacted evidence persistence refused",
+            ));
+        }
+        validate_redacted_text(evidence.redacted_summary, "Unsafe evidence summary")?;
         validate_hash(evidence.integrity_sha256, "Invalid evidence hash")?;
         self.connection.execute("INSERT INTO evidence(id,scan_id,finding_id,source,observed_at_utc,redacted_summary,integrity_sha256,redacted) VALUES (?1,?2,?3,?4,?5,?6,?7,?8)", params![evidence.id,evidence.scan_id,evidence.finding_id,evidence.source,evidence.observed_at_utc,evidence.redacted_summary,evidence.integrity_sha256,evidence.redacted])?;
         Ok(())
@@ -309,9 +328,11 @@ impl Storage {
         kind: &str,
         redacted_detail: Option<&str>,
     ) -> Result<(), StorageError> {
-        validate_text(at_utc, 64, "Invalid event timestamp")?;
+        validate_scan_id(scan_id)?;
+        validate_timestamp(at_utc, "Invalid event timestamp")?;
         validate_text(kind, 64, "Invalid event kind")?;
         validate_optional_text(redacted_detail, 4096, "Invalid event detail")?;
+        validate_optional_redacted_text(redacted_detail, "Unsafe event detail")?;
         self.connection.execute(
             "INSERT INTO scan_events(scan_id,at_utc,kind,redacted_detail) VALUES (?1,?2,?3,?4)",
             params![scan_id, at_utc, kind, redacted_detail],
@@ -319,14 +340,12 @@ impl Storage {
         Ok(())
     }
     pub fn begin_engine_run(&self, run: &NewEngineRun<'_>) -> Result<(), StorageError> {
-        for (value, max, message) in [
-            (run.id, 128, "Invalid engine run id"),
-            (run.engine_id, 64, "Invalid engine id"),
-            (run.engine_version, 64, "Invalid engine version"),
-            (run.started_at_utc, 64, "Invalid engine timestamp"),
-        ] {
-            validate_text(value, max, message)?;
-        }
+        validate_uuid_v7(run.id, "Invalid engine run id")?;
+        validate_scan_id(run.scan_id)?;
+        validate_target_id(run.target_id)?;
+        validate_engine_id(run.engine_id)?;
+        validate_text(run.engine_version, 64, "Invalid engine version")?;
+        validate_timestamp(run.started_at_utc, "Invalid engine timestamp")?;
         self.connection.execute("INSERT INTO engine_runs(id,scan_id,target_id,engine_id,engine_version,state,started_at_utc) VALUES (?1,?2,?3,?4,?5,'running',?6)",params![run.id,run.scan_id,run.target_id,run.engine_id,run.engine_version,run.started_at_utc])?;
         Ok(())
     }
@@ -339,21 +358,22 @@ impl Storage {
         exit_code: Option<u32>,
         error_summary: Option<&str>,
     ) -> Result<(), StorageError> {
-        validate_text(completed_at_utc, 64, "Invalid engine timestamp")?;
+        validate_uuid_v7(id, "Invalid engine run id")?;
+        validate_timestamp(completed_at_utc, "Invalid engine timestamp")?;
         validate_optional_text(error_summary, 2048, "Invalid engine error summary")?;
-        require_changed(self.connection.execute("UPDATE engine_runs SET state=?2,partial=?3,completed_at_utc=?4,exit_code=?5,error_summary=?6 WHERE id=?1",params![id,engine_run_state_name(state),partial,completed_at_utc,exit_code,error_summary])?,"Engine run not found")
+        validate_optional_redacted_text(error_summary, "Unsafe engine error summary")?;
+        require_changed(self.connection.execute("UPDATE engine_runs SET state=?2,partial=?3,completed_at_utc=?4,exit_code=?5,error_summary=?6 WHERE id=?1 AND state='running'",params![id,engine_run_state_name(state),partial,completed_at_utc,exit_code,error_summary])?,"Engine run is missing or already finalized")
     }
     pub fn add_remediation_action(
         &self,
         action: &NewRemediationAction<'_>,
     ) -> Result<(), StorageError> {
-        for (value, max, message) in [
-            (action.id, 128, "Invalid remediation id"),
-            (action.proposal_summary, 4096, "Invalid remediation summary"),
-            (action.at_utc, 64, "Invalid remediation timestamp"),
-        ] {
-            validate_text(value, max, message)?;
-        }
+        validate_remediation_id(action.id)?;
+        validate_scan_id(action.scan_id)?;
+        validate_finding_id(action.finding_id)?;
+        validate_text(action.proposal_summary, 4096, "Invalid remediation summary")?;
+        validate_timestamp(action.at_utc, "Invalid remediation timestamp")?;
+        validate_redacted_text(action.proposal_summary, "Unsafe remediation summary")?;
         self.connection.execute("INSERT INTO remediation_actions(id,scan_id,finding_id,state,proposal_summary,requires_authorization,created_at_utc,updated_at_utc) VALUES (?1,?2,?3,'requested',?4,?5,?6,?6)",params![action.id,action.scan_id,action.finding_id,action.proposal_summary,action.requires_authorization,action.at_utc])?;
         Ok(())
     }
@@ -363,18 +383,56 @@ impl Storage {
         state: RemediationWorkflowState,
         updated_at_utc: &str,
     ) -> Result<(), StorageError> {
-        validate_text(updated_at_utc, 64, "Invalid remediation timestamp")?;
+        validate_remediation_id(id)?;
+        validate_timestamp(updated_at_utc, "Invalid remediation timestamp")?;
+        let transaction = self.connection.unchecked_transaction()?;
+        let (current, previous_at) = transaction
+            .query_row(
+                "SELECT state,updated_at_utc FROM remediation_actions WHERE id=?1",
+                [id],
+                |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+            )
+            .map_err(|error| match error {
+                rusqlite::Error::QueryReturnedNoRows => {
+                    StorageError::NotFound("Remediation action not found")
+                }
+                other => StorageError::Sql(other),
+            })?;
+        let current_state = parse_remediation_state(&current)?;
+        let mut workflow = RemediationWorkflow {
+            plan_id: RemediationId::new(id)
+                .map_err(|_| StorageError::InvalidInput("Invalid remediation id"))?,
+            state: current_state,
+            history: Vec::new(),
+        };
+        workflow
+            .transition(
+                state,
+                Timestamp::new(updated_at_utc)
+                    .map_err(|_| StorageError::InvalidInput("Invalid remediation timestamp"))?,
+                "storage persistence",
+            )
+            .map_err(|_| StorageError::InvalidInput("Invalid remediation state transition"))?;
+        if updated_at_utc < previous_at.as_str() {
+            return Err(StorageError::InvalidInput(
+                "Remediation timestamp moved backwards",
+            ));
+        }
         require_changed(
-            self.connection.execute(
-                "UPDATE remediation_actions SET state=?2,updated_at_utc=?3 WHERE id=?1",
-                (id, remediation_state_name(state), updated_at_utc),
+            transaction.execute(
+                "UPDATE remediation_actions SET state=?2,updated_at_utc=?3 WHERE id=?1 AND state=?4",
+                (id, remediation_state_name(state), updated_at_utc, current.as_str()),
             )?,
-            "Remediation action not found",
-        )
+            "Remediation action changed concurrently",
+        )?;
+        transaction.commit()?;
+        Ok(())
     }
     pub fn begin_verification(&self, run: &NewVerificationRun<'_>) -> Result<(), StorageError> {
-        validate_text(run.id, 128, "Invalid verification id")?;
-        validate_text(run.started_at_utc, 64, "Invalid verification timestamp")?;
+        validate_verification_id(run.id)?;
+        validate_scan_id(run.scan_id)?;
+        validate_remediation_id(run.remediation_action_id)?;
+        validate_timestamp(run.started_at_utc, "Invalid verification timestamp")?;
         self.connection.execute("INSERT INTO verification_runs(id,scan_id,remediation_action_id,state,started_at_utc) VALUES (?1,?2,?3,'running',?4)",params![run.id,run.scan_id,run.remediation_action_id,run.started_at_utc])?;
         Ok(())
     }
@@ -385,9 +443,11 @@ impl Storage {
         completed_at_utc: &str,
         redacted_result: Option<&str>,
     ) -> Result<(), StorageError> {
-        validate_text(completed_at_utc, 64, "Invalid verification timestamp")?;
+        validate_verification_id(id)?;
+        validate_timestamp(completed_at_utc, "Invalid verification timestamp")?;
         validate_optional_text(redacted_result, 4096, "Invalid verification result")?;
-        require_changed(self.connection.execute("UPDATE verification_runs SET state=?2,completed_at_utc=?3,redacted_result=?4 WHERE id=?1",params![id,verification_outcome_name(outcome),completed_at_utc,redacted_result])?,"Verification run not found")
+        validate_optional_redacted_text(redacted_result, "Unsafe verification result")?;
+        require_changed(self.connection.execute("UPDATE verification_runs SET state=?2,completed_at_utc=?3,redacted_result=?4 WHERE id=?1 AND state='running'",params![id,verification_outcome_name(outcome),completed_at_utc,redacted_result])?,"Verification run is missing or already finalized")
     }
 }
 
@@ -538,6 +598,21 @@ fn remediation_state_name(state: RemediationWorkflowState) -> &'static str {
         RemediationWorkflowState::Failed => "failed",
     }
 }
+fn parse_remediation_state(value: &str) -> Result<RemediationWorkflowState, StorageError> {
+    match value {
+        "requested" => Ok(RemediationWorkflowState::Requested),
+        "completed" => Ok(RemediationWorkflowState::Completed),
+        "verification_pending" => Ok(RemediationWorkflowState::VerificationPending),
+        "rescan_running" => Ok(RemediationWorkflowState::RescanRunning),
+        "resolved" => Ok(RemediationWorkflowState::Resolved),
+        "still_present" => Ok(RemediationWorkflowState::StillPresent),
+        "regression" => Ok(RemediationWorkflowState::Regression),
+        "failed" => Ok(RemediationWorkflowState::Failed),
+        _ => Err(StorageError::UnsafeState(
+            "Unknown persisted remediation state",
+        )),
+    }
+}
 fn verification_outcome_name(outcome: VerificationOutcome) -> &'static str {
     match outcome {
         VerificationOutcome::Resolved => "resolved",
@@ -560,6 +635,120 @@ fn validate_optional_text(
 ) -> Result<(), StorageError> {
     match value {
         Some(value) => validate_text(value, max, message),
+        None => Ok(()),
+    }
+}
+fn validate_scan_id(value: &str) -> Result<(), StorageError> {
+    match ScanId::new(value) {
+        Ok(id) if id.as_str() == value => Ok(()),
+        _ => Err(StorageError::InvalidInput("Invalid scan id")),
+    }
+}
+fn validate_target_id(value: &str) -> Result<(), StorageError> {
+    match TargetId::new(value) {
+        Ok(id) if id.as_str() == value => Ok(()),
+        _ => Err(StorageError::InvalidInput("Invalid target id")),
+    }
+}
+fn validate_finding_id(value: &str) -> Result<(), StorageError> {
+    match FindingId::new(value) {
+        Ok(id) if id.as_str() == value => Ok(()),
+        _ => Err(StorageError::InvalidInput("Invalid finding id")),
+    }
+}
+fn validate_evidence_id(value: &str) -> Result<(), StorageError> {
+    match EvidenceId::new(value) {
+        Ok(id) if id.as_str() == value => Ok(()),
+        _ => Err(StorageError::InvalidInput("Invalid evidence id")),
+    }
+}
+fn validate_remediation_id(value: &str) -> Result<(), StorageError> {
+    match RemediationId::new(value) {
+        Ok(id) if id.as_str() == value => Ok(()),
+        _ => Err(StorageError::InvalidInput("Invalid remediation id")),
+    }
+}
+fn validate_verification_id(value: &str) -> Result<(), StorageError> {
+    match VerificationId::new(value) {
+        Ok(id) if id.as_str() == value => Ok(()),
+        _ => Err(StorageError::InvalidInput("Invalid verification id")),
+    }
+}
+fn validate_engine_id(value: &str) -> Result<(), StorageError> {
+    EngineId::new(value)
+        .map(|_| ())
+        .map_err(|_| StorageError::InvalidInput("Invalid engine id"))
+}
+fn validate_uuid_v7(value: &str, message: &'static str) -> Result<(), StorageError> {
+    let bytes = value.as_bytes();
+    let valid = bytes.len() == 36
+        && bytes[8] == b'-'
+        && bytes[13] == b'-'
+        && bytes[18] == b'-'
+        && bytes[23] == b'-'
+        && bytes[14] == b'7'
+        && matches!(bytes[19], b'8' | b'9' | b'a' | b'b')
+        && bytes.iter().enumerate().all(|(index, byte)| {
+            matches!(index, 8 | 13 | 18 | 23)
+                || byte.is_ascii_digit()
+                || (b'a'..=b'f').contains(byte)
+        });
+    if valid {
+        Ok(())
+    } else {
+        Err(StorageError::InvalidInput(message))
+    }
+}
+fn validate_timestamp(value: &str, message: &'static str) -> Result<(), StorageError> {
+    Timestamp::new(value)
+        .map(|_| ())
+        .map_err(|_| StorageError::InvalidInput(message))
+}
+fn contains_ascii_case_insensitive(value: &str, needle: &[u8]) -> bool {
+    value
+        .as_bytes()
+        .windows(needle.len())
+        .any(|window| window.eq_ignore_ascii_case(needle))
+}
+fn validate_redacted_text(value: &str, message: &'static str) -> Result<(), StorageError> {
+    const UNSAFE_MARKERS: &[&[u8]] = &[
+        b"secret=",
+        b"token=",
+        b"password=",
+        b"api_key=",
+        b"api-key=",
+        b"apikey=",
+        b"access_token=",
+        b"client_secret=",
+        b"\"secret\":",
+        b"\"token\":",
+        b"\"password\":",
+        b"\"api_key\":",
+        b"\"access_token\":",
+        b"\"client_secret\":",
+        b"authorization:",
+        b"bearer ",
+        b"-----begin private key-----",
+        b"-----begin rsa private key-----",
+        b"-----begin ec private key-----",
+        b"-----begin openssh private key-----",
+    ];
+    if value.chars().any(char::is_control)
+        || UNSAFE_MARKERS
+            .iter()
+            .any(|marker| contains_ascii_case_insensitive(value, marker))
+    {
+        Err(StorageError::InvalidInput(message))
+    } else {
+        Ok(())
+    }
+}
+fn validate_optional_redacted_text(
+    value: Option<&str>,
+    message: &'static str,
+) -> Result<(), StorageError> {
+    match value {
+        Some(value) => validate_redacted_text(value, message),
         None => Ok(()),
     }
 }
@@ -600,6 +789,21 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     const AT: &str = "2026-09-02T03:00:00Z";
+    const BEFORE: &str = "2026-09-02T02:59:59Z";
+    const SCAN_ID: &str = "018f4c2a-1d3b-7abc-8def-0123456789ab";
+    const TARGET_ID: &str = "018f4c2a-1d3b-7abc-8def-0123456789ac";
+    const FINDING_ID: &str = "018f4c2a-1d3b-7abc-8def-0123456789ad";
+    const DUPLICATE_FINDING_ID: &str = "018f4c2a-1d3b-7abc-8def-0123456789ae";
+    const EVIDENCE_ID: &str = "018f4c2a-1d3b-7abc-8def-0123456789af";
+    const ENGINE_RUN_ID: &str = "018f4c2a-1d3b-7abc-8def-0123456789a0";
+    const REMEDIATION_ID: &str = "018f4c2a-1d3b-7abc-8def-0123456789a1";
+    const VERIFICATION_ID: &str = "018f4c2a-1d3b-7abc-8def-0123456789a2";
+    const SECOND_SCAN_ID: &str = "018f4c2a-1d3b-7abc-8def-0123456789a3";
+    const SECOND_TARGET_ID: &str = "018f4c2a-1d3b-7abc-8def-0123456789a4";
+    const ORPHAN_TARGET_ID: &str = "018f4c2a-1d3b-7abc-8def-0123456789a5";
+    const MISSING_SCAN_ID: &str = "018f4c2a-1d3b-7abc-8def-0123456789a6";
+    const INVALID_TARGET_ID: &str = "018f4c2a-1d3b-7abc-8def-0123456789a7";
+    const INVALID_FINDING_ID: &str = "018f4c2a-1d3b-7abc-8def-0123456789a8";
     const HASH_A: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     const FINDING_FINGERPRINT: &str = "ffp1-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     struct Directory(std::path::PathBuf);
@@ -621,13 +825,13 @@ mod tests {
     }
     fn seeded(path: &Path) -> Storage {
         let mut s = Storage::open(path).unwrap();
-        s.create_scan("scan-1", AT).unwrap();
-        s.transition_scan("scan-1", ScanState::Preparing, AT)
+        s.create_scan(SCAN_ID, AT).unwrap();
+        s.transition_scan(SCAN_ID, ScanState::Preparing, AT)
             .unwrap();
-        s.transition_scan("scan-1", ScanState::Running, AT).unwrap();
+        s.transition_scan(SCAN_ID, ScanState::Running, AT).unwrap();
         s.add_target(&NewTarget {
-            id: "target-1",
-            scan_id: "scan-1",
+            id: TARGET_ID,
+            scan_id: SCAN_ID,
             kind: "synthetic",
             reference: "fixture/benign",
             fingerprint: HASH_A,
@@ -745,9 +949,9 @@ mod tests {
         let p = d.0.join("db.sqlite3");
         let mut s = seeded(&p);
         let f = NewFinding {
-            id: "finding-1",
-            scan_id: "scan-1",
-            target_id: "target-1",
+            id: FINDING_ID,
+            scan_id: SCAN_ID,
+            target_id: TARGET_ID,
             fingerprint: FINDING_FINGERPRINT,
             category: "synthetic",
             location_reference: "fixture/benign:1",
@@ -755,18 +959,18 @@ mod tests {
             confidence: "high",
             observed_at_utc: AT,
         };
-        assert_eq!(s.upsert_finding(&f).unwrap(), "finding-1");
+        assert_eq!(s.upsert_finding(&f).unwrap(), FINDING_ID);
         let duplicate = NewFinding {
-            id: "finding-duplicate",
+            id: DUPLICATE_FINDING_ID,
             ..f
         };
-        assert_eq!(s.upsert_finding(&duplicate).unwrap(), "finding-1");
-        s.set_finding_lifecycle("finding-1", FindingStatus::Investigating)
+        assert_eq!(s.upsert_finding(&duplicate).unwrap(), FINDING_ID);
+        s.set_finding_lifecycle(FINDING_ID, FindingStatus::Investigating)
             .unwrap();
         s.add_evidence(&NewEvidence {
-            id: "evidence-1",
-            scan_id: "scan-1",
-            finding_id: "finding-1",
+            id: EVIDENCE_ID,
+            scan_id: SCAN_ID,
+            finding_id: FINDING_ID,
             source: "synthetic-fixture",
             observed_at_utc: AT,
             redacted_summary: "benign synthetic observation",
@@ -775,16 +979,16 @@ mod tests {
         })
         .unwrap();
         s.begin_engine_run(&NewEngineRun {
-            id: "engine-run-1",
-            scan_id: "scan-1",
-            target_id: "target-1",
+            id: ENGINE_RUN_ID,
+            scan_id: SCAN_ID,
+            target_id: TARGET_ID,
             engine_id: "fixture-engine",
             engine_version: "0.0.0",
             started_at_utc: AT,
         })
         .unwrap();
         s.finish_engine_run(
-            "engine-run-1",
+            ENGINE_RUN_ID,
             EngineRunState::Failed,
             true,
             AT,
@@ -793,34 +997,44 @@ mod tests {
         )
         .unwrap();
         s.add_remediation_action(&NewRemediationAction {
-            id: "action-1",
-            scan_id: "scan-1",
-            finding_id: "finding-1",
+            id: REMEDIATION_ID,
+            scan_id: SCAN_ID,
+            finding_id: FINDING_ID,
             proposal_summary: "review synthetic condition",
             requires_authorization: true,
             at_utc: AT,
         })
         .unwrap();
-        s.set_remediation_state("action-1", RemediationWorkflowState::Completed, AT)
+        s.set_remediation_state(REMEDIATION_ID, RemediationWorkflowState::Completed, AT)
+            .unwrap();
+        s.set_remediation_state(
+            REMEDIATION_ID,
+            RemediationWorkflowState::VerificationPending,
+            AT,
+        )
+        .unwrap();
+        s.set_remediation_state(REMEDIATION_ID, RemediationWorkflowState::RescanRunning, AT)
             .unwrap();
         s.begin_verification(&NewVerificationRun {
-            id: "verification-1",
-            scan_id: "scan-1",
-            remediation_action_id: "action-1",
+            id: VERIFICATION_ID,
+            scan_id: SCAN_ID,
+            remediation_action_id: REMEDIATION_ID,
             started_at_utc: AT,
         })
         .unwrap();
         s.finish_verification(
-            "verification-1",
+            VERIFICATION_ID,
             VerificationOutcome::Resolved,
             AT,
             Some("synthetic verification passed"),
         )
         .unwrap();
-        s.transition_scan("scan-1", ScanState::Partial, AT).unwrap();
+        s.set_remediation_state(REMEDIATION_ID, RemediationWorkflowState::Resolved, AT)
+            .unwrap();
+        s.transition_scan(SCAN_ID, ScanState::Partial, AT).unwrap();
         drop(s);
         let s = Storage::open(&p).unwrap();
-        let scan = s.get_scan("scan-1").unwrap();
+        let scan = s.get_scan(SCAN_ID).unwrap();
         assert_eq!(scan.state, "partial");
         assert!(scan.partial);
         assert_eq!(
@@ -843,31 +1057,31 @@ mod tests {
         let s = Storage::open(&p).unwrap();
         assert!(
             s.add_target(&NewTarget {
-                id: "orphan",
-                scan_id: "missing",
+                id: ORPHAN_TARGET_ID,
+                scan_id: MISSING_SCAN_ID,
                 kind: "synthetic",
                 reference: "fixture",
                 fingerprint: HASH_A
             })
             .is_err()
         );
-        s.create_scan("scan-delete", AT).unwrap();
+        s.create_scan(SECOND_SCAN_ID, AT).unwrap();
         s.add_target(&NewTarget {
-            id: "target-delete",
-            scan_id: "scan-delete",
+            id: SECOND_TARGET_ID,
+            scan_id: SECOND_SCAN_ID,
             kind: "synthetic",
             reference: "fixture",
             fingerprint: HASH_A,
         })
         .unwrap();
-        s.delete_scan("scan-delete").unwrap();
+        s.delete_scan(SECOND_SCAN_ID).unwrap();
         assert_eq!(
             s.connection
                 .query_row("SELECT count(*) FROM targets", [], |r| r.get::<_, u32>(0))
                 .unwrap(),
             0
         );
-        assert!(s.get_scan("scan-delete").is_err());
+        assert!(s.get_scan(SECOND_SCAN_ID).is_err());
     }
     #[test]
     fn invalid_hashes_and_errors_do_not_echo_input() {
@@ -876,8 +1090,8 @@ mod tests {
         let mut s = seeded(&p);
         assert!(
             s.add_target(&NewTarget {
-                id: "bad-hash",
-                scan_id: "scan-1",
+                id: INVALID_TARGET_ID,
+                scan_id: SCAN_ID,
                 kind: "synthetic",
                 reference: "fixture",
                 fingerprint: "NOT-A-HASH"
@@ -886,9 +1100,9 @@ mod tests {
         );
         assert!(
             s.upsert_finding(&NewFinding {
-                id: "bad-finding",
-                scan_id: "scan-1",
-                target_id: "target-1",
+                id: INVALID_FINDING_ID,
+                scan_id: SCAN_ID,
+                target_id: TARGET_ID,
                 fingerprint: HASH_A,
                 category: "synthetic",
                 location_reference: "fixture",
@@ -899,8 +1113,244 @@ mod tests {
             .is_err()
         );
         assert_eq!(
-            s.get_scan("missing").unwrap_err().to_string(),
+            s.get_scan(MISSING_SCAN_ID).unwrap_err().to_string(),
             "Scan not found"
+        );
+    }
+    #[test]
+    fn workflow_transitions_and_terminal_runs_cannot_be_rewritten() {
+        let d = Directory::new();
+        let p = d.0.join("db.sqlite3");
+        let mut s = seeded(&p);
+        s.upsert_finding(&NewFinding {
+            id: FINDING_ID,
+            scan_id: SCAN_ID,
+            target_id: TARGET_ID,
+            fingerprint: FINDING_FINGERPRINT,
+            category: "synthetic",
+            location_reference: "fixture/benign:1",
+            severity: "low",
+            confidence: "high",
+            observed_at_utc: AT,
+        })
+        .unwrap();
+
+        assert!(
+            s.set_finding_lifecycle(FINDING_ID, FindingStatus::Resolved)
+                .is_err()
+        );
+        assert_eq!(
+            s.connection
+                .query_row(
+                    "SELECT lifecycle FROM findings WHERE id=?1",
+                    [FINDING_ID],
+                    |row| row.get::<_, String>(0)
+                )
+                .unwrap(),
+            "open"
+        );
+        assert!(
+            s.transition_scan(SCAN_ID, ScanState::Preparing, AT)
+                .is_err()
+        );
+
+        s.begin_engine_run(&NewEngineRun {
+            id: ENGINE_RUN_ID,
+            scan_id: SCAN_ID,
+            target_id: TARGET_ID,
+            engine_id: "fixture-engine",
+            engine_version: "0.0.0",
+            started_at_utc: AT,
+        })
+        .unwrap();
+        s.finish_engine_run(
+            ENGINE_RUN_ID,
+            EngineRunState::Failed,
+            true,
+            AT,
+            Some(7),
+            Some("synthetic failure"),
+        )
+        .unwrap();
+        assert!(
+            s.finish_engine_run(
+                ENGINE_RUN_ID,
+                EngineRunState::Passed,
+                false,
+                AT,
+                Some(0),
+                None,
+            )
+            .is_err()
+        );
+        assert_eq!(
+            s.connection
+                .query_row(
+                    "SELECT state,partial,exit_code FROM engine_runs WHERE id=?1",
+                    [ENGINE_RUN_ID],
+                    |row| Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, i64>(1)?,
+                        row.get::<_, i64>(2)?,
+                    ))
+                )
+                .unwrap(),
+            ("failed".to_string(), 1, 7)
+        );
+
+        s.add_remediation_action(&NewRemediationAction {
+            id: REMEDIATION_ID,
+            scan_id: SCAN_ID,
+            finding_id: FINDING_ID,
+            proposal_summary: "review synthetic condition",
+            requires_authorization: true,
+            at_utc: AT,
+        })
+        .unwrap();
+        assert!(
+            s.set_remediation_state(REMEDIATION_ID, RemediationWorkflowState::Resolved, AT)
+                .is_err()
+        );
+        assert!(
+            s.set_remediation_state(REMEDIATION_ID, RemediationWorkflowState::Completed, BEFORE,)
+                .is_err()
+        );
+        s.set_remediation_state(REMEDIATION_ID, RemediationWorkflowState::Completed, AT)
+            .unwrap();
+        assert!(
+            s.set_remediation_state(REMEDIATION_ID, RemediationWorkflowState::Resolved, AT)
+                .is_err()
+        );
+        s.set_remediation_state(
+            REMEDIATION_ID,
+            RemediationWorkflowState::VerificationPending,
+            AT,
+        )
+        .unwrap();
+        s.set_remediation_state(REMEDIATION_ID, RemediationWorkflowState::RescanRunning, AT)
+            .unwrap();
+
+        s.begin_verification(&NewVerificationRun {
+            id: VERIFICATION_ID,
+            scan_id: SCAN_ID,
+            remediation_action_id: REMEDIATION_ID,
+            started_at_utc: AT,
+        })
+        .unwrap();
+        s.finish_verification(VERIFICATION_ID, VerificationOutcome::Resolved, AT, None)
+            .unwrap();
+        assert!(
+            s.finish_verification(VERIFICATION_ID, VerificationOutcome::Regression, AT, None,)
+                .is_err()
+        );
+        assert_eq!(
+            s.connection
+                .query_row(
+                    "SELECT state FROM verification_runs WHERE id=?1",
+                    [VERIFICATION_ID],
+                    |row| row.get::<_, String>(0)
+                )
+                .unwrap(),
+            "resolved"
+        );
+    }
+    #[test]
+    fn invalid_domain_values_and_unredacted_payloads_are_refused() {
+        let d = Directory::new();
+        let p = d.0.join("db.sqlite3");
+        let mut s = Storage::open(&p).unwrap();
+        assert!(s.create_scan("scan-1", AT).is_err());
+        assert!(s.create_scan(SCAN_ID, "2026-02-30T03:00:00Z").is_err());
+        assert!(
+            s.create_scan("018F4C2A-1D3B-7ABC-8DEF-0123456789AB", AT)
+                .is_err()
+        );
+        assert_eq!(
+            s.connection
+                .query_row("SELECT count(*) FROM scans", [], |row| row.get::<_, u32>(0))
+                .unwrap(),
+            0
+        );
+
+        s = seeded(&p);
+        s.upsert_finding(&NewFinding {
+            id: FINDING_ID,
+            scan_id: SCAN_ID,
+            target_id: TARGET_ID,
+            fingerprint: FINDING_FINGERPRINT,
+            category: "synthetic",
+            location_reference: "fixture/benign:1",
+            severity: "low",
+            confidence: "high",
+            observed_at_utc: AT,
+        })
+        .unwrap();
+        for (redacted, summary) in [(false, "safe summary"), (true, "token=FAKE_VALUE")] {
+            assert!(
+                s.add_evidence(&NewEvidence {
+                    id: EVIDENCE_ID,
+                    scan_id: SCAN_ID,
+                    finding_id: FINDING_ID,
+                    source: "synthetic-fixture",
+                    observed_at_utc: AT,
+                    redacted_summary: summary,
+                    integrity_sha256: HASH_A,
+                    redacted,
+                })
+                .is_err()
+            );
+        }
+        assert!(
+            s.record_event(SCAN_ID, AT, "synthetic", Some("Authorization: Bearer FAKE"))
+                .is_err()
+        );
+        assert!(
+            s.add_remediation_action(&NewRemediationAction {
+                id: REMEDIATION_ID,
+                scan_id: SCAN_ID,
+                finding_id: FINDING_ID,
+                proposal_summary: "password=FAKE_VALUE",
+                requires_authorization: true,
+                at_utc: AT,
+            })
+            .is_err()
+        );
+        s.begin_engine_run(&NewEngineRun {
+            id: ENGINE_RUN_ID,
+            scan_id: SCAN_ID,
+            target_id: TARGET_ID,
+            engine_id: "fixture-engine",
+            engine_version: "0.0.0",
+            started_at_utc: AT,
+        })
+        .unwrap();
+        assert!(
+            s.finish_engine_run(
+                ENGINE_RUN_ID,
+                EngineRunState::Failed,
+                true,
+                AT,
+                Some(1),
+                Some("token=FAKE_VALUE"),
+            )
+            .is_err()
+        );
+        assert_eq!(
+            s.connection
+                .query_row(
+                    "SELECT state FROM engine_runs WHERE id=?1",
+                    [ENGINE_RUN_ID],
+                    |row| row.get::<_, String>(0)
+                )
+                .unwrap(),
+            "running"
+        );
+        assert_eq!(
+            s.connection
+                .query_row("SELECT count(*) FROM evidence", [], |row| row
+                    .get::<_, u32>(0))
+                .unwrap(),
+            0
         );
     }
     #[test]

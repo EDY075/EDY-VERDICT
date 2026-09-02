@@ -94,6 +94,9 @@ pub enum AdapterError {
     UnsupportedTarget,
     InvalidArgument,
     MissingRules,
+    MissingGitleaksConfig,
+    MissingGitleaksIgnorePolicy,
+    MissingTrivyCache,
 }
 
 impl fmt::Display for AdapterError {
@@ -111,6 +114,9 @@ impl fmt::Display for AdapterError {
             Self::UnsupportedTarget => "target kind is not supported by this engine",
             Self::InvalidArgument => "engine argument is invalid or unsafe",
             Self::MissingRules => "YARA-X requires an approved rules path",
+            Self::MissingGitleaksConfig => "Gitleaks requires an approved config path",
+            Self::MissingGitleaksIgnorePolicy => "Gitleaks requires an approved ignore-policy path",
+            Self::MissingTrivyCache => "Trivy requires an approved project-local cache path",
         })
     }
 }
@@ -161,12 +167,36 @@ pub trait EngineAdapter {
     }
 }
 
-/// Inputs for pure argument preparation. The executable is deliberately excluded:
-/// it must come from a verified manifest and receipt at the execution boundary.
+/// A lexically valid absolute path on a local Windows drive that the orchestrator
+/// explicitly selected for engine infrastructure.
+///
+/// This type is not integrity evidence. Before execution, the orchestration boundary
+/// must still canonicalize it, reject links/reparse points where applicable, and bind
+/// executable, YARA rules, configs and other closed-set artifacts to their hashes and
+/// receipts. Argument preparation alone never makes an engine ready.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ApprovedLocalPath<'a>(&'a str);
+
+impl<'a> ApprovedLocalPath<'a> {
+    pub fn new(path: &'a str) -> Result<Self, AdapterError> {
+        checked_path_argument(path).map(Self)
+    }
+
+    pub const fn as_str(self) -> &'a str {
+        self.0
+    }
+}
+
+/// Inputs for pure argument preparation. The executable is deliberately excluded and
+/// every auxiliary path is explicit. The project root confines engine-owned config and
+/// cache paths; it does not replace the execution-time integrity gate.
 pub struct AdapterPreparation<'a> {
     pub target: &'a Target,
-    /// Approved local rules file/directory. Used only by YARA-X.
-    pub yara_rules_path: Option<&'a str>,
+    pub project_root: ApprovedLocalPath<'a>,
+    pub yara_rules_path: Option<ApprovedLocalPath<'a>>,
+    pub gitleaks_config_path: Option<ApprovedLocalPath<'a>>,
+    pub gitleaks_ignore_path: Option<ApprovedLocalPath<'a>>,
+    pub trivy_cache_dir: Option<ApprovedLocalPath<'a>>,
 }
 
 pub struct YaraXAdapter;
@@ -193,8 +223,10 @@ impl EngineAdapter for YaraXAdapter {
         &self,
         preparation: &AdapterPreparation<'_>,
     ) -> Result<Vec<String>, AdapterError> {
+        reject_unexpected_auxiliary_paths(preparation, AuxiliaryUse::YaraRules)?;
         let target = checked_target_path(self, preparation.target)?;
-        let rules = checked_path_argument(
+        let rules = checked_project_path(
+            preparation.project_root,
             preparation
                 .yara_rules_path
                 .ok_or(AdapterError::MissingRules)?,
@@ -268,13 +300,28 @@ impl EngineAdapter for GitleaksAdapter {
         &self,
         preparation: &AdapterPreparation<'_>,
     ) -> Result<Vec<String>, AdapterError> {
-        reject_unused_rules(preparation)?;
+        reject_unexpected_auxiliary_paths(preparation, AuxiliaryUse::GitleaksPolicy)?;
         let target = checked_target_path(self, preparation.target)?;
+        let config = checked_project_path(
+            preparation.project_root,
+            preparation
+                .gitleaks_config_path
+                .ok_or(AdapterError::MissingGitleaksConfig)?,
+        )?;
+        let ignore = checked_project_path(
+            preparation.project_root,
+            preparation
+                .gitleaks_ignore_path
+                .ok_or(AdapterError::MissingGitleaksIgnorePolicy)?,
+        )?;
         Ok(vec![
             "dir".to_owned(),
             "--no-banner".to_owned(),
             "--no-color".to_owned(),
             "--redact=100".to_owned(),
+            format!("--config={config}"),
+            format!("--gitleaks-ignore-path={ignore}"),
+            "--ignore-gitleaks-allow".to_owned(),
             "--report-format=json".to_owned(),
             "--report-path=-".to_owned(),
             "--exit-code=1".to_owned(),
@@ -342,14 +389,21 @@ impl EngineAdapter for TrivyAdapter {
         &self,
         preparation: &AdapterPreparation<'_>,
     ) -> Result<Vec<String>, AdapterError> {
-        reject_unused_rules(preparation)?;
+        reject_unexpected_auxiliary_paths(preparation, AuxiliaryUse::TrivyCache)?;
         let target = checked_target_path(self, preparation.target)?;
+        let cache = checked_project_path(
+            preparation.project_root,
+            preparation
+                .trivy_cache_dir
+                .ok_or(AdapterError::MissingTrivyCache)?,
+        )?;
         Ok(vec![
             "filesystem".to_owned(),
             "--format=json".to_owned(),
             "--offline-scan".to_owned(),
             "--skip-db-update".to_owned(),
             "--scanners=vuln".to_owned(),
+            format!("--cache-dir={cache}"),
             target.to_owned(),
         ])
     }
@@ -416,17 +470,26 @@ impl EngineAdapter for OsvScannerAdapter {
         &self,
         preparation: &AdapterPreparation<'_>,
     ) -> Result<Vec<String>, AdapterError> {
-        reject_unused_rules(preparation)?;
+        reject_unexpected_auxiliary_paths(preparation, AuxiliaryUse::None)?;
         let target = checked_target_path(self, preparation.target)?;
         let mut arguments = vec![
             "scan".to_owned(),
+            "source".to_owned(),
             "--format=json".to_owned(),
             "--offline".to_owned(),
+            "--offline-vulnerabilities".to_owned(),
         ];
-        if preparation.target.kind() == TargetKind::Repository {
-            arguments.push("--recursive".to_owned());
+        match preparation.target.kind() {
+            TargetKind::Repository => {
+                arguments.push("--recursive".to_owned());
+                arguments.push(target.to_owned());
+            }
+            TargetKind::File => {
+                arguments.push("--lockfile".to_owned());
+                arguments.push(target.to_owned());
+            }
+            _ => return Err(AdapterError::UnsupportedTarget),
         }
-        arguments.push(target.to_owned());
         Ok(arguments)
     }
 
@@ -510,17 +573,87 @@ fn checked_target_path<'a, A: EngineAdapter + ?Sized>(
 fn checked_path_argument(value: &str) -> Result<&str, AdapterError> {
     if value.is_empty()
         || value.len() > 4096
-        || value.starts_with('-')
         || value.trim() != value
         || value.chars().any(char::is_control)
+        || value.starts_with(['/', '\\'])
+    {
+        return Err(AdapterError::InvalidArgument);
+    }
+    let bytes = value.as_bytes();
+    if bytes.len() < 3
+        || !bytes[0].is_ascii_alphabetic()
+        || bytes[1] != b':'
+        || !matches!(bytes[2], b'/' | b'\\')
+    {
+        return Err(AdapterError::InvalidArgument);
+    }
+    let normalized = value.replace('\\', "/");
+    let remainder = &normalized[3..];
+    if remainder.starts_with('/')
+        || remainder.split('/').any(|component| {
+            component.is_empty()
+                || matches!(component, "." | "..")
+                || component.ends_with([' ', '.'])
+                || component
+                    .chars()
+                    .any(|character| matches!(character, '<' | '>' | '"' | ':' | '|' | '?' | '*'))
+                || reserved_windows_component(component)
+        })
     {
         return Err(AdapterError::InvalidArgument);
     }
     Ok(value)
 }
 
-fn reject_unused_rules(preparation: &AdapterPreparation<'_>) -> Result<(), AdapterError> {
-    if preparation.yara_rules_path.is_some() {
+fn reserved_windows_component(component: &str) -> bool {
+    let stem = component.split('.').next().unwrap_or(component);
+    let stem = stem.to_ascii_uppercase();
+    matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+        || stem
+            .strip_prefix("COM")
+            .or_else(|| stem.strip_prefix("LPT"))
+            .is_some_and(|suffix| {
+                matches!(suffix, "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9")
+            })
+}
+
+fn checked_project_path<'a>(
+    project_root: ApprovedLocalPath<'_>,
+    candidate: ApprovedLocalPath<'a>,
+) -> Result<&'a str, AdapterError> {
+    let root = project_root
+        .as_str()
+        .replace('\\', "/")
+        .to_ascii_lowercase();
+    let candidate_normalized = candidate.as_str().replace('\\', "/").to_ascii_lowercase();
+    let prefix = if root.ends_with('/') {
+        root
+    } else {
+        format!("{root}/")
+    };
+    if !candidate_normalized.starts_with(&prefix) {
+        return Err(AdapterError::InvalidArgument);
+    }
+    Ok(candidate.as_str())
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AuxiliaryUse {
+    None,
+    YaraRules,
+    GitleaksPolicy,
+    TrivyCache,
+}
+
+fn reject_unexpected_auxiliary_paths(
+    preparation: &AdapterPreparation<'_>,
+    allowed: AuxiliaryUse,
+) -> Result<(), AdapterError> {
+    let unexpected = (preparation.yara_rules_path.is_some() && allowed != AuxiliaryUse::YaraRules)
+        || (preparation.gitleaks_config_path.is_some() && allowed != AuxiliaryUse::GitleaksPolicy)
+        || (preparation.gitleaks_ignore_path.is_some() && allowed != AuxiliaryUse::GitleaksPolicy)
+        || (preparation.trivy_cache_dir.is_some() && allowed != AuxiliaryUse::TrivyCache);
+    if unexpected {
         Err(AdapterError::InvalidArgument)
     } else {
         Ok(())

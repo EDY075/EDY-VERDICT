@@ -42,6 +42,7 @@ pub struct ScanStarted {
 pub struct EngineStarted {
     pub scan_id: ScanId,
     pub engine: EngineId,
+    pub target_id: TargetId,
     pub at: Timestamp,
 }
 
@@ -50,6 +51,7 @@ pub struct EngineStarted {
 pub struct EngineProgress {
     pub scan_id: ScanId,
     pub engine: EngineId,
+    pub target_id: TargetId,
     pub completed_units: u32,
     pub total_units: Option<u32>,
     pub at: Timestamp,
@@ -72,6 +74,7 @@ pub struct FindingObserved {
 pub struct EngineCompleted {
     pub scan_id: ScanId,
     pub engine: EngineId,
+    pub target_id: TargetId,
     pub observations: u32,
     pub at: Timestamp,
 }
@@ -81,6 +84,7 @@ pub struct EngineCompleted {
 pub struct EngineFailed {
     pub scan_id: ScanId,
     pub engine: EngineId,
+    pub target_id: TargetId,
     pub failure: String,
     pub at: Timestamp,
 }
@@ -143,5 +147,18 @@ mod tests {
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains("scan_started"));
         assert_eq!(serde_json::from_str::<DomainEvent>(&json).unwrap(), event);
+
+        let engine_event = DomainEvent::EngineStarted(EngineStarted {
+            scan_id: ScanId::new("018f4c2a-1d3b-7abc-8def-0123456789ab").unwrap(),
+            engine: EngineId::new("fixture").unwrap(),
+            target_id: TargetId::new("018f4c2a-1d3b-7abc-8def-0123456789ac").unwrap(),
+            at: Timestamp::new("2026-09-02T03:00:00Z").unwrap(),
+        });
+        let json = serde_json::to_string(&engine_event).unwrap();
+        assert!(json.contains("target_id"));
+        assert_eq!(
+            serde_json::from_str::<DomainEvent>(&json).unwrap(),
+            engine_event
+        );
     }
 }
