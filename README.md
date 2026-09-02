@@ -11,6 +11,9 @@ Read `docs/adr/0001-platform-stack.md` and `docs/architecture/foundation-contrac
 Use `scripts/Enter-Project.ps1` in a new PowerShell process before development commands.
 Toolchains, caches, temporary files and build artifacts remain project-local.
 Do not commit `.local`, `target`, `node_modules`, credentials or generated databases.
+Never run Rust inventory or QA commands inside this repository with global or unset
+`RUSTUP_HOME`/`CARGO_HOME`; `scripts/Assert-ProjectRustEnvironment.ps1` fails closed when it
+detects that context. Global Rust inventory must run only from a verified neutral directory.
 
 Current implementation result: **Level 0 COMPLETE WITH ACTIONS (synthetic scope)**.
 Read `docs/LEVEL_0_REPORT.md` for the exact boundary. The independent release gate remains

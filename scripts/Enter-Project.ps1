@@ -23,3 +23,7 @@ if (Test-Path -LiteralPath $VsWhere) {
     }
 }
 Set-Location -LiteralPath $ProjectRoot
+& (Join-Path $PSScriptRoot 'Assert-ProjectRustEnvironment.ps1') `
+    -WorkingDirectory $ProjectRoot `
+    -CandidateRustupHome $env:RUSTUP_HOME `
+    -CandidateCargoHome $env:CARGO_HOME | Out-Null

@@ -32,3 +32,21 @@ operation may also have populated entries in the pre-existing global Cargo regis
 cache; those shared cache entries were not deleted because their prior ownership could
 not be established safely. No engine, Windows setting or global environment variable
 was installed or changed.
+
+## Recurrence during the Level 0 final gate
+
+On 2026-09-02 a global inventory command, `rustup toolchain list`, was invoked with
+`D:\EDY-Projects\EDY-VERDICT` as its working directory while process-local
+`RUSTUP_HOME` and `CARGO_HOME` were unset. The global Rustup shim honored the repository
+`rust-toolchain.toml` and automatically provisioned the pinned 1.98.0 toolchain under
+`C:\Users\edmil\.rustup`. The project-local toolchain was not changed.
+
+The user explicitly authorized one official uninstall from the verified neutral `C:\`
+directory. Post-remediation checks confirmed that only global `stable` remained active and
+default, settings/PATH hashes were unchanged, and the 168-file project-local manifest was
+byte-identical before and after removal.
+
+Rust inventory and QA commands must never execute inside the repository with a global or
+unset Rustup/Cargo context. `scripts/Assert-ProjectRustEnvironment.ps1` enforces the approved
+project-local homes for repository execution and permits global inventory only from a neutral
+directory. `scripts/Enter-Project.ps1` invokes this gate after establishing the local context.
