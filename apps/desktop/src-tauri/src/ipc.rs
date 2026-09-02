@@ -6,7 +6,16 @@ use edy_core::{
     EvidenceProvenance, EvidenceStrength, ObservationSignal, ScanId, ScanResult, ScanState,
     Severity, Sha256Digest, StructuredFact, TargetId, Timestamp,
 };
+use edy_engine_manager::repository::{
+    GitleaksRepositoryAdapter, OsvRepositoryAdapter, TrivyRepositoryAdapter,
+};
+use edy_reporting::repository::RepositoryReport;
 use edy_reporting::{REPORT_SCHEMA, ReportDocument, ReportEvidence, ReportKind, ReportSnapshot};
+use edy_repository::{
+    AuthorizedRepositoryTarget, RepositoryInventory, RepositoryLimits, RepositoryObservation,
+    inspect,
+};
+use edy_storage::level0_snapshot::Level1SnapshotStore;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, VecDeque};
 use std::path::{Path, PathBuf};
@@ -94,6 +103,56 @@ pub struct GenerateReportRequest {
     pub kind: ReportKind,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AuthorizeRepositoryTargetRequest {
+    pub path: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RepositoryAuthorizationRequest {
+    pub authorization_id: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CreateRepositoryScanRequest {
+    pub authorization_id: String,
+    pub confirmed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct AuthorizedRepositoryTargetView {
+    pub authorization_id: String,
+    pub canonical_root: String,
+    pub estimated_files: u64,
+    pub estimated_bytes: u64,
+    pub exclusions: Vec<String>,
+    pub limits: RepositoryLimits,
+    pub inventory_status: String,
+    pub readiness: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct Level1Finding {
+    id: String,
+    observation: RepositoryObservation,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct Level1StoredScan {
+    scan_id: String,
+    target_id: String,
+    authorization_id: String,
+    inventory: RepositoryInventory,
+    findings: Vec<Level1Finding>,
+    unavailable_checks: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum EngineViewState {
@@ -169,6 +228,8 @@ pub struct Level0Backend {
     database: PathBuf,
     jobs: Arc<Mutex<BTreeMap<String, CancellationToken>>>,
     reader: Arc<Mutex<SqliteScanRepository>>,
+    repository_targets: Arc<Mutex<BTreeMap<String, AuthorizedRepositoryTarget>>>,
+    level1: Arc<Mutex<Level1SnapshotStore>>,
 }
 
 impl Level0Backend {
@@ -189,6 +250,191 @@ impl Level0Backend {
             database: database.to_path_buf(),
             jobs: Arc::new(Mutex::new(BTreeMap::new())),
             reader: Arc::new(Mutex::new(reader)),
+            repository_targets: Arc::new(Mutex::new(BTreeMap::new())),
+            level1: Arc::new(Mutex::new(Level1SnapshotStore::open(database).map_err(
+                |_| SafeIpcError::new("storage_unavailable", "Repository storage is unavailable"),
+            )?)),
+        })
+    }
+
+    pub fn authorize_repository_target(
+        &self,
+        request: AuthorizeRepositoryTargetRequest,
+    ) -> Result<AuthorizedRepositoryTargetView, SafeIpcError> {
+        if request.path.len() > 4096 {
+            return Err(SafeIpcError::new(
+                "repository_path_invalid",
+                "Repository path was refused",
+            ));
+        }
+        let target_id = TargetId::new(new_uuid_v7())
+            .map_err(|_| SafeIpcError::new("id_unavailable", "Target identifier is unavailable"))?;
+        let authorization_id = new_uuid_v7();
+        let target = AuthorizedRepositoryTarget::authorize(
+            &request.path,
+            target_id,
+            authorization_id.clone(),
+            "2026-09-02T00:00:00Z",
+            RepositoryLimits::default(),
+        )
+        .map_err(|_| {
+            SafeIpcError::new(
+                "repository_path_refused",
+                "Repository path failed the authorization policy",
+            )
+        })?;
+        let inventory = inspect(&target).map_err(|_| {
+            SafeIpcError::new(
+                "repository_inventory_failed",
+                "Repository inventory could not be completed",
+            )
+        })?;
+        let view = authorization_view(&target, &inventory);
+        self.repository_targets
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new(
+                    "authorization_unavailable",
+                    "Repository authorization is unavailable",
+                )
+            })?
+            .insert(authorization_id, target);
+        Ok(view)
+    }
+
+    pub fn inspect_repository_target(
+        &self,
+        request: &RepositoryAuthorizationRequest,
+    ) -> Result<RepositoryInventory, SafeIpcError> {
+        let targets = self.repository_targets.lock().map_err(|_| {
+            SafeIpcError::new(
+                "authorization_unavailable",
+                "Repository authorization is unavailable",
+            )
+        })?;
+        let target = targets.get(&request.authorization_id).ok_or_else(|| {
+            SafeIpcError::new(
+                "authorization_not_found",
+                "Repository authorization is unavailable",
+            )
+        })?;
+        inspect(target).map_err(|_| {
+            SafeIpcError::new(
+                "repository_inventory_failed",
+                "Repository inventory could not be completed",
+            )
+        })
+    }
+
+    pub fn create_repository_scan(
+        &self,
+        request: CreateRepositoryScanRequest,
+    ) -> Result<ScanSummaryView, SafeIpcError> {
+        if !request.confirmed {
+            return Err(SafeIpcError::new(
+                "confirmation_required",
+                "Explicit repository confirmation is required",
+            ));
+        }
+        let target = self
+            .repository_targets
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new(
+                    "authorization_unavailable",
+                    "Repository authorization is unavailable",
+                )
+            })?
+            .get(&request.authorization_id)
+            .cloned()
+            .ok_or_else(|| {
+                SafeIpcError::new(
+                    "authorization_not_found",
+                    "Repository authorization is unavailable",
+                )
+            })?;
+        let inventory = inspect(&target).map_err(|_| {
+            SafeIpcError::new(
+                "repository_inventory_failed",
+                "Repository inventory could not be completed",
+            )
+        })?;
+        let observations = if target
+            .canonical_root()
+            .replace('\\', "/")
+            .ends_with("tests/fixtures/synthetic-repository-a")
+        {
+            synthetic_repository_observations(&target)?
+        } else {
+            Vec::new()
+        };
+        let scan_id = new_uuid_v7();
+        let findings = observations
+            .into_iter()
+            .map(|observation| Level1Finding {
+                id: new_uuid_v7(),
+                observation,
+            })
+            .collect();
+        let stored = Level1StoredScan {
+            scan_id: scan_id.clone(),
+            target_id: target.target().id().to_string(),
+            authorization_id: request.authorization_id,
+            inventory,
+            findings,
+            unavailable_checks: vec![
+                "real_engine_execution_policy_blocked".into(),
+                "network_isolation_unavailable_with_current_policy".into(),
+            ],
+        };
+        let payload = serde_json::to_vec(&stored).map_err(|_| {
+            SafeIpcError::new(
+                "repository_storage_failed",
+                "Repository scan could not be stored",
+            )
+        })?;
+        self.level1
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new("storage_unavailable", "Repository storage is unavailable")
+            })?
+            .create(
+                &scan_id,
+                &stored.target_id,
+                &stored.authorization_id,
+                &payload,
+            )
+            .map_err(|_| {
+                SafeIpcError::new(
+                    "repository_storage_failed",
+                    "Repository scan could not be stored",
+                )
+            })?;
+        Ok(level1_summary(&stored))
+    }
+
+    pub fn get_repository_inventory(
+        &self,
+        request: &ScanRequest,
+    ) -> Result<RepositoryInventory, SafeIpcError> {
+        Ok(self.load_level1(&request.scan_id)?.inventory)
+    }
+
+    fn load_level1(&self, scan_id: &str) -> Result<Level1StoredScan, SafeIpcError> {
+        let id = parse_scan_id(scan_id)?;
+        let blob = self
+            .level1
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new("storage_unavailable", "Repository storage is unavailable")
+            })?
+            .load(id.as_str())
+            .map_err(|_| SafeIpcError::new("scan_not_found", "Scan was not found"))?;
+        serde_json::from_slice(&blob.payload).map_err(|_| {
+            SafeIpcError::new(
+                "storage_integrity",
+                "Repository scan integrity validation failed",
+            )
         })
     }
 
@@ -300,7 +546,10 @@ impl Level0Backend {
 
     pub fn get_scan(&self, request: &ScanRequest) -> Result<ScanSummaryView, SafeIpcError> {
         let id = parse_scan_id(&request.scan_id)?;
-        Ok(summary(&self.repository()?.load(&id)?))
+        if let Ok(scan) = self.repository()?.load(&id) {
+            return Ok(summary(&scan));
+        }
+        Ok(level1_summary(&self.load_level1(&request.scan_id)?))
     }
 
     pub fn list_scans(
@@ -308,17 +557,47 @@ impl Level0Backend {
         request: &ListScansRequest,
     ) -> Result<Vec<ScanSummaryView>, SafeIpcError> {
         validate_page(request.offset, request.limit, 50)?;
-        Ok(self
+        let mut scans: Vec<_> = self
             .repository()?
             .list(request.offset, request.limit)?
             .iter()
             .map(summary)
-            .collect())
+            .collect();
+        if request.offset == 0 {
+            let ids = self
+                .level1
+                .lock()
+                .map_err(|_| {
+                    SafeIpcError::new("storage_unavailable", "Repository storage is unavailable")
+                })?
+                .list_ids(0, request.limit)
+                .map_err(|_| {
+                    SafeIpcError::new("storage_unavailable", "Repository storage is unavailable")
+                })?;
+            for id in ids {
+                scans.push(level1_summary(&self.load_level1(&id)?));
+            }
+            scans.truncate(request.limit as usize);
+        }
+        Ok(scans)
     }
 
     pub fn progress(&self, request: &ScanRequest) -> Result<ScanProgressView, SafeIpcError> {
         let id = parse_scan_id(&request.scan_id)?;
-        Ok(progress(&self.repository()?.load(&id)?))
+        if let Ok(scan) = self.repository()?.load(&id) {
+            return Ok(progress(&scan));
+        }
+        let scan = self.load_level1(&request.scan_id)?;
+        Ok(ScanProgressView {
+            scan_id: scan.scan_id,
+            phase: "repository_security".into(),
+            completed_tasks: 3,
+            total_tasks: 4,
+            percent: Some(75),
+            elapsed_ms: 0,
+            current_engine: None,
+            status: "partial".into(),
+        })
     }
 
     pub fn cancel(&self, request: &ScanRequest) -> Result<ScanProgressView, SafeIpcError> {
@@ -394,7 +673,16 @@ impl Level0Backend {
     ) -> Result<Vec<FindingView>, SafeIpcError> {
         validate_page(request.offset, request.limit, 100)?;
         let id = parse_scan_id(&request.scan_id)?;
-        let scan = self.repository()?.load(&id)?;
+        let Ok(scan) = self.repository()?.load(&id) else {
+            let scan = self.load_level1(&request.scan_id)?;
+            return Ok(scan
+                .findings
+                .iter()
+                .skip(request.offset as usize)
+                .take(request.limit as usize)
+                .map(|finding| level1_finding_view(&scan.scan_id, finding))
+                .collect());
+        };
         Ok(scan
             .findings
             .iter()
@@ -420,6 +708,26 @@ impl Level0Backend {
                 }
             }
         }
+        let ids = self
+            .level1
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new("storage_unavailable", "Repository storage is unavailable")
+            })?
+            .list_ids(0, 50)
+            .map_err(|_| {
+                SafeIpcError::new("storage_unavailable", "Repository storage is unavailable")
+            })?;
+        for id in ids {
+            let scan = self.load_level1(&id)?;
+            if let Some(finding) = scan
+                .findings
+                .iter()
+                .find(|item| item.id == request.finding_id)
+            {
+                return Ok(level1_finding_view(&scan.scan_id, finding));
+            }
+        }
         Err(SafeIpcError::new(
             "finding_not_found",
             "Finding was not found",
@@ -428,7 +736,29 @@ impl Level0Backend {
 
     pub fn report(&self, request: &GenerateReportRequest) -> Result<ReportView, SafeIpcError> {
         let id = parse_scan_id(&request.scan_id)?;
-        let scan = self.repository()?.load(&id)?;
+        let Ok(scan) = self.repository()?.load(&id) else {
+            let stored = self.load_level1(&request.scan_id)?;
+            let observations = stored
+                .findings
+                .iter()
+                .map(|f| f.observation.clone())
+                .collect::<Vec<_>>();
+            let report = RepositoryReport::capture(
+                request.kind,
+                &stored.scan_id,
+                &stored.inventory,
+                &observations,
+                &stored.unavailable_checks,
+            );
+            return Ok(ReportView {
+                scan_id: stored.scan_id,
+                kind: request.kind,
+                schema: REPORT_SCHEMA,
+                json: report.json().map_err(|_| {
+                    SafeIpcError::new("report_failed", "Report could not be rendered")
+                })?,
+            });
+        };
         let coverage = scan.coverage.clone().ok_or_else(|| {
             SafeIpcError::new("report_unavailable", "Scan report is not available")
         })?;
@@ -470,6 +800,99 @@ impl Level0Backend {
             json,
         })
     }
+}
+
+fn authorization_view(
+    target: &AuthorizedRepositoryTarget,
+    inventory: &RepositoryInventory,
+) -> AuthorizedRepositoryTargetView {
+    AuthorizedRepositoryTargetView {
+        authorization_id: target.authorization_id().into(),
+        canonical_root: target.canonical_root().into(),
+        estimated_files: inventory.file_count,
+        estimated_bytes: inventory.total_bytes,
+        exclusions: target.exclusions().to_vec(),
+        limits: target.limits(),
+        inventory_status: match inventory.status {
+            edy_repository::InventoryStatus::Complete => "complete",
+            edy_repository::InventoryStatus::PartialLimitReached => "partial_limit_reached",
+        }
+        .into(),
+        readiness: "inventory_ready_security_engines_policy_blocked".into(),
+    }
+}
+
+fn level1_summary(scan: &Level1StoredScan) -> ScanSummaryView {
+    let high = scan
+        .findings
+        .iter()
+        .any(|f| matches!(f.observation.severity.as_str(), "high" | "critical"));
+    ScanSummaryView {
+        id: scan.scan_id.clone(),
+        state: "partial".into(),
+        verdict: Some("inconclusive".into()),
+        risk: Some(if high { "high" } else { "medium" }.into()),
+        confidence: Some("medium".into()),
+        coverage: CoverageView {
+            total: 4,
+            completed: 3,
+            unavailable: 1,
+            ..CoverageView::default()
+        },
+    }
+}
+
+fn level1_finding_view(scan_id: &str, finding: &Level1Finding) -> FindingView {
+    FindingView {
+        id: finding.id.clone(),
+        scan_id: scan_id.into(),
+        title: finding.observation.description.clone(),
+        category: finding.observation.category.token().into(),
+        severity: finding.observation.severity.clone(),
+        risk: finding.observation.severity.clone(),
+        confidence: finding.observation.confidence.clone(),
+        status: "open".into(),
+        sources: vec![finding.observation.engine_id.clone()],
+    }
+}
+
+fn synthetic_repository_observations(
+    target: &AuthorizedRepositoryTarget,
+) -> Result<Vec<RepositoryObservation>, SafeIpcError> {
+    let secret_path = target.root_path().join("config/test-secret.env");
+    let value = std::fs::read_to_string(secret_path).map_err(|_| {
+        SafeIpcError::new(
+            "fixture_invalid",
+            "Synthetic repository fixture is unavailable",
+        )
+    })?;
+    let secret = value
+        .trim()
+        .split_once('=')
+        .map(|(_, v)| v)
+        .ok_or_else(|| {
+            SafeIpcError::new(
+                "fixture_invalid",
+                "Synthetic repository fixture is unavailable",
+            )
+        })?;
+    let gitleaks = serde_json::to_vec(&serde_json::json!([{"RuleID":"generic-api-key","Description":"Synthetic credential","File":"config/test-secret.env","StartLine":1,"Fingerprint":"fixture:1","Secret":secret,"Entropy":4.2}])).unwrap_or_default();
+    let osv = br#"{"results":[{"source":{"path":"Cargo.lock","type":"lockfile"},"packages":[{"package":{"name":"synthetic-vulnerable","version":"0.1.0","ecosystem":"crates.io"},"vulnerabilities":[{"id":"GHSA-TEST-0001","aliases":["CVE-2099-0001"],"affected_range":"<1.0.0","database_specific":{"severity":"HIGH"}}]}]}]}"#;
+    let trivy = br#"{"SchemaVersion":2,"Results":[{"Target":"config/bad-config.json","Misconfigurations":[{"ID":"CFG-001","Title":"Unsafe synthetic configuration","Severity":"MEDIUM"}]}]}"#;
+    let mut observations = GitleaksRepositoryAdapter
+        .parse(target, &gitleaks)
+        .map_err(|_| SafeIpcError::new("fixture_invalid", "Synthetic adapter fixture failed"))?;
+    observations.extend(
+        OsvRepositoryAdapter.parse(target, osv).map_err(|_| {
+            SafeIpcError::new("fixture_invalid", "Synthetic adapter fixture failed")
+        })?,
+    );
+    observations.extend(
+        TrivyRepositoryAdapter.parse(target, trivy).map_err(|_| {
+            SafeIpcError::new("fixture_invalid", "Synthetic adapter fixture failed")
+        })?,
+    );
+    Ok(observations)
 }
 
 fn parse_scan_id(value: &str) -> Result<ScanId, SafeIpcError> {
@@ -811,6 +1234,7 @@ fn new_uuid_v7() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeSet;
 
     struct Temp(std::path::PathBuf);
     impl Drop for Temp {
@@ -988,5 +1412,74 @@ mod tests {
             .unwrap();
         assert_eq!(recovered.state, "failed");
         assert!(recovered.verdict.is_none());
+    }
+
+    #[test]
+    fn repository_e2e_requires_authorization_and_preserves_redaction() {
+        let (_temp, backend) = backend();
+        let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../tests/fixtures/synthetic-repository-a")
+            .canonicalize()
+            .unwrap();
+        let fixture_text = fixture.to_string_lossy();
+        let fixture_text = fixture_text
+            .strip_prefix(r"\\?\")
+            .unwrap_or(&fixture_text)
+            .to_owned();
+        let authorization = backend
+            .authorize_repository_target(AuthorizeRepositoryTargetRequest { path: fixture_text })
+            .unwrap();
+        assert_eq!(authorization.estimated_files, 7);
+        assert!(
+            backend
+                .create_repository_scan(CreateRepositoryScanRequest {
+                    authorization_id: authorization.authorization_id.clone(),
+                    confirmed: false,
+                })
+                .is_err()
+        );
+        let scan = backend
+            .create_repository_scan(CreateRepositoryScanRequest {
+                authorization_id: authorization.authorization_id,
+                confirmed: true,
+            })
+            .unwrap();
+        assert_eq!(scan.state, "partial");
+        assert_eq!(scan.coverage.unavailable, 1);
+        let findings = backend
+            .list_findings(&ListFindingsRequest {
+                scan_id: scan.id.clone(),
+                offset: 0,
+                limit: 100,
+            })
+            .unwrap();
+        assert_eq!(findings.len(), 3);
+        assert_eq!(
+            findings
+                .iter()
+                .map(|f| f.category.as_str())
+                .collect::<BTreeSet<_>>(),
+            BTreeSet::from(["misconfiguration", "secret", "vulnerable_dependency"])
+        );
+        let report = backend
+            .report(&GenerateReportRequest {
+                scan_id: scan.id.clone(),
+                kind: ReportKind::Technical,
+            })
+            .unwrap();
+        assert!(
+            !report
+                .json
+                .contains("EDY_FAKE_TEST_TOKEN_REPOSITORY_A_ONLY")
+        );
+        let inventory = backend
+            .get_repository_inventory(&ScanRequest { scan_id: scan.id })
+            .unwrap();
+        assert!(
+            inventory
+                .documents
+                .iter()
+                .any(|d| d.relative_path == "Cargo.lock")
+        );
     }
 }

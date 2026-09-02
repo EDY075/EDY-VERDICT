@@ -5,10 +5,12 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use edy_desktop::ipc::{
+    AuthorizeRepositoryTargetRequest, AuthorizedRepositoryTargetView, CreateRepositoryScanRequest,
     CreateSyntheticScanRequest, EngineStatusView, FindingRequest, FindingView,
     GenerateReportRequest, Level0Backend, ListFindingsRequest, ListScansRequest, ReportView,
-    SafeIpcError, ScanProgressView, ScanRequest, ScanSummaryView,
+    RepositoryAuthorizationRequest, SafeIpcError, ScanProgressView, ScanRequest, ScanSummaryView,
 };
+use edy_repository::RepositoryInventory;
 use edy_storage::Storage;
 use serde::Serialize;
 use tauri::{Manager, WebviewWindow, WebviewWindowBuilder};
@@ -77,6 +79,46 @@ fn get_engine_status(
 ) -> Result<Vec<EngineStatusView>, SafeIpcError> {
     ipc_guard(&window)?;
     Ok(state.backend.engine_status())
+}
+
+#[tauri::command]
+fn authorize_repository_target(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: AuthorizeRepositoryTargetRequest,
+) -> Result<AuthorizedRepositoryTargetView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.authorize_repository_target(request)
+}
+
+#[tauri::command]
+fn inspect_repository_target(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: RepositoryAuthorizationRequest,
+) -> Result<RepositoryInventory, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.inspect_repository_target(&request)
+}
+
+#[tauri::command]
+fn create_repository_scan(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: CreateRepositoryScanRequest,
+) -> Result<ScanSummaryView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.create_repository_scan(request)
+}
+
+#[tauri::command]
+fn get_repository_inventory(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: ScanRequest,
+) -> Result<RepositoryInventory, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.get_repository_inventory(&request)
 }
 
 #[tauri::command]
@@ -245,6 +287,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .invoke_handler(tauri::generate_handler![
             get_foundation_status,
             get_engine_status,
+            authorize_repository_target,
+            inspect_repository_target,
+            create_repository_scan,
+            get_repository_inventory,
             create_synthetic_scan,
             get_scan,
             list_scans,

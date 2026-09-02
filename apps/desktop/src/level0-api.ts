@@ -67,6 +67,13 @@ export interface SafeIpcError {
   readonly correlation_id: string;
 }
 
+export interface RepositoryAuthorization {
+  readonly authorization_id: string; readonly canonical_root: string;
+  readonly estimated_files: number; readonly estimated_bytes: number;
+  readonly exclusions: readonly string[]; readonly inventory_status: string; readonly readiness: string;
+  readonly limits: { readonly max_files:number; readonly max_total_bytes:number; readonly max_file_bytes:number; readonly max_depth:number };
+}
+
 const ENGINE_IDS = ["yara-x", "gitleaks", "trivy", "osv-scanner"] as const;
 const ENGINE_STATES = ["ready", "unavailable", "tampered", "policy_blocked"] as const;
 const SCAN_STATES = ["queued", "preparing", "running", "cancellation_requested", "cancelled", "completed", "partial", "failed"] as const;
@@ -184,6 +191,17 @@ export function parseReport(value: unknown): ReportView {
   });
 }
 
+export function parseRepositoryAuthorization(value: unknown): RepositoryAuthorization {
+  const item = record(value);
+  exact(item, ["authorization_id","canonical_root","estimated_files","estimated_bytes","exclusions","limits","inventory_status","readiness"]);
+  if (!Array.isArray(item.exclusions)) throw new Error("Backend response rejected");
+  const limits = record(item.limits); exact(limits,["max_files","max_total_bytes","max_file_bytes","max_depth"]);
+  return Object.freeze({ authorization_id:uuid(item.authorization_id), canonical_root:text(item.canonical_root,4096),
+    estimated_files:integer(item.estimated_files), estimated_bytes:integer(item.estimated_bytes),
+    exclusions:Object.freeze(item.exclusions.map(x=>text(x,128))), inventory_status:text(item.inventory_status,64), readiness:text(item.readiness,128),
+    limits:Object.freeze({max_files:integer(limits.max_files),max_total_bytes:integer(limits.max_total_bytes),max_file_bytes:integer(limits.max_file_bytes),max_depth:integer(limits.max_depth,128)}) });
+}
+
 async function call<T>(command: string, args: Record<string, unknown>, parse: (value: unknown) => T, timeoutMs: number | null = 8000): Promise<T> {
   if (timeoutMs === null) return parse(await invoke(command, args));
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -208,6 +226,8 @@ export const level0Api = Object.freeze({
     return Object.freeze(engines);
   }),
   createSyntheticScan: (): Promise<ScanSummary> => call("create_synthetic_scan", { request: { fixture_id: "synthetic-target-a" } }, parseScanSummary, null),
+  authorizeRepository: (path:string):Promise<RepositoryAuthorization> => call("authorize_repository_target",{request:{path:text(path,4096)}},parseRepositoryAuthorization,null),
+  createRepositoryScan: (authorizationId:string):Promise<ScanSummary> => call("create_repository_scan",{request:{authorization_id:uuid(authorizationId),confirmed:true}},parseScanSummary,null),
   getScan: (scanId: string): Promise<ScanSummary> => {
     const expected = uuid(scanId);
     return call("get_scan", { request: { scan_id: expected } }, (value) => {

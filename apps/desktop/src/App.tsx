@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { FoundationStatus } from "./foundation";
 import { level0Api } from "./level0-api";
-import type { EngineStatus, FindingView, ReportView, ScanProgress, ScanSummary } from "./level0-api";
+import type { EngineStatus, FindingView, ReportView, ScanProgress, ScanSummary, RepositoryAuthorization } from "./level0-api";
 
 type Locale = "pt-BR" | "en";
 type Theme = "professional" | "neon";
@@ -52,6 +52,9 @@ interface ProductViewProps {
   readonly onCancel?: () => void;
   readonly onSelect?: (scan: ScanSummary) => void;
   readonly onReport?: (kind: ReportView["kind"]) => void;
+  readonly repositoryAuthorization?: RepositoryAuthorization | null;
+  readonly onAuthorizeRepository?: (path:string) => void;
+  readonly onStartRepository?: () => void;
 }
 
 function EmptyState({ title, detail }: { readonly title: string; readonly detail: string }) {
@@ -60,18 +63,19 @@ function EmptyState({ title, detail }: { readonly title: string; readonly detail
 
 export function FoundationView({
   status, failed, engines = [], scans = [], selected = null, progress = null, findings = [], report = null,
-  error = null, busy = false, onStart, onCancel, onSelect, onReport,
+  error = null, busy = false, onStart, onCancel, onSelect, onReport, repositoryAuthorization = null, onAuthorizeRepository, onStartRepository,
 }: ProductViewProps) {
   const [page, setPage] = useState<Page>("overview");
   const [locale, setLocale] = useState<Locale>("pt-BR");
   const [theme, setTheme] = useState<Theme>("professional");
+  const [repositoryPath, setRepositoryPath] = useState("");
   const text = copy[locale];
   const ready = status !== null;
   const scan = selected ?? scans[0] ?? null;
   const coverage = scan === null || scan.coverage.total === 0 ? "—" : `${scan.coverage.completed}/${scan.coverage.total}`;
 
   const content = (() => {
-    if (page === "new-scan") return <section className="action-panel"><h2>{text.synthetic}</h2><p>{text.syntheticNote}</p><button className="primary" disabled={!ready || busy || onStart === undefined} onClick={onStart}>{busy ? "…" : text.synthetic}</button></section>;
+    if (page === "new-scan") return <section className="action-panel"><h2>Repository Security</h2><p>Repository inventory available. Some security checks are unavailable until execution policy requirements are satisfied.</p><label>Repository path<input aria-label="Repository path" value={repositoryPath} onChange={(event)=>setRepositoryPath(event.target.value)} /></label><button className="secondary" disabled={!ready||busy||repositoryPath.length===0||onAuthorizeRepository===undefined} onClick={()=>onAuthorizeRepository?.(repositoryPath)}>Authorize and inspect</button>{repositoryAuthorization && <div className="data-panel"><h3>Authorization preview</h3><code>{repositoryAuthorization.canonical_root}</code><dl><dt>Estimated files</dt><dd>{repositoryAuthorization.estimated_files}</dd><dt>Estimated bytes</dt><dd>{repositoryAuthorization.estimated_bytes}</dd><dt>Exclusions</dt><dd>{repositoryAuthorization.exclusions.join(", ")}</dd><dt>Readiness</dt><dd>{repositoryAuthorization.readiness}</dd></dl><button className="primary" disabled={busy||onStartRepository===undefined} onClick={onStartRepository}>Confirm repository scan</button></div>}<hr/><h2>{text.synthetic}</h2><p>{text.syntheticNote}</p><button className="primary" disabled={!ready || busy || onStart === undefined} onClick={onStart}>{busy ? "…" : text.synthetic}</button></section>;
     if (page === "progress") return progress === null
       ? <EmptyState title={text.noData} detail={text.noDataDetail} />
       : <section className="data-panel"><div className="panel-heading"><div><h2>{progress.phase}</h2><code>{progress.scan_id}</code></div><strong>{progress.percent === null ? "—" : `${progress.percent}%`}</strong></div><progress max="100" value={progress.percent ?? 0} /><dl><dt>{text.status}</dt><dd>{progress.status}</dd><dt>Engine</dt><dd>{progress.current_engine ?? "—"}</dd><dt>Tasks</dt><dd>{progress.completed_tasks}/{progress.total_tasks}</dd><dt>Elapsed</dt><dd>{progress.elapsed_ms} ms</dd></dl>{!terminalStates.has(progress.status) && <button className="secondary" onClick={onCancel} disabled={busy || onCancel === undefined}>{text.cancel}</button>}</section>;
@@ -113,6 +117,7 @@ export default function App() {
   const [report, setReport] = useState<ReportView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [repositoryAuthorization,setRepositoryAuthorization]=useState<RepositoryAuthorization|null>(null);
   const selectedId = useRef<string | null>(null);
 
   useEffect(() => { selectedId.current = selected?.id ?? null; }, [selected?.id]);
@@ -166,6 +171,8 @@ export default function App() {
     try { const result = await level0Api.cancel(scanId); if (selectedId.current === scanId) setProgress(result); }
     catch { setError("Cancellation request failed safely"); } finally { setBusy(false); }
   };
+  const authorizeRepository = async(path:string)=>{setBusy(true);setError(null);try{setRepositoryAuthorization(await level0Api.authorizeRepository(path));}catch{setError("Repository path was refused safely");}finally{setBusy(false);}};
+  const startRepository = async()=>{if(!repositoryAuthorization)return;setBusy(true);setError(null);try{const scan=await level0Api.createRepositoryScan(repositoryAuthorization.authorization_id);setSelected(scan);setScans(current=>[scan,...current]);}catch{setError("Repository scan could not be created safely");}finally{setBusy(false);}};
   const generateReport = async (kind: ReportView["kind"]) => {
     if (selected === null) return;
     const scanId = selected.id;
@@ -173,5 +180,5 @@ export default function App() {
     try { const result = await level0Api.report(scanId, kind); if (selectedId.current === scanId) setReport(result); }
     catch { setError("Report generation failed safely"); } finally { setBusy(false); }
   };
-  return <FoundationView status={status} failed={failed} engines={engines} scans={scans} selected={selected} progress={progress} findings={findings} report={report} error={error} busy={busy} onStart={() => { void start(); }} onCancel={() => { void cancel(); }} onSelect={(scan) => { if (!busy) setSelected(scan); }} onReport={(kind) => { void generateReport(kind); }} />;
+  return <FoundationView status={status} failed={failed} engines={engines} scans={scans} selected={selected} progress={progress} findings={findings} report={report} error={error} busy={busy} repositoryAuthorization={repositoryAuthorization} onAuthorizeRepository={(path)=>{void authorizeRepository(path);}} onStartRepository={()=>{void startRepository();}} onStart={() => { void start(); }} onCancel={() => { void cancel(); }} onSelect={(scan) => { if (!busy) setSelected(scan); }} onReport={(kind) => { void generateReport(kind); }} />;
 }

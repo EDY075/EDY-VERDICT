@@ -44,6 +44,7 @@ footer strong { color: #d7dee7; }
 .action-panel, .data-panel, .table-wrap { margin-top: 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); padding: 24px; }
 .action-panel h2, .data-panel h2, .card-list h2, .engine-grid h2 { margin: 0 0 8px; font-size: 1rem; }
 .action-panel p, .data-panel p, .card-list p, .engine-grid p { color: var(--muted); font-size: .82rem; line-height: 1.55; }
+.action-panel input { width: min(100%, 56rem); display: block; margin-top: .5rem; padding: .75rem .9rem; color: var(--text); background: var(--panel-strong); border: 1px solid var(--border); border-radius: .55rem; }
 .primary, .secondary { border-radius: 8px; padding: 9px 14px; cursor: pointer; }
 .primary { border: 1px solid var(--accent); background: var(--accent); color: #07110f; font-weight: 700; }
 .secondary { border: 1px solid var(--border); background: var(--panel-2); color: #e9eef5; }
