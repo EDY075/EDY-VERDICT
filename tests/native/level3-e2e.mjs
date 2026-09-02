@@ -24,6 +24,7 @@ async function flow(viewport){
   await until(async()=>(await body()).includes('Installed Application Security'),'page');await screen(viewport,'start');
   await click('Preview inventory');await until(async()=>(await body()).includes('applications in preview'),'preview');await screen(viewport,'preview');
   await click('Authorize this snapshot');await until(async()=>(await body()).includes('Snapshot authorized'),'authorization');
+  await click('Authorize this snapshot');await until(async()=>(await body()).includes('Installed application authorization failed safely'),'safe authorization error');await screen(viewport,'error');
   const old=(await ipc('list_scans',{offset:0,limit:50})).map(scan=>scan.id);await click('Confirm installed-app analysis');
   const scan=await until(async()=>(await ipc('list_scans',{offset:0,limit:50})).find(item=>!old.includes(item.id)),'scan');
   const inventory=await until(async()=>{const value=await ipc('get_installed_application_inventory',{scan_id:scan.id});return value.state==='completed'?value:false},'completed installed-app scan');assert.equal(inventory.state,'completed');

@@ -64,9 +64,10 @@ version does not prove an update is available on this host.
 | Reports JSON/HTML determinism and escaping | PASS |
 | IPC + Isolation exact allow/deny contracts | PASS |
 | Frontend typecheck/lint/unit/build | PASS using already-present binaries |
-| Native Tauri/WebView2/React/IPC/SQLite/report E2E | PASS, three resolutions / 19 semantic screens |
+| Native Tauri/WebView2/React/IPC/SQLite/report E2E | PASS, three resolutions / 22 semantic screens |
 | Native cancellation | PASS, three resolutions; persisted `cancelled`, zero findings, no verdict |
 | Native stale/unavailable provider state | PASS; explicit incomplete coverage |
+| Native safe error state | PASS; rejected reuse of single-use authorization |
 | Rust workspace tests / Clippy warnings-as-errors / fmt | PASS |
 | Cargo deny licenses/sources/bans | PASS |
 | Cargo deny advisories | expected FAIL: five pre-existing `unic-*` advisories via pinned Tauri |
