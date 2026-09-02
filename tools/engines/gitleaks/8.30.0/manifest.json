@@ -1,0 +1,104 @@
+{
+  "schema_version": 2,
+  "identity": {
+    "id": "gitleaks",
+    "version": "8.30.0",
+    "platform": "windows",
+    "architecture": "x86_64"
+  },
+  "source": {
+    "official_source": "https://github.com/gitleaks/gitleaks",
+    "release_url": "https://github.com/gitleaks/gitleaks/releases/tag/v8.30.0",
+    "asset_url": "https://github.com/gitleaks/gitleaks/releases/download/v8.30.0/gitleaks_8.30.0_windows_x64.zip",
+    "asset_name": "gitleaks_8.30.0_windows_x64.zip",
+    "asset_size": 8519574,
+    "archive_sha256": "54fe94f644b832dd08e8c3a5915efb3bfa862386d59fb27ca0792cb687a83573"
+  },
+  "artifact": {
+    "format": "zip",
+    "entrypoint": "gitleaks.exe",
+    "entrypoint_size": 22689792,
+    "executable_sha256": "9d08e3f5cfb35a98f230b97bcda24f8d3fc66363c91868ffc98dac0afebdcb72",
+    "auxiliary_hashes": [
+      {
+        "relative_path": "LICENSE",
+        "size": 1069,
+        "sha256": "e3884b252b3bfc045e55be43a34d1e80da070bc6f804ac95bf4660e97d62ebc6"
+      },
+      {
+        "relative_path": "README.md",
+        "size": 29998,
+        "sha256": "022fd4d9fb53a8e7eb6b6e49875052e571f784bafab387deb484e28f8a1ea38b"
+      }
+    ],
+    "closed_set": true
+  },
+  "provenance": {
+    "evidence": [
+      {
+        "type": "published_checksum",
+        "status": "verified",
+        "source": "https://github.com/gitleaks/gitleaks/releases/download/v8.30.0/gitleaks_8.30.0_checksums.txt",
+        "subject": "gitleaks_8.30.0_windows_x64.zip",
+        "digest": {"algorithm": "sha256", "value": "54fe94f644b832dd08e8c3a5915efb3bfa862386d59fb27ca0792cb687a83573"},
+        "verifier": "GitHub-release-digest+published-checksums+Get-FileHash",
+        "verified_at": "2026-09-02T03:40:56Z"
+      },
+      {
+        "type": "source_commit",
+        "status": "verified",
+        "source": "https://github.com/gitleaks/gitleaks/commit/6eaad039603a4de39fddd1cf5f727391efe9974e",
+        "subject": "6eaad039603a4de39fddd1cf5f727391efe9974e",
+        "digest": {"algorithm": "git_sha1", "value": "6eaad039603a4de39fddd1cf5f727391efe9974e"},
+        "verifier": "GitHub-API-annotated-tag-resolution",
+        "verified_at": "2026-09-02T03:40:56Z"
+      },
+      {
+        "type": "signed_tag",
+        "status": "unavailable",
+        "source": "https://github.com/gitleaks/gitleaks/releases/tag/v8.30.0",
+        "subject": "v8.30.0"
+      }
+    ]
+  },
+  "license": {
+    "spdx": "MIT",
+    "source": "https://github.com/gitleaks/gitleaks/blob/master/LICENSE",
+    "redistribution_policy": "permitted",
+    "notice_required": true
+  },
+  "extraction": {
+    "max_archive_bytes": 16777216,
+    "max_expanded_bytes": 67108864,
+    "max_entries": 16,
+    "allowed_formats": ["zip"],
+    "reject_absolute_paths": true,
+    "reject_parent_traversal": true,
+    "reject_ads": true,
+    "reject_links": true,
+    "reject_case_collisions": true,
+    "reject_duplicate_paths": true
+  },
+  "process": {
+    "timeout_ms": 10000,
+    "stdout_limit_bytes": 1048576,
+    "stderr_limit_bytes": 1048576,
+    "stdin_limit_bytes": 0,
+    "kill_process_tree": true,
+    "shell": false,
+    "network_policy": "deny"
+  },
+  "version_probe": {
+    "args": ["version"],
+    "expected_exit_codes": [0],
+    "expected_output": "8.30.0",
+    "output_stream": "stdout",
+    "network": false,
+    "timeout_ms": 5000
+  },
+  "review": {
+    "reviewed_at": "2026-09-02T03:40:56Z",
+    "reviewed_by_role": "jr_orchestrator",
+    "policy_version": "engine-policy-v2"
+  }
+}

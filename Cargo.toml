@@ -1,0 +1,29 @@
+[workspace]
+resolver = "3"
+members = ["crates/edy-core", "crates/edy-engine-manager", "crates/edy-providers", "crates/edy-storage", "crates/edy-reporting", "crates/edy-cli", "apps/desktop/src-tauri"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+publish = false
+
+[workspace.dependencies]
+edy-core = { version = "=0.1.0", path = "crates/edy-core" }
+edy-engine-manager = { version = "=0.1.0", path = "crates/edy-engine-manager" }
+edy-providers = { version = "=0.1.0", path = "crates/edy-providers" }
+edy-storage = { version = "=0.1.0", path = "crates/edy-storage" }
+edy-reporting = { version = "=0.1.0", path = "crates/edy-reporting" }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.149"
+rusqlite = { version = "=0.40.2", features = ["bundled", "backup", "limits"] }
+windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Credentials", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_System_Pipes", "Win32_Storage_FileSystem", "Win32_System_IO", "Win32_System_Memory"] }
+sha2 = "=0.10.9"
+zeroize = "=1.8.2"
+tauri = { version = "=2.11.5", features = ["isolation"] }
+tauri-build = { version = "=2.6.3", features = ["isolation"] }
+
+[profile.release]
+strip = true
+lto = "thin"
+codegen-units = 1

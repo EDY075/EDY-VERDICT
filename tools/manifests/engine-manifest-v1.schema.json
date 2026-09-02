@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:edy-verdict:engine-manifest:v1",
+  "title": "EDY VERDICT engine manifest — superseded V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version","id","version","platform","source_url","asset_url","archive_sha256","executable_sha256","entrypoint","license","provenance","max_archive_bytes","max_expanded_bytes","timeout_ms","stdout_limit","stderr_limit"],
+  "properties": {
+    "schema_version": {"const":1},
+    "id": {"type":"string","minLength":1,"maxLength":64,"pattern":"^[a-zA-Z0-9.-]+$"},
+    "version": {"type":"string","minLength":1,"maxLength":64,"pattern":"^[a-zA-Z0-9.-]+$"},
+    "platform": {"const":"windows-x64"},
+    "source_url": {"type":"string","pattern":"^https://github\\.com/","maxLength":2048},
+    "asset_url": {"type":"string","pattern":"^https://github\\.com/","maxLength":2048},
+    "archive_sha256": {"type":"string","pattern":"^[a-fA-F0-9]{64}$"},
+    "executable_sha256": {"type":"string","pattern":"^[a-fA-F0-9]{64}$"},
+    "entrypoint": {"type":"string","minLength":1},
+    "license": {"type":"string","minLength":1},
+    "provenance": {"enum":["verified_attestation","published_checksum_only"]},
+    "max_archive_bytes": {"type":"integer","minimum":1,"maximum":536870912},
+    "max_expanded_bytes": {"type":"integer","minimum":1,"maximum":2147483648},
+    "timeout_ms": {"type":"integer","minimum":1,"maximum":600000},
+    "stdout_limit": {"type":"integer","minimum":1,"maximum":16777216},
+    "stderr_limit": {"type":"integer","minimum":1,"maximum":4194304}
+  },
+  "$comment": "SUPERSEDED. Retained only for historical documentation and explicit migration tests."
+}

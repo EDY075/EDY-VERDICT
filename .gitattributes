@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.png binary
+*.ico binary
+docs/legacy/codex-pack-v0.1/** -text
+THIRD_PARTY_NOTICES.md whitespace=-trailing-space,-space-before-tab
+tools/packaging/nsis/3.12/COPYING whitespace=-trailing-space,-space-before-tab
+tools/packaging/nsis/3.12/LICENSES/LZMA-CPL-1.0-with-NSIS-exception.txt whitespace=-trailing-space,-space-before-tab

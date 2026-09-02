@@ -1,0 +1,12 @@
+[package]
+name = "edy-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+[dependencies]
+edy-core.workspace = true
+edy-engine-manager.workspace = true
+edy-providers.workspace = true
+edy-storage.workspace = true
+edy-reporting.workspace = true

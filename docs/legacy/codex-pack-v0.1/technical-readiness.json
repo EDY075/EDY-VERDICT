@@ -1,0 +1,40 @@
+{
+  "project": "EDY VERDICT",
+  "stage": "LEVEL -1",
+  "snapshot_date": "2026-09-01",
+  "selected_stack": {
+    "core": ".NET 10 LTS / C#",
+    "ui": "Avalonia 12.1.x OSS Core (pin exact patch during Level -1)",
+    "persistence": "SQLite + EF Core",
+    "local_engines": [
+      "YARA-X",
+      "Microsoft Defender when available",
+      "Gitleaks CLI",
+      "Trivy",
+      "OSV-Scanner"
+    ],
+    "intel_core_no_key": [
+      "OSV",
+      "CISA KEV",
+      "FIRST EPSS"
+    ],
+    "intel_key_recommended": [
+      "NVD"
+    ],
+    "intel_optional_community": [
+      "URLhaus",
+      "MalwareBazaar"
+    ],
+    "intel_restricted_optional": [
+      "VirusTotal Public API"
+    ]
+  },
+  "secrets_placeholders": [
+    "NVD_API_KEY",
+    "ABUSECH_AUTH_KEY",
+    "VIRUSTOTAL_API_KEY"
+  ],
+  "mandatory_monthly_cost_mvp": 0,
+  "public_release_risk": "Windows SmartScreen/signing path must be addressed; SignPath Foundation should be evaluated for qualifying OSS.",
+  "next_prompt": "Prompt D in 13_LEVEL_MINUS_1_PROMPT_ROUND.md"
+}

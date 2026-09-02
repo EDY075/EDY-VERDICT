@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "Read-only infrastructure status from the local main webview only.",
+  "local": true,
+  "windows": ["main"],
+  "webviews": ["main"],
+  "permissions": ["allow-foundation-status"]
+}

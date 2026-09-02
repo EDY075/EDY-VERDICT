@@ -1,0 +1,96 @@
+{
+  "schema_version": 2,
+  "identity": {
+    "id": "yara-x",
+    "version": "1.20.0",
+    "platform": "windows",
+    "architecture": "x86_64"
+  },
+  "source": {
+    "official_source": "https://github.com/VirusTotal/yara-x",
+    "release_url": "https://github.com/VirusTotal/yara-x/releases/tag/v1.20.0",
+    "asset_url": "https://github.com/VirusTotal/yara-x/releases/download/v1.20.0/yara-x-v1.20.0-x86_64-pc-windows-msvc.zip",
+    "asset_name": "yara-x-v1.20.0-x86_64-pc-windows-msvc.zip",
+    "asset_size": 8640562,
+    "archive_sha256": "b1e2840bac593aea353d2b2b341f5a862c9d61c0c406d9abbbad9e1fa35163a1"
+  },
+  "artifact": {
+    "format": "zip",
+    "entrypoint": "yr.exe",
+    "entrypoint_size": 25210368,
+    "executable_sha256": "d3e648651f3eaa5e833faeb394fc7dc7dfb583a31dd5fc572ab6cae7ac41f3fd",
+    "auxiliary_hashes": [],
+    "closed_set": true
+  },
+  "provenance": {
+    "evidence": [
+      {
+        "type": "published_checksum",
+        "status": "verified",
+        "source": "https://api.github.com/repos/VirusTotal/yara-x/releases/tags/v1.20.0",
+        "subject": "yara-x-v1.20.0-x86_64-pc-windows-msvc.zip",
+        "digest": {"algorithm": "sha256", "value": "b1e2840bac593aea353d2b2b341f5a862c9d61c0c406d9abbbad9e1fa35163a1"},
+        "verifier": "JR_ORCHESTRATOR+Get-FileHash",
+        "verified_at": "2026-09-02T03:32:27Z"
+      },
+      {
+        "type": "source_commit",
+        "status": "verified",
+        "source": "https://github.com/VirusTotal/yara-x/commit/60ad06971467029e77967e59d580cbbe85a1474d",
+        "subject": "60ad06971467029e77967e59d580cbbe85a1474d",
+        "digest": {"algorithm": "git_sha1", "value": "60ad06971467029e77967e59d580cbbe85a1474d"},
+        "verifier": "GitHub-API-ref-resolution",
+        "verified_at": "2026-09-02T03:32:27Z"
+      },
+      {
+        "type": "signed_commit",
+        "status": "verified",
+        "source": "https://github.com/VirusTotal/yara-x/commit/60ad06971467029e77967e59d580cbbe85a1474d",
+        "subject": "60ad06971467029e77967e59d580cbbe85a1474d",
+        "digest": {"algorithm": "git_sha1", "value": "60ad06971467029e77967e59d580cbbe85a1474d"},
+        "verifier": "GitHub-commit-verification-valid",
+        "verified_at": "2026-09-02T03:32:27Z"
+      }
+    ]
+  },
+  "license": {
+    "spdx": "BSD-3-Clause",
+    "source": "https://github.com/VirusTotal/yara-x/blob/main/LICENSE",
+    "redistribution_policy": "permitted",
+    "notice_required": true
+  },
+  "extraction": {
+    "max_archive_bytes": 16777216,
+    "max_expanded_bytes": 134217728,
+    "max_entries": 32,
+    "allowed_formats": ["zip"],
+    "reject_absolute_paths": true,
+    "reject_parent_traversal": true,
+    "reject_ads": true,
+    "reject_links": true,
+    "reject_case_collisions": true,
+    "reject_duplicate_paths": true
+  },
+  "process": {
+    "timeout_ms": 10000,
+    "stdout_limit_bytes": 1048576,
+    "stderr_limit_bytes": 1048576,
+    "stdin_limit_bytes": 0,
+    "kill_process_tree": true,
+    "shell": false,
+    "network_policy": "deny"
+  },
+  "version_probe": {
+    "args": ["--version"],
+    "expected_exit_codes": [0],
+    "expected_output": "1.20.0",
+    "output_stream": "stdout",
+    "network": false,
+    "timeout_ms": 5000
+  },
+  "review": {
+    "reviewed_at": "2026-09-02T03:32:27Z",
+    "reviewed_by_role": "jr_orchestrator",
+    "policy_version": "engine-policy-v2"
+  }
+}

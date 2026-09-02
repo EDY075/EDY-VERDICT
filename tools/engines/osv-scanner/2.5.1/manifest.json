@@ -1,0 +1,96 @@
+{
+  "schema_version": 2,
+  "identity": {
+    "id": "osv-scanner",
+    "version": "2.5.1",
+    "platform": "windows",
+    "architecture": "x86_64"
+  },
+  "source": {
+    "official_source": "https://github.com/google/osv-scanner",
+    "release_url": "https://github.com/google/osv-scanner/releases/tag/v2.5.1",
+    "asset_url": "https://github.com/google/osv-scanner/releases/download/v2.5.1/osv-scanner_windows_amd64.exe",
+    "asset_name": "osv-scanner_windows_amd64.exe",
+    "asset_size": 58970112,
+    "archive_sha256": "25e42f5ef6711fd8c0fb45390972205891dd44c6bd02ac93f0f63e8e98d9bfb6"
+  },
+  "artifact": {
+    "format": "raw_executable",
+    "entrypoint": "osv-scanner.exe",
+    "entrypoint_size": 58970112,
+    "executable_sha256": "25e42f5ef6711fd8c0fb45390972205891dd44c6bd02ac93f0f63e8e98d9bfb6",
+    "auxiliary_hashes": [],
+    "closed_set": true
+  },
+  "provenance": {
+    "evidence": [
+      {
+        "type": "published_checksum",
+        "status": "verified",
+        "source": "https://github.com/google/osv-scanner/releases/download/v2.5.1/osv-scanner_SHA256SUMS",
+        "subject": "osv-scanner_windows_amd64.exe",
+        "digest": {"algorithm": "sha256", "value": "25e42f5ef6711fd8c0fb45390972205891dd44c6bd02ac93f0f63e8e98d9bfb6"},
+        "verifier": "GitHub-release-digest+published-checksums+Get-FileHash",
+        "verified_at": "2026-09-02T03:49:05Z"
+      },
+      {
+        "type": "source_commit",
+        "status": "verified",
+        "source": "https://github.com/google/osv-scanner/commit/c84fa4568f2526d0333e9a914ea8a0a5f74ad68b",
+        "subject": "c84fa4568f2526d0333e9a914ea8a0a5f74ad68b",
+        "digest": {"algorithm": "git_sha1", "value": "c84fa4568f2526d0333e9a914ea8a0a5f74ad68b"},
+        "verifier": "GitHub-API-tag-resolution",
+        "verified_at": "2026-09-02T03:49:05Z"
+      },
+      {
+        "type": "in_toto",
+        "status": "verified",
+        "source": "https://github.com/google/osv-scanner/releases/download/v2.5.1/multiple.intoto.jsonl",
+        "subject": "osv-scanner_windows_amd64.exe",
+        "digest": {"algorithm": "sha256", "value": "25e42f5ef6711fd8c0fb45390972205891dd44c6bd02ac93f0f63e8e98d9bfb6"},
+        "verifier": "gh-attestation-verify-v0.2+exact-SLSA-generator-identity",
+        "verified_at": "2026-09-02T03:49:05Z"
+      }
+    ]
+  },
+  "license": {
+    "spdx": "Apache-2.0",
+    "source": "https://github.com/google/osv-scanner/blob/main/LICENSE",
+    "redistribution_policy": "permitted",
+    "notice_required": true
+  },
+  "extraction": {
+    "max_archive_bytes": 67108864,
+    "max_expanded_bytes": 67108864,
+    "max_entries": 1,
+    "allowed_formats": ["raw_executable"],
+    "reject_absolute_paths": true,
+    "reject_parent_traversal": true,
+    "reject_ads": true,
+    "reject_links": true,
+    "reject_case_collisions": true,
+    "reject_duplicate_paths": true
+  },
+  "process": {
+    "timeout_ms": 10000,
+    "stdout_limit_bytes": 1048576,
+    "stderr_limit_bytes": 1048576,
+    "stdin_limit_bytes": 0,
+    "kill_process_tree": true,
+    "shell": false,
+    "network_policy": "deny"
+  },
+  "version_probe": {
+    "args": ["--version"],
+    "expected_exit_codes": [0],
+    "expected_output": "2.5.1",
+    "output_stream": "stdout",
+    "network": false,
+    "timeout_ms": 5000
+  },
+  "review": {
+    "reviewed_at": "2026-09-02T03:49:05Z",
+    "reviewed_by_role": "jr_orchestrator",
+    "policy_version": "engine-policy-v2"
+  }
+}

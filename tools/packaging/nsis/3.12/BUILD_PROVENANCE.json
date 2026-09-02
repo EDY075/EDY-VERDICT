@@ -1,0 +1,162 @@
+{
+  "schema_version": "1.0",
+  "tool": "NSIS",
+  "version": "3.12",
+  "architecture": "x86",
+  "classification": "BUILD_TOOLING",
+  "source_repository": "https://github.com/NSIS-Dev/nsis.git",
+  "source_tag": "v312",
+  "source_commit": "e3f60402bcdf7be822d159b531c6e38ddf32de12",
+  "source_tree": {
+    "git_tree_sha1": "74ef281715d3fe36eda7ae33d181191642883da5",
+    "canonical_sha256": "58087810d4c84bc0cfb92b58a3e431ccebc8f8c52649e1ca0ec26b00aad25693",
+    "file_count": 835
+  },
+  "source_manifest_sha256": "91fbe1563b39e11f72a70451188325dcb08c01c5cf2809a9252e8324dc08cc54",
+  "security_fix": {
+    "issue": "#1326",
+    "commit": "8e6f02205d5f22da6c7855dbfe59b2af667330ca",
+    "present": true
+  },
+  "build_toolchain": {
+    "compiler": "MSVC 19.44.35228.0",
+    "toolset": "14.44.35207",
+    "windows_sdk": "10.0.26100.0",
+    "target_arch": "x86",
+    "unicode": true,
+    "debug": false
+  },
+  "scons": {
+    "version": "4.11.1",
+    "wheel_sha256": "454cef364348053422696e3d2ecb4fa593c96a624f955842eaaea64f95c8d11d",
+    "origin": "PyPI official",
+    "installation": "isolated build-only venvs; not redistributed"
+  },
+  "zlib": {
+    "version": "1.3.2",
+    "source_sha256": "e8bf55f3017aa181690990cb58a994e77885da140609fc8f94abe9b65d2cae28",
+    "gpg": "VALIDSIG",
+    "signer_fingerprint": "5ED46A6721D365587791E2AA783FCD8E58BCAFBA",
+    "crt": "static /MT"
+  },
+  "source_date_epoch": 1776630749,
+  "build_method": "two independent clean non-incremental single-pass builds",
+  "reproducibility": {
+    "status": "REPRODUCIBLE",
+    "build_a_files": 276,
+    "build_b_files": 276,
+    "equal_files": 276,
+    "hash_sets": "stored per payload file in manifest.json"
+  },
+  "file_count": 276,
+  "entrypoint": "Bin/makensis.exe",
+  "entrypoint_sha256": "28c87961d818117bfa4d8becfea2f2ed6aad8d325d62e8ad0ebd9d4dcd9c9f76",
+  "auxiliary_hashes": [
+    {
+      "path": "Bin/zlib1.dll",
+      "sha256": "bce51df2cc355ae24ed907aaac47ad58b39069251502166443b43820e2c354ee"
+    },
+    {
+      "path": "Plugins/x86-ansi/nsDialogs.dll",
+      "sha256": "d75bd7e81e9bd6c3c733ca71666a620e1845bfc9fd5a832b4d43e628960bb8cd"
+    },
+    {
+      "path": "Plugins/x86-ansi/System.dll",
+      "sha256": "8e67c394ae1816722b8c7471aa13fe5f64726905cace3f4327acf631a9a5b390"
+    },
+    {
+      "path": "Plugins/x86-unicode/nsDialogs.dll",
+      "sha256": "4fc959babb7510d072f1d6201300aabf67882991ec433d1eac369e550ae42cfe"
+    },
+    {
+      "path": "Plugins/x86-unicode/System.dll",
+      "sha256": "528398bd7a6c73dc25dcf43b8c119c95275335d2ffe0a44ff19109621bb95aee"
+    },
+    {
+      "path": "Stubs/lzma_solid-x86-ansi",
+      "sha256": "2ff025ecb55f8b73a5f13227a1c3861f80b65a74f95988cbf5b36800cc2c377d"
+    },
+    {
+      "path": "Stubs/lzma_solid-x86-unicode",
+      "sha256": "d582a5460edc10e974d3cd97fe66a86836105bc082f719c91fd192418e9416e6"
+    },
+    {
+      "path": "Stubs/lzma-x86-ansi",
+      "sha256": "64e91d735bf5387a6b31a4bf780eaa43c5b74f2506da7f30fe1d8603cb84e448"
+    },
+    {
+      "path": "Stubs/lzma-x86-unicode",
+      "sha256": "6b43e7042c7ca026dc14f3a1646ec7d4fe1ab319000fcc3958167d1703624cfd"
+    },
+    {
+      "path": "Stubs/uninst",
+      "sha256": "ba82bb5d90262417a18cec6631bbd8b880020eb159b45f264a9145196dfb8f3a"
+    },
+    {
+      "path": "Stubs/zlib_solid-x86-ansi",
+      "sha256": "85b469a905431619ad3b8a0688cd972e8b5c81bfa63856899ef344c5fca242ff"
+    },
+    {
+      "path": "Stubs/zlib_solid-x86-unicode",
+      "sha256": "330012a1fd0825a10b89fa3a9f28a6ed183cc4d0b8f2c0b0840ecc10b10f1260"
+    },
+    {
+      "path": "Stubs/zlib-x86-ansi",
+      "sha256": "f45bf634429ddd61df5c3b12158b1d4e7eeb95a1ac227db9e5ef603e97ba8d8d"
+    },
+    {
+      "path": "Stubs/zlib-x86-unicode",
+      "sha256": "f9de3b03177f1faf6473ccd6a39d4c7666703aa0f6b31980527f89818994dbfc"
+    }
+  ],
+  "licenses": [
+    {
+      "component": "NSIS core, nsDialogs, System",
+      "license": "zlib/libpng",
+      "file": "COPYING"
+    },
+    {
+      "component": "LZMA module",
+      "license": "CPL-1.0 with NSIS special exception",
+      "file": "LICENSES/LZMA-CPL-1.0-with-NSIS-exception.txt"
+    },
+    {
+      "component": "zlib 1.3.2",
+      "license": "Zlib",
+      "file": "LICENSES/zlib-LICENSE.txt"
+    }
+  ],
+  "static_analysis": {
+    "result": "PASS",
+    "pe_count": 21,
+    "x86": 21,
+    "nx_dep": 21,
+    "aslr": 13,
+    "aslr_disabled_upstream_fixed_stubs": 8,
+    "network_imports": 0,
+    "unexpected_runtime_dependencies": 0,
+    "local_path_leaks": 0
+  },
+  "makensis_version_probe": {
+    "result": "PASS",
+    "version": "v3.12",
+    "exit_code": 0
+  },
+  "authenticode": {
+    "internal_build_tool": "NOT_REQUIRED",
+    "public_edy_verdict_release": "FUTURE_RELEASE_GATE"
+  },
+  "known_limitations": [
+    "8 NSIS stubs: ASLR disabled by upstream /FIXED (KNOWN_UPSTREAM_RESIDUAL_RISK)",
+    "Project-local binaries are unsigned; trust requires closed-set SHA-256 verification before use",
+    "The expected project-local runtime dependency is Bin/zlib1.dll",
+    "No NSIS .nsi script or installer has been created or executed"
+  ],
+  "bzip2": "NOT_INCLUDED",
+  "third_party_nsis_plugins": 0,
+  "provenance_status": "APPROVED_REPRODUCIBLE_SOURCE_BUILD",
+  "license_gate": "PASS",
+  "tauri": "WAIT_FOR_OFFICIAL_RELEASE",
+  "level_minus_1c": "FAIL_WAITING_UPSTREAM",
+  "reviewed_at": "2026-09-02T02:21:29.1471197Z"
+}

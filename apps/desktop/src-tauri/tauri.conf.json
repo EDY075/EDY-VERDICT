@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "EDY VERDICT Foundation",
+  "version": "0.1.0",
+  "identifier": "dev.edyverdict.foundation",
+  "build": {
+    "beforeBuildCommand": "pnpm build",
+    "beforeDevCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [{
+      "label": "main",
+      "title": "EDY VERDICT — Foundation Build",
+      "url": "index.html",
+      "create": false,
+      "width": 760,
+      "height": 520,
+      "minWidth": 360,
+      "minHeight": 400,
+      "devtools": false,
+      "dragDropEnabled": false
+    }],
+    "security": {
+      "freezePrototype": true,
+      "dangerousDisableAssetCspModification": false,
+      "assetProtocol": { "enable": false, "scope": [] },
+      "capabilities": ["main"],
+      "pattern": { "use": "isolation", "options": { "dir": "../isolation" } },
+      "csp": {
+        "default-src": "'none'",
+        "script-src": "'self'",
+        "style-src": "'self'",
+        "img-src": "'self'",
+        "font-src": "'self'",
+        "connect-src": "ipc: http://ipc.localhost",
+        "object-src": "'none'",
+        "media-src": "'none'",
+        "frame-ancestors": "'none'",
+        "base-uri": "'none'",
+        "form-action": "'none'",
+        "worker-src": "'none'"
+      }
+    }
+  },
+  "bundle": { "active": false, "icon": [".generated/foundation.ico"] },
+  "plugins": {}
+}

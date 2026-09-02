@@ -1,0 +1,13 @@
+packages:
+  - apps/desktop
+storeDir: .local/pnpm/store
+cacheDir: .local/pnpm/cache
+ignoreScripts: true
+ignorePnpmfile: true
+pnpmfile: []
+verifyDepsBeforeRun: error
+verifyStoreIntegrity: true
+pmOnFail: error
+runtimeOnFail: error
+engineStrict: true
+saveExact: true

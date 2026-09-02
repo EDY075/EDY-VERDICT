@@ -1,0 +1,2560 @@
+{
+  "schema_version": "1.0",
+  "tool": "NSIS",
+  "version": "3.12",
+  "architecture": "x86",
+  "source_repository": "https://github.com/NSIS-Dev/nsis.git",
+  "source_tag": "v312",
+  "source_commit": "e3f60402bcdf7be822d159b531c6e38ddf32de12",
+  "source_tree": "58087810d4c84bc0cfb92b58a3e431ccebc8f8c52649e1ca0ec26b00aad25693",
+  "source_manifest_sha256": "91fbe1563b39e11f72a70451188325dcb08c01c5cf2809a9252e8324dc08cc54",
+  "security_fix": "#1326 present",
+  "build_toolchain": "MSVC 19.44.35228.0 / toolset 14.44.35207 / Windows SDK 10.0.26100.0",
+  "scons_version": "4.11.1",
+  "zlib_version": "1.3.2",
+  "source_date_epoch": 1776630749,
+  "build_method": "clean non-incremental independent A/B source builds",
+  "reproducibility": "REPRODUCIBLE 276/276",
+  "file_count": 276,
+  "bundle_file_count_including_manifest": 283,
+  "entrypoint": "Bin/makensis.exe",
+  "entrypoint_sha256": "28c87961d818117bfa4d8becfea2f2ed6aad8d325d62e8ad0ebd9d4dcd9c9f76",
+  "auxiliary_hashes": {
+    "zlib1_dll": "bce51df2cc355ae24ed907aaac47ad58b39069251502166443b43820e2c354ee",
+    "default_lzma_stub": "6b43e7042c7ca026dc14f3a1646ec7d4fe1ab319000fcc3958167d1703624cfd",
+    "default_zlib_stub": "f9de3b03177f1faf6473ccd6a39d4c7666703aa0f6b31980527f89818994dbfc",
+    "nsdialogs_unicode": "4fc959babb7510d072f1d6201300aabf67882991ec433d1eac369e550ae42cfe",
+    "system_unicode": "528398bd7a6c73dc25dcf43b8c119c95275335d2ffe0a44ff19109621bb95aee"
+  },
+  "licenses": [
+    "COPYING",
+    "LICENSES/README.md",
+    "LICENSES/zlib-LICENSE.txt",
+    "LICENSES/LZMA-CPL-1.0-with-NSIS-exception.txt"
+  ],
+  "provenance_status": "APPROVED",
+  "closed_set_policy": "manifest.json plus exactly the files listed below; no extras; no auto-repair",
+  "reviewed_at": "2026-09-02T02:41:11.4893014Z",
+  "files": [
+    {
+      "path": "Bin/makensis.exe",
+      "size": 662016,
+      "sha256": "28c87961d818117bfa4d8becfea2f2ed6aad8d325d62e8ad0ebd9d4dcd9c9f76",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "28c87961d818117bfa4d8becfea2f2ed6aad8d325d62e8ad0ebd9d4dcd9c9f76",
+      "build_b_sha256": "28c87961d818117bfa4d8becfea2f2ed6aad8d325d62e8ad0ebd9d4dcd9c9f76",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Bin/zlib1.dll",
+      "size": 190976,
+      "sha256": "bce51df2cc355ae24ed907aaac47ad58b39069251502166443b43820e2c354ee",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "bce51df2cc355ae24ed907aaac47ad58b39069251502166443b43820e2c354ee",
+      "build_b_sha256": "bce51df2cc355ae24ed907aaac47ad58b39069251502166443b43820e2c354ee",
+      "build_a_b_match": true
+    },
+    {
+      "path": "BUILD_PROVENANCE.json",
+      "size": 5488,
+      "sha256": "7a2ac70711dacdfc65c7e47fd217b065fe87e9c79b90432c9ed49fcb161761ee",
+      "classification": "PROVENANCE"
+    },
+    {
+      "path": "Contrib/Graphics/Checks/big.bmp",
+      "size": 886,
+      "sha256": "c22b2ada7263ec33431ff251f1484c7a554c36f34ec30beb25e34861f9e1dfc9",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "c22b2ada7263ec33431ff251f1484c7a554c36f34ec30beb25e34861f9e1dfc9",
+      "build_b_sha256": "c22b2ada7263ec33431ff251f1484c7a554c36f34ec30beb25e34861f9e1dfc9",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Checks/classic-cross.bmp",
+      "size": 886,
+      "sha256": "438a514508b56db7c188d9826662fe39639f470e877ef2f659edae7139e4e32c",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "438a514508b56db7c188d9826662fe39639f470e877ef2f659edae7139e4e32c",
+      "build_b_sha256": "438a514508b56db7c188d9826662fe39639f470e877ef2f659edae7139e4e32c",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Checks/classic.bmp",
+      "size": 886,
+      "sha256": "c0a5e0e33a8c8af0ddc313126a7767632890373444f58a4f20c7fee75eeca65c",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "c0a5e0e33a8c8af0ddc313126a7767632890373444f58a4f20c7fee75eeca65c",
+      "build_b_sha256": "c0a5e0e33a8c8af0ddc313126a7767632890373444f58a4f20c7fee75eeca65c",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Checks/colorful.bmp",
+      "size": 2512,
+      "sha256": "4318c3d4f25b1fcfabe3a1b44d56957da06224f64534944aedd4b7d1c55a8a84",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "4318c3d4f25b1fcfabe3a1b44d56957da06224f64534944aedd4b7d1c55a8a84",
+      "build_b_sha256": "4318c3d4f25b1fcfabe3a1b44d56957da06224f64534944aedd4b7d1c55a8a84",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Checks/grey-cross.bmp",
+      "size": 886,
+      "sha256": "ca1c42c656e4f687ed4ee54321d8f23ff4e80242b104388c1d275ad921e0e011",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "ca1c42c656e4f687ed4ee54321d8f23ff4e80242b104388c1d275ad921e0e011",
+      "build_b_sha256": "ca1c42c656e4f687ed4ee54321d8f23ff4e80242b104388c1d275ad921e0e011",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Checks/grey.bmp",
+      "size": 886,
+      "sha256": "1d5ffd9b69b50071b44603fa517230456af743b4a8abe117ceeb64104769c2ac",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "1d5ffd9b69b50071b44603fa517230456af743b4a8abe117ceeb64104769c2ac",
+      "build_b_sha256": "1d5ffd9b69b50071b44603fa517230456af743b4a8abe117ceeb64104769c2ac",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Checks/modern.bmp",
+      "size": 1652,
+      "sha256": "5ac685bb79e6fe75e6e54b9fd4e9524d8da6bc8acb269f50c42bf372af671570",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "5ac685bb79e6fe75e6e54b9fd4e9524d8da6bc8acb269f50c42bf372af671570",
+      "build_b_sha256": "5ac685bb79e6fe75e6e54b9fd4e9524d8da6bc8acb269f50c42bf372af671570",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Checks/red-round.bmp",
+      "size": 886,
+      "sha256": "4b74ffb1131596fa3059c3f025e28720b41b4fceb512b7388cd1e19894908fe9",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "4b74ffb1131596fa3059c3f025e28720b41b4fceb512b7388cd1e19894908fe9",
+      "build_b_sha256": "4b74ffb1131596fa3059c3f025e28720b41b4fceb512b7388cd1e19894908fe9",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Checks/red.bmp",
+      "size": 886,
+      "sha256": "e12080d15e31fc428116a72c32245e9c7c3b222cae4e4608a8433f16cc56f7bf",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "e12080d15e31fc428116a72c32245e9c7c3b222cae4e4608a8433f16cc56f7bf",
+      "build_b_sha256": "e12080d15e31fc428116a72c32245e9c7c3b222cae4e4608a8433f16cc56f7bf",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Checks/simple-round.bmp",
+      "size": 1616,
+      "sha256": "2e84996353100d025920cd81a0f21b81b3849c20fc4e4a547692d5d0afc6e17a",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "2e84996353100d025920cd81a0f21b81b3849c20fc4e4a547692d5d0afc6e17a",
+      "build_b_sha256": "2e84996353100d025920cd81a0f21b81b3849c20fc4e4a547692d5d0afc6e17a",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Checks/simple-round2.bmp",
+      "size": 1844,
+      "sha256": "dfcd7729376479d5df262fedcc7f5a6b3fffc4f8d6b9d5fc2cba304f944f7710",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "dfcd7729376479d5df262fedcc7f5a6b3fffc4f8d6b9d5fc2cba304f944f7710",
+      "build_b_sha256": "dfcd7729376479d5df262fedcc7f5a6b3fffc4f8d6b9d5fc2cba304f944f7710",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Checks/simple.bmp",
+      "size": 1616,
+      "sha256": "b22aca4a5b82422a009b91a046176df6cd7265050b7c9d4950c71b1b93f4c78f",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "b22aca4a5b82422a009b91a046176df6cd7265050b7c9d4950c71b1b93f4c78f",
+      "build_b_sha256": "b22aca4a5b82422a009b91a046176df6cd7265050b7c9d4950c71b1b93f4c78f",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Header/nsis-r.bmp",
+      "size": 9744,
+      "sha256": "2a54f3e88dc3176c97f104546c8aa913172f0bfbb826d0e8aea9abcfdc3979f0",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "2a54f3e88dc3176c97f104546c8aa913172f0bfbb826d0e8aea9abcfdc3979f0",
+      "build_b_sha256": "2a54f3e88dc3176c97f104546c8aa913172f0bfbb826d0e8aea9abcfdc3979f0",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Header/nsis.bmp",
+      "size": 9744,
+      "sha256": "766a893fe962aefd27c574cb05f25cf895d3fc70a00db5a6fa73d573f571aefc",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "766a893fe962aefd27c574cb05f25cf895d3fc70a00db5a6fa73d573f571aefc",
+      "build_b_sha256": "766a893fe962aefd27c574cb05f25cf895d3fc70a00db5a6fa73d573f571aefc",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Header/nsis3-branding-r.bmp",
+      "size": 25820,
+      "sha256": "0f3b85a4a7bd2c6baa7b2b24590ea69e656384130fa8212e944016c46ac7e7d1",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "0f3b85a4a7bd2c6baa7b2b24590ea69e656384130fa8212e944016c46ac7e7d1",
+      "build_b_sha256": "0f3b85a4a7bd2c6baa7b2b24590ea69e656384130fa8212e944016c46ac7e7d1",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Header/nsis3-branding.bmp",
+      "size": 25820,
+      "sha256": "4b6dadddb9bd51c4c25283fb726a3115295d872b786df2e73872a41d00e80fea",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "4b6dadddb9bd51c4c25283fb726a3115295d872b786df2e73872a41d00e80fea",
+      "build_b_sha256": "4b6dadddb9bd51c4c25283fb726a3115295d872b786df2e73872a41d00e80fea",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Header/nsis3-grey-right.bmp",
+      "size": 8932,
+      "sha256": "533588be2790810fb372797e7355c948c0b13ac544ea34f0e021735ca48e5907",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "533588be2790810fb372797e7355c948c0b13ac544ea34f0e021735ca48e5907",
+      "build_b_sha256": "533588be2790810fb372797e7355c948c0b13ac544ea34f0e021735ca48e5907",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Header/nsis3-grey.bmp",
+      "size": 8956,
+      "sha256": "51016cfd0222dadd7a0ce445c9a87e51bf3593adcd669b0782a86f7c5391d4eb",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "51016cfd0222dadd7a0ce445c9a87e51bf3593adcd669b0782a86f7c5391d4eb",
+      "build_b_sha256": "51016cfd0222dadd7a0ce445c9a87e51bf3593adcd669b0782a86f7c5391d4eb",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Header/nsis3-metro-right.bmp",
+      "size": 25820,
+      "sha256": "ed4326ae071f3db133a58252786b39c1a76146b9263e03dd7e8566013d5dbba1",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "ed4326ae071f3db133a58252786b39c1a76146b9263e03dd7e8566013d5dbba1",
+      "build_b_sha256": "ed4326ae071f3db133a58252786b39c1a76146b9263e03dd7e8566013d5dbba1",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Header/nsis3-metro.bmp",
+      "size": 25820,
+      "sha256": "b74ed1397c5a50c22ddd4da1c01cf1a36484fa38623051b4959bb6e01d657547",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "b74ed1397c5a50c22ddd4da1c01cf1a36484fa38623051b4959bb6e01d657547",
+      "build_b_sha256": "b74ed1397c5a50c22ddd4da1c01cf1a36484fa38623051b4959bb6e01d657547",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Header/nsis3-vintage-right.bmp",
+      "size": 8996,
+      "sha256": "38ff3142812ae83d094add3c1f4ece7ef917aff44a19dbca1882603f0c6200e0",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "38ff3142812ae83d094add3c1f4ece7ef917aff44a19dbca1882603f0c6200e0",
+      "build_b_sha256": "38ff3142812ae83d094add3c1f4ece7ef917aff44a19dbca1882603f0c6200e0",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Header/nsis3-vintage.bmp",
+      "size": 9008,
+      "sha256": "6ec748997c1c8ea0e9d3dd660d4acb696bc6cf160c201a48c04d608cff779d3a",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "6ec748997c1c8ea0e9d3dd660d4acb696bc6cf160c201a48c04d608cff779d3a",
+      "build_b_sha256": "6ec748997c1c8ea0e9d3dd660d4acb696bc6cf160c201a48c04d608cff779d3a",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Header/orange-nsis.bmp",
+      "size": 9740,
+      "sha256": "552f10c2b0a34eaea274ed8ccbc9d754eeae5826a10a3ef224685bf1d8eac2cf",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "552f10c2b0a34eaea274ed8ccbc9d754eeae5826a10a3ef224685bf1d8eac2cf",
+      "build_b_sha256": "552f10c2b0a34eaea274ed8ccbc9d754eeae5826a10a3ef224685bf1d8eac2cf",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Header/orange-r-nsis.bmp",
+      "size": 9740,
+      "sha256": "6cfebb59f0ba1b9f1e8d7aa6387f223a468eb2ff74a9ed3c3f4bb688c2b6455e",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "6cfebb59f0ba1b9f1e8d7aa6387f223a468eb2ff74a9ed3c3f4bb688c2b6455e",
+      "build_b_sha256": "6cfebb59f0ba1b9f1e8d7aa6387f223a468eb2ff74a9ed3c3f4bb688c2b6455e",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Header/orange-r.bmp",
+      "size": 9744,
+      "sha256": "bd146e39af28cec251d63da453cb8f04b74904a643f4c3dab52ef2b5bcb4bb3a",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "bd146e39af28cec251d63da453cb8f04b74904a643f4c3dab52ef2b5bcb4bb3a",
+      "build_b_sha256": "bd146e39af28cec251d63da453cb8f04b74904a643f4c3dab52ef2b5bcb4bb3a",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Header/orange-uninstall-nsis.bmp",
+      "size": 9740,
+      "sha256": "87d1eed1ee12e91bc38a58108139fa8d3a220382069ff8c0eb9261ea52f35326",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "87d1eed1ee12e91bc38a58108139fa8d3a220382069ff8c0eb9261ea52f35326",
+      "build_b_sha256": "87d1eed1ee12e91bc38a58108139fa8d3a220382069ff8c0eb9261ea52f35326",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Header/orange-uninstall-r-nsis.bmp",
+      "size": 9740,
+      "sha256": "bd6cde334e9a70979efad038bc1ddc62191974e99b662c3f264b2e95e966c052",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "bd6cde334e9a70979efad038bc1ddc62191974e99b662c3f264b2e95e966c052",
+      "build_b_sha256": "bd6cde334e9a70979efad038bc1ddc62191974e99b662c3f264b2e95e966c052",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Header/orange-uninstall-r.bmp",
+      "size": 9744,
+      "sha256": "7e3e16598f8fed5a42f4597dac5c1773e7e471797872accff0042affabeb0b4f",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "7e3e16598f8fed5a42f4597dac5c1773e7e471797872accff0042affabeb0b4f",
+      "build_b_sha256": "7e3e16598f8fed5a42f4597dac5c1773e7e471797872accff0042affabeb0b4f",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Header/orange-uninstall.bmp",
+      "size": 9744,
+      "sha256": "b9f6b1effac717dcb899f45b99f5755a5b12825a1b61d7d6bf23efffb3ac36e7",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "b9f6b1effac717dcb899f45b99f5755a5b12825a1b61d7d6bf23efffb3ac36e7",
+      "build_b_sha256": "b9f6b1effac717dcb899f45b99f5755a5b12825a1b61d7d6bf23efffb3ac36e7",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Header/orange.bmp",
+      "size": 9744,
+      "sha256": "4c9e804ce1a391f8e603b7b9c732a6529c1e81be4d12f125c8562ea9d49095c2",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "4c9e804ce1a391f8e603b7b9c732a6529c1e81be4d12f125c8562ea9d49095c2",
+      "build_b_sha256": "4c9e804ce1a391f8e603b7b9c732a6529c1e81be4d12f125c8562ea9d49095c2",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Header/win.bmp",
+      "size": 9744,
+      "sha256": "8e58b3e6e3896a4bae05fa2f6adc238d391aa80bc51c138f851f373c6c23e518",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "8e58b3e6e3896a4bae05fa2f6adc238d391aa80bc51c138f851f373c6c23e518",
+      "build_b_sha256": "8e58b3e6e3896a4bae05fa2f6adc238d391aa80bc51c138f851f373c6c23e518",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/arrow-install.ico",
+      "size": 4710,
+      "sha256": "ad8e1efce449a4c6658305f979f2826153fa97d48579259cd09180ba2010b995",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "ad8e1efce449a4c6658305f979f2826153fa97d48579259cd09180ba2010b995",
+      "build_b_sha256": "ad8e1efce449a4c6658305f979f2826153fa97d48579259cd09180ba2010b995",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/arrow-uninstall.ico",
+      "size": 4710,
+      "sha256": "cd58c15fb0848994cb3f1bcc179e53a9db7d962778ee036b560b8fedd07792d8",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "cd58c15fb0848994cb3f1bcc179e53a9db7d962778ee036b560b8fedd07792d8",
+      "build_b_sha256": "cd58c15fb0848994cb3f1bcc179e53a9db7d962778ee036b560b8fedd07792d8",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/arrow2-install.ico",
+      "size": 4710,
+      "sha256": "7446a65155c7d71816bf6321796a3e2c004eb4a2f50717035cd96f7b21b14f1f",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "7446a65155c7d71816bf6321796a3e2c004eb4a2f50717035cd96f7b21b14f1f",
+      "build_b_sha256": "7446a65155c7d71816bf6321796a3e2c004eb4a2f50717035cd96f7b21b14f1f",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/arrow2-uninstall.ico",
+      "size": 4710,
+      "sha256": "e725e4c212b71d426cd85cb44741fb0e5fd50406c0cdca447663d3fd4003fceb",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "e725e4c212b71d426cd85cb44741fb0e5fd50406c0cdca447663d3fd4003fceb",
+      "build_b_sha256": "e725e4c212b71d426cd85cb44741fb0e5fd50406c0cdca447663d3fd4003fceb",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/box-install.ico",
+      "size": 4710,
+      "sha256": "6a2ca9ce7cea0ba7215dd257920790156933f1a50054ea051419c00f37477456",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "6a2ca9ce7cea0ba7215dd257920790156933f1a50054ea051419c00f37477456",
+      "build_b_sha256": "6a2ca9ce7cea0ba7215dd257920790156933f1a50054ea051419c00f37477456",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/box-uninstall.ico",
+      "size": 4710,
+      "sha256": "797f66b21534d429f052180423fc22b730311a9c97bdf98d632948f9f859c04c",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "797f66b21534d429f052180423fc22b730311a9c97bdf98d632948f9f859c04c",
+      "build_b_sha256": "797f66b21534d429f052180423fc22b730311a9c97bdf98d632948f9f859c04c",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/classic-install.ico",
+      "size": 1078,
+      "sha256": "a09769e39fa641ae88851ed5b64173a8abe0d494dc937a0c78e0255df9d2fed1",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "a09769e39fa641ae88851ed5b64173a8abe0d494dc937a0c78e0255df9d2fed1",
+      "build_b_sha256": "a09769e39fa641ae88851ed5b64173a8abe0d494dc937a0c78e0255df9d2fed1",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/classic-uninstall.ico",
+      "size": 1078,
+      "sha256": "d9673909834dcedf34932d59a80eb6ae19210afdfa054241959ac226bf504a27",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "d9673909834dcedf34932d59a80eb6ae19210afdfa054241959ac226bf504a27",
+      "build_b_sha256": "d9673909834dcedf34932d59a80eb6ae19210afdfa054241959ac226bf504a27",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/llama-blue.ico",
+      "size": 2238,
+      "sha256": "87df44f81ac4ff83e4dce0b5d819afa7fa65288f515a5219cf54d7317be8b295",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "87df44f81ac4ff83e4dce0b5d819afa7fa65288f515a5219cf54d7317be8b295",
+      "build_b_sha256": "87df44f81ac4ff83e4dce0b5d819afa7fa65288f515a5219cf54d7317be8b295",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/llama-grey.ico",
+      "size": 2238,
+      "sha256": "7f17ec9f401f9e91c88c5cd4d216397d714c05c549340acccd3221abf9c92b0c",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "7f17ec9f401f9e91c88c5cd4d216397d714c05c549340acccd3221abf9c92b0c",
+      "build_b_sha256": "7f17ec9f401f9e91c88c5cd4d216397d714c05c549340acccd3221abf9c92b0c",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/modern-install-blue-full.ico",
+      "size": 23558,
+      "sha256": "5a2bd76e8d1e601f93c667ae6319cf4aeed24ee30508dca7f1b845789033e3ed",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "5a2bd76e8d1e601f93c667ae6319cf4aeed24ee30508dca7f1b845789033e3ed",
+      "build_b_sha256": "5a2bd76e8d1e601f93c667ae6319cf4aeed24ee30508dca7f1b845789033e3ed",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/modern-install-blue.ico",
+      "size": 13902,
+      "sha256": "666d7f1da2d3aa65a638be9818e4bb24e9632eabab4d642f7d9dbf8cf3bffc01",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "666d7f1da2d3aa65a638be9818e4bb24e9632eabab4d642f7d9dbf8cf3bffc01",
+      "build_b_sha256": "666d7f1da2d3aa65a638be9818e4bb24e9632eabab4d642f7d9dbf8cf3bffc01",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/modern-install-colorful.ico",
+      "size": 23558,
+      "sha256": "f5681d2ed2efef52faf7fbcecc9da2e07ba6f8eefde7dc89cb33abecccfc1d3f",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "f5681d2ed2efef52faf7fbcecc9da2e07ba6f8eefde7dc89cb33abecccfc1d3f",
+      "build_b_sha256": "f5681d2ed2efef52faf7fbcecc9da2e07ba6f8eefde7dc89cb33abecccfc1d3f",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/modern-install-full.ico",
+      "size": 23558,
+      "sha256": "13a9fc72823ead4f0065b032b81adecda1ed0f1789c23b15e52df531912db1d0",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "13a9fc72823ead4f0065b032b81adecda1ed0f1789c23b15e52df531912db1d0",
+      "build_b_sha256": "13a9fc72823ead4f0065b032b81adecda1ed0f1789c23b15e52df531912db1d0",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/modern-install.ico",
+      "size": 13902,
+      "sha256": "95c36884a12b4bde8db9a3587f7bdb05e7232a4e9a095202ace4eba693412e05",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "95c36884a12b4bde8db9a3587f7bdb05e7232a4e9a095202ace4eba693412e05",
+      "build_b_sha256": "95c36884a12b4bde8db9a3587f7bdb05e7232a4e9a095202ace4eba693412e05",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/modern-uninstall-blue-full.ico",
+      "size": 23558,
+      "sha256": "ff5435163d7d1e79ca1cfda01ba929dcd4dbf29cf69ed60f5448d822f0e26d03",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "ff5435163d7d1e79ca1cfda01ba929dcd4dbf29cf69ed60f5448d822f0e26d03",
+      "build_b_sha256": "ff5435163d7d1e79ca1cfda01ba929dcd4dbf29cf69ed60f5448d822f0e26d03",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/modern-uninstall-blue.ico",
+      "size": 13902,
+      "sha256": "2a766a15db31e4fec07226cceea64ab411854d751354a35dec2aa305fc8849f3",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "2a766a15db31e4fec07226cceea64ab411854d751354a35dec2aa305fc8849f3",
+      "build_b_sha256": "2a766a15db31e4fec07226cceea64ab411854d751354a35dec2aa305fc8849f3",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/modern-uninstall-colorful.ico",
+      "size": 23558,
+      "sha256": "fb365bd8f0ca0b17d7a94e67b0b6aad3ed7aced6fad233907a492e796ff3c337",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "fb365bd8f0ca0b17d7a94e67b0b6aad3ed7aced6fad233907a492e796ff3c337",
+      "build_b_sha256": "fb365bd8f0ca0b17d7a94e67b0b6aad3ed7aced6fad233907a492e796ff3c337",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/modern-uninstall-full.ico",
+      "size": 23558,
+      "sha256": "47bd1830e3e05311ad5c4c6abdcb6f7cfe8f13c79a51fc48669729a28ac8a181",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "47bd1830e3e05311ad5c4c6abdcb6f7cfe8f13c79a51fc48669729a28ac8a181",
+      "build_b_sha256": "47bd1830e3e05311ad5c4c6abdcb6f7cfe8f13c79a51fc48669729a28ac8a181",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/modern-uninstall.ico",
+      "size": 13902,
+      "sha256": "5037c877cb134c1cd303367cfcc2afecb0517522ff8ad98544d4eb158ddc6bda",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "5037c877cb134c1cd303367cfcc2afecb0517522ff8ad98544d4eb158ddc6bda",
+      "build_b_sha256": "5037c877cb134c1cd303367cfcc2afecb0517522ff8ad98544d4eb158ddc6bda",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/nsis-menu.ico",
+      "size": 39119,
+      "sha256": "e007305cc3e89bb786c212f14bb37a5b5e7f80cb5755ffe9e4eb9110f97c1f8c",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "e007305cc3e89bb786c212f14bb37a5b5e7f80cb5755ffe9e4eb9110f97c1f8c",
+      "build_b_sha256": "e007305cc3e89bb786c212f14bb37a5b5e7f80cb5755ffe9e4eb9110f97c1f8c",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/nsis1-install.ico",
+      "size": 1078,
+      "sha256": "dd1a02e00f70f5e8a90568a06e9953af6688d7083851f3d14453b4a2030fec73",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "dd1a02e00f70f5e8a90568a06e9953af6688d7083851f3d14453b4a2030fec73",
+      "build_b_sha256": "dd1a02e00f70f5e8a90568a06e9953af6688d7083851f3d14453b4a2030fec73",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/nsis1-uninstall.ico",
+      "size": 1078,
+      "sha256": "04fa9188e475bf1698d4a6953c4ad6f4bfc25677d7cf149a605fd91e3f12100c",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "04fa9188e475bf1698d4a6953c4ad6f4bfc25677d7cf149a605fd91e3f12100c",
+      "build_b_sha256": "04fa9188e475bf1698d4a6953c4ad6f4bfc25677d7cf149a605fd91e3f12100c",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/nsis3-install-alt.ico",
+      "size": 13111,
+      "sha256": "453dc599a43ba980b310e0420fc8fcc95ea06dc653413efd5b64e087635045b7",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "453dc599a43ba980b310e0420fc8fcc95ea06dc653413efd5b64e087635045b7",
+      "build_b_sha256": "453dc599a43ba980b310e0420fc8fcc95ea06dc653413efd5b64e087635045b7",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/nsis3-install.ico",
+      "size": 11697,
+      "sha256": "747ef2a4ef0eecc653d86a86b3f38cb36ea18d799e39b6d948ed5340ae354ab8",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "747ef2a4ef0eecc653d86a86b3f38cb36ea18d799e39b6d948ed5340ae354ab8",
+      "build_b_sha256": "747ef2a4ef0eecc653d86a86b3f38cb36ea18d799e39b6d948ed5340ae354ab8",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/nsis3-uninstall.ico",
+      "size": 12533,
+      "sha256": "96899982c23b43956b425c9fed6118651397b8602748236fc8d89203d02bfd87",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "96899982c23b43956b425c9fed6118651397b8602748236fc8d89203d02bfd87",
+      "build_b_sha256": "96899982c23b43956b425c9fed6118651397b8602748236fc8d89203d02bfd87",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/orange-install-nsis.ico",
+      "size": 25214,
+      "sha256": "af57f376d93c091c7deff84082c0b8267962a70c9a018f3981300ece8be165e9",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "af57f376d93c091c7deff84082c0b8267962a70c9a018f3981300ece8be165e9",
+      "build_b_sha256": "af57f376d93c091c7deff84082c0b8267962a70c9a018f3981300ece8be165e9",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/orange-install.ico",
+      "size": 25214,
+      "sha256": "20f5116dd02ab3004ce701135f7d09211b6be3aadfb4c1559d7620ca05f11bf8",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "20f5116dd02ab3004ce701135f7d09211b6be3aadfb4c1559d7620ca05f11bf8",
+      "build_b_sha256": "20f5116dd02ab3004ce701135f7d09211b6be3aadfb4c1559d7620ca05f11bf8",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/orange-uninstall-nsis.ico",
+      "size": 25214,
+      "sha256": "9f45b9a6aaa741ab473ed4e53811cf0b40eeab7c4477d4bc47f06c94b443e99a",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "9f45b9a6aaa741ab473ed4e53811cf0b40eeab7c4477d4bc47f06c94b443e99a",
+      "build_b_sha256": "9f45b9a6aaa741ab473ed4e53811cf0b40eeab7c4477d4bc47f06c94b443e99a",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/orange-uninstall.ico",
+      "size": 25214,
+      "sha256": "48498bf6cee860bc17e00a4426a0b7a9633b264a74e89fa288668a8e69c02ade",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "48498bf6cee860bc17e00a4426a0b7a9633b264a74e89fa288668a8e69c02ade",
+      "build_b_sha256": "48498bf6cee860bc17e00a4426a0b7a9633b264a74e89fa288668a8e69c02ade",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/pixel-install.ico",
+      "size": 5390,
+      "sha256": "e8080918da76cbc0a9df627c59eccaea1b6142008a67f9affd1a688fcfb66c0e",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "e8080918da76cbc0a9df627c59eccaea1b6142008a67f9affd1a688fcfb66c0e",
+      "build_b_sha256": "e8080918da76cbc0a9df627c59eccaea1b6142008a67f9affd1a688fcfb66c0e",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/pixel-uninstall.ico",
+      "size": 5390,
+      "sha256": "652f01a3a81456cc1cd1aabc7e14e9506db3c1298139e82da3b522563e933b4e",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "652f01a3a81456cc1cd1aabc7e14e9506db3c1298139e82da3b522563e933b4e",
+      "build_b_sha256": "652f01a3a81456cc1cd1aabc7e14e9506db3c1298139e82da3b522563e933b4e",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/win-install.ico",
+      "size": 1078,
+      "sha256": "1a3ec42f393635307ae2e369ef50a8eb0fbbe02cd2f82c4c6d3486d294ddcceb",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "1a3ec42f393635307ae2e369ef50a8eb0fbbe02cd2f82c4c6d3486d294ddcceb",
+      "build_b_sha256": "1a3ec42f393635307ae2e369ef50a8eb0fbbe02cd2f82c4c6d3486d294ddcceb",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Icons/win-uninstall.ico",
+      "size": 1078,
+      "sha256": "5f5bae653fd5a00b6baf38a4eab2b2a0412c1932fa533570cd233d01437bf7bf",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "5f5bae653fd5a00b6baf38a4eab2b2a0412c1932fa533570cd233d01437bf7bf",
+      "build_b_sha256": "5f5bae653fd5a00b6baf38a4eab2b2a0412c1932fa533570cd233d01437bf7bf",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Wizard/arrow.bmp",
+      "size": 52576,
+      "sha256": "f1dfb50efbd9dc69818175eadd0ca8c8f975ae6916f83523505e488d48f21e6a",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "f1dfb50efbd9dc69818175eadd0ca8c8f975ae6916f83523505e488d48f21e6a",
+      "build_b_sha256": "f1dfb50efbd9dc69818175eadd0ca8c8f975ae6916f83523505e488d48f21e6a",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Wizard/llama.bmp",
+      "size": 26494,
+      "sha256": "c9af52dc2c1444a2ae53f3cca9282bb433af4ef4ed850c1133447b7ba731174c",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "c9af52dc2c1444a2ae53f3cca9282bb433af4ef4ed850c1133447b7ba731174c",
+      "build_b_sha256": "c9af52dc2c1444a2ae53f3cca9282bb433af4ef4ed850c1133447b7ba731174c",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Wizard/nsis.bmp",
+      "size": 26494,
+      "sha256": "c1cd4e5a3d2ebfdc477ca00b5b8c127df149df80cf089e851369db75c61cef4b",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "c1cd4e5a3d2ebfdc477ca00b5b8c127df149df80cf089e851369db75c61cef4b",
+      "build_b_sha256": "c1cd4e5a3d2ebfdc477ca00b5b8c127df149df80cf089e851369db75c61cef4b",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Wizard/nsis3-branding.bmp",
+      "size": 154544,
+      "sha256": "411961864a8edb7cc2ba384e702bbb787040ea47488d2cefc2ef2c6f0a55a832",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "411961864a8edb7cc2ba384e702bbb787040ea47488d2cefc2ef2c6f0a55a832",
+      "build_b_sha256": "411961864a8edb7cc2ba384e702bbb787040ea47488d2cefc2ef2c6f0a55a832",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Wizard/nsis3-grey.bmp",
+      "size": 51832,
+      "sha256": "2e138faec4410e66f0b4e3199badf019bc83c1fa13f4409e8719b6762ed908be",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "2e138faec4410e66f0b4e3199badf019bc83c1fa13f4409e8719b6762ed908be",
+      "build_b_sha256": "2e138faec4410e66f0b4e3199badf019bc83c1fa13f4409e8719b6762ed908be",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Wizard/nsis3-metro.bmp",
+      "size": 154544,
+      "sha256": "2079f7a3eba60e0d9ee827a7208aa052a71b384873b641de5e299aeb8e733109",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "2079f7a3eba60e0d9ee827a7208aa052a71b384873b641de5e299aeb8e733109",
+      "build_b_sha256": "2079f7a3eba60e0d9ee827a7208aa052a71b384873b641de5e299aeb8e733109",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Wizard/nsis3-vintage.bmp",
+      "size": 51920,
+      "sha256": "34b4a33ada04c9919fed2028562042ca5ffa8918f45905f6c41c68850f58ff5a",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "34b4a33ada04c9919fed2028562042ca5ffa8918f45905f6c41c68850f58ff5a",
+      "build_b_sha256": "34b4a33ada04c9919fed2028562042ca5ffa8918f45905f6c41c68850f58ff5a",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Wizard/nullsoft.bmp",
+      "size": 26494,
+      "sha256": "b7a5b209189b77423be7e213444e30f2d6f79ba688fcf9c063b5618ebb625a51",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "b7a5b209189b77423be7e213444e30f2d6f79ba688fcf9c063b5618ebb625a51",
+      "build_b_sha256": "b7a5b209189b77423be7e213444e30f2d6f79ba688fcf9c063b5618ebb625a51",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Wizard/orange-nsis.bmp",
+      "size": 52572,
+      "sha256": "076221b4527ff13c3e1557abbbd48b0cb8e5f7d724c6b9171c6aadadb80561dd",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "076221b4527ff13c3e1557abbbd48b0cb8e5f7d724c6b9171c6aadadb80561dd",
+      "build_b_sha256": "076221b4527ff13c3e1557abbbd48b0cb8e5f7d724c6b9171c6aadadb80561dd",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Wizard/orange-uninstall-nsis.bmp",
+      "size": 52572,
+      "sha256": "b0278ae60eddd3e03cdb37a873221df0656eeb4541b0190898de1ce8f0427a5e",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "b0278ae60eddd3e03cdb37a873221df0656eeb4541b0190898de1ce8f0427a5e",
+      "build_b_sha256": "b0278ae60eddd3e03cdb37a873221df0656eeb4541b0190898de1ce8f0427a5e",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Wizard/orange-uninstall.bmp",
+      "size": 52576,
+      "sha256": "498d402163d5d4578d8e76a22c97ab927cf31bf16f7125938cf03cc200c7a290",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "498d402163d5d4578d8e76a22c97ab927cf31bf16f7125938cf03cc200c7a290",
+      "build_b_sha256": "498d402163d5d4578d8e76a22c97ab927cf31bf16f7125938cf03cc200c7a290",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Wizard/orange.bmp",
+      "size": 52576,
+      "sha256": "a7b2f12e01cbea88d4f645f797f2ca6107d76ae13cd1be6dc532b759bfe0d925",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "a7b2f12e01cbea88d4f645f797f2ca6107d76ae13cd1be6dc532b759bfe0d925",
+      "build_b_sha256": "a7b2f12e01cbea88d4f645f797f2ca6107d76ae13cd1be6dc532b759bfe0d925",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Graphics/Wizard/win.bmp",
+      "size": 26494,
+      "sha256": "3ad2dc318056d0a2024af1804ea741146cfc18cc404649a44610cbf8b2056cf2",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "3ad2dc318056d0a2024af1804ea741146cfc18cc404649a44610cbf8b2056cf2",
+      "build_b_sha256": "3ad2dc318056d0a2024af1804ea741146cfc18cc404649a44610cbf8b2056cf2",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Afrikaans.nlf",
+      "size": 4876,
+      "sha256": "8db12941460eda9e69ffeb7dbbc9df8fe5c2314853d3e2cc66b19a326b181532",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "8db12941460eda9e69ffeb7dbbc9df8fe5c2314853d3e2cc66b19a326b181532",
+      "build_b_sha256": "8db12941460eda9e69ffeb7dbbc9df8fe5c2314853d3e2cc66b19a326b181532",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Afrikaans.nsh",
+      "size": 7010,
+      "sha256": "5053f038f8641b62d33d8b358fce88ac50343313055d9fc7368a983f17ab20dd",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "5053f038f8641b62d33d8b358fce88ac50343313055d9fc7368a983f17ab20dd",
+      "build_b_sha256": "5053f038f8641b62d33d8b358fce88ac50343313055d9fc7368a983f17ab20dd",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Albanian.nlf",
+      "size": 5537,
+      "sha256": "842f88c081ed8c8a42a87e6c7e1d3f58837955bceb72909b581213e051c9f60d",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "842f88c081ed8c8a42a87e6c7e1d3f58837955bceb72909b581213e051c9f60d",
+      "build_b_sha256": "842f88c081ed8c8a42a87e6c7e1d3f58837955bceb72909b581213e051c9f60d",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Albanian.nsh",
+      "size": 7936,
+      "sha256": "ce04a41b45b0799e6a165744c46abb43103b1d5c99b15453a0b4e2bc51b1ddf8",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "ce04a41b45b0799e6a165744c46abb43103b1d5c99b15453a0b4e2bc51b1ddf8",
+      "build_b_sha256": "ce04a41b45b0799e6a165744c46abb43103b1d5c99b15453a0b4e2bc51b1ddf8",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Arabic.nlf",
+      "size": 6290,
+      "sha256": "686b85e458dcdd30b0dfd2a902b1f671abfc5e3358485699e23d952e34f74c7d",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "686b85e458dcdd30b0dfd2a902b1f671abfc5e3358485699e23d952e34f74c7d",
+      "build_b_sha256": "686b85e458dcdd30b0dfd2a902b1f671abfc5e3358485699e23d952e34f74c7d",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Arabic.nsh",
+      "size": 8568,
+      "sha256": "138dd690611539cfbc5aa34a968de98cd4b8771ac8ed045b016db7507459dc32",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "138dd690611539cfbc5aa34a968de98cd4b8771ac8ed045b016db7507459dc32",
+      "build_b_sha256": "138dd690611539cfbc5aa34a968de98cd4b8771ac8ed045b016db7507459dc32",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Armenian.nlf",
+      "size": 7230,
+      "sha256": "a342f1d35f9ac1ec9fd0deb5a0ff76a9e2bab8786f77bedd0d44f34a319cf636",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "a342f1d35f9ac1ec9fd0deb5a0ff76a9e2bab8786f77bedd0d44f34a319cf636",
+      "build_b_sha256": "a342f1d35f9ac1ec9fd0deb5a0ff76a9e2bab8786f77bedd0d44f34a319cf636",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Armenian.nsh",
+      "size": 9799,
+      "sha256": "6cc2dfe15b83e89d61ad5c93b74da27f69795a5d558e84a24dddc1b7164abe30",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "6cc2dfe15b83e89d61ad5c93b74da27f69795a5d558e84a24dddc1b7164abe30",
+      "build_b_sha256": "6cc2dfe15b83e89d61ad5c93b74da27f69795a5d558e84a24dddc1b7164abe30",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Asturian.nlf",
+      "size": 5607,
+      "sha256": "112da4de3de9959ba66e677f3800870129e6126cfa930512b818528c56cf14b5",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "112da4de3de9959ba66e677f3800870129e6126cfa930512b818528c56cf14b5",
+      "build_b_sha256": "112da4de3de9959ba66e677f3800870129e6126cfa930512b818528c56cf14b5",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Asturian.nsh",
+      "size": 7897,
+      "sha256": "e1199d5a15916e4104ddd7b8b03a7e3ffd5d8739e0c0f5e7ce66b1a6db9c0a9e",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "e1199d5a15916e4104ddd7b8b03a7e3ffd5d8739e0c0f5e7ce66b1a6db9c0a9e",
+      "build_b_sha256": "e1199d5a15916e4104ddd7b8b03a7e3ffd5d8739e0c0f5e7ce66b1a6db9c0a9e",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Basque.nlf",
+      "size": 5249,
+      "sha256": "4ef56a6886873c6c847635fa474bb086b45738f13d0bf1f85ed2569c5cdb183a",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "4ef56a6886873c6c847635fa474bb086b45738f13d0bf1f85ed2569c5cdb183a",
+      "build_b_sha256": "4ef56a6886873c6c847635fa474bb086b45738f13d0bf1f85ed2569c5cdb183a",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Basque.nsh",
+      "size": 7716,
+      "sha256": "c20e884e715548a1c4216014de81db5714c7d533fe181e55b9921366547c1e19",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "c20e884e715548a1c4216014de81db5714c7d533fe181e55b9921366547c1e19",
+      "build_b_sha256": "c20e884e715548a1c4216014de81db5714c7d533fe181e55b9921366547c1e19",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Belarusian.nlf",
+      "size": 8498,
+      "sha256": "09f05a37db6f4e60574309dbcd4d3010006b888d8f214340c9846aa2c1f02963",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "09f05a37db6f4e60574309dbcd4d3010006b888d8f214340c9846aa2c1f02963",
+      "build_b_sha256": "09f05a37db6f4e60574309dbcd4d3010006b888d8f214340c9846aa2c1f02963",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Belarusian.nsh",
+      "size": 10561,
+      "sha256": "53270f15fdc26e6679822ba1d6ef823637adabe6e11f168803a51f5140c40769",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "53270f15fdc26e6679822ba1d6ef823637adabe6e11f168803a51f5140c40769",
+      "build_b_sha256": "53270f15fdc26e6679822ba1d6ef823637adabe6e11f168803a51f5140c40769",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Bosnian.nlf",
+      "size": 5332,
+      "sha256": "237cd0f56ba5c874bc177f03faa0b965a98d7e04ed035468b15e5f9fedf5a266",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "237cd0f56ba5c874bc177f03faa0b965a98d7e04ed035468b15e5f9fedf5a266",
+      "build_b_sha256": "237cd0f56ba5c874bc177f03faa0b965a98d7e04ed035468b15e5f9fedf5a266",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Bosnian.nsh",
+      "size": 7598,
+      "sha256": "f6e7452f72fe6a222c2b399cf325b5da06f82744cc4ea9c4fcb5e477f61e2bfc",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "f6e7452f72fe6a222c2b399cf325b5da06f82744cc4ea9c4fcb5e477f61e2bfc",
+      "build_b_sha256": "f6e7452f72fe6a222c2b399cf325b5da06f82744cc4ea9c4fcb5e477f61e2bfc",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Breton.nlf",
+      "size": 5554,
+      "sha256": "def6fb144908a12914b524beb13137d3c42649d65cb74700b3af86865f541702",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "def6fb144908a12914b524beb13137d3c42649d65cb74700b3af86865f541702",
+      "build_b_sha256": "def6fb144908a12914b524beb13137d3c42649d65cb74700b3af86865f541702",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Breton.nsh",
+      "size": 7444,
+      "sha256": "1d6c8ce5528eed26f82756498b5f69de6329ff82eade164a1d555ffd50371e31",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "1d6c8ce5528eed26f82756498b5f69de6329ff82eade164a1d555ffd50371e31",
+      "build_b_sha256": "1d6c8ce5528eed26f82756498b5f69de6329ff82eade164a1d555ffd50371e31",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Bulgarian.nlf",
+      "size": 8143,
+      "sha256": "ff6aab84349dd67f28a4c9911873bef9f6780fdb925dcab12a8209cb49ff1d04",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "ff6aab84349dd67f28a4c9911873bef9f6780fdb925dcab12a8209cb49ff1d04",
+      "build_b_sha256": "ff6aab84349dd67f28a4c9911873bef9f6780fdb925dcab12a8209cb49ff1d04",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Bulgarian.nsh",
+      "size": 10121,
+      "sha256": "92835ce57d2237957d7e9ae0aec33eb64016424138df5026a22506bd3a70a0aa",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "92835ce57d2237957d7e9ae0aec33eb64016424138df5026a22506bd3a70a0aa",
+      "build_b_sha256": "92835ce57d2237957d7e9ae0aec33eb64016424138df5026a22506bd3a70a0aa",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Catalan.nlf",
+      "size": 5830,
+      "sha256": "4a2f5586c36d9780820e80e6599682719d379a2fadb71f59a68c72897843b2f6",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "4a2f5586c36d9780820e80e6599682719d379a2fadb71f59a68c72897843b2f6",
+      "build_b_sha256": "4a2f5586c36d9780820e80e6599682719d379a2fadb71f59a68c72897843b2f6",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Catalan.nsh",
+      "size": 7907,
+      "sha256": "1a3f86ae4b54250c748982a33325fb7362b5d6ac37aae75279be7e748ceb9cc9",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "1a3f86ae4b54250c748982a33325fb7362b5d6ac37aae75279be7e748ceb9cc9",
+      "build_b_sha256": "1a3f86ae4b54250c748982a33325fb7362b5d6ac37aae75279be7e748ceb9cc9",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Corsican.nlf",
+      "size": 6407,
+      "sha256": "76067d17ebcb9a5ea701f9650609d796e9216bc20da28716fd3b95f23f03d53f",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "76067d17ebcb9a5ea701f9650609d796e9216bc20da28716fd3b95f23f03d53f",
+      "build_b_sha256": "76067d17ebcb9a5ea701f9650609d796e9216bc20da28716fd3b95f23f03d53f",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Corsican.nsh",
+      "size": 8436,
+      "sha256": "ebc54bc3b61e88c1bb3f5a76377c64b02f20f377f38eba1dcc0746767f957bcf",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "ebc54bc3b61e88c1bb3f5a76377c64b02f20f377f38eba1dcc0746767f957bcf",
+      "build_b_sha256": "ebc54bc3b61e88c1bb3f5a76377c64b02f20f377f38eba1dcc0746767f957bcf",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Croatian.nlf",
+      "size": 5231,
+      "sha256": "84420e45a4e0f0e1a8876b89dd429aaaa728af75d099cc9fa2864346c442484a",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "84420e45a4e0f0e1a8876b89dd429aaaa728af75d099cc9fa2864346c442484a",
+      "build_b_sha256": "84420e45a4e0f0e1a8876b89dd429aaaa728af75d099cc9fa2864346c442484a",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Croatian.nsh",
+      "size": 7489,
+      "sha256": "e9b2f227787a0c8b16480ecece177ae9bcfb2ff1cbf504f032dc984b22b898e4",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "e9b2f227787a0c8b16480ecece177ae9bcfb2ff1cbf504f032dc984b22b898e4",
+      "build_b_sha256": "e9b2f227787a0c8b16480ecece177ae9bcfb2ff1cbf504f032dc984b22b898e4",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Czech.nlf",
+      "size": 5869,
+      "sha256": "cb34da78591160e3b200175470b0138e164c59cc9d32fd7d0b477f2d565b9e3e",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "cb34da78591160e3b200175470b0138e164c59cc9d32fd7d0b477f2d565b9e3e",
+      "build_b_sha256": "cb34da78591160e3b200175470b0138e164c59cc9d32fd7d0b477f2d565b9e3e",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Czech.nsh",
+      "size": 8167,
+      "sha256": "690a6fc502e72bc03a15fa4b12fb8c76ef258b09a1d7977c1d74dba915da3941",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "690a6fc502e72bc03a15fa4b12fb8c76ef258b09a1d7977c1d74dba915da3941",
+      "build_b_sha256": "690a6fc502e72bc03a15fa4b12fb8c76ef258b09a1d7977c1d74dba915da3941",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Danish.nlf",
+      "size": 5387,
+      "sha256": "ee02dfa6029317172e463dabda9ac7f27fbbb03a3ef138bcb4df56a4330eca05",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "ee02dfa6029317172e463dabda9ac7f27fbbb03a3ef138bcb4df56a4330eca05",
+      "build_b_sha256": "ee02dfa6029317172e463dabda9ac7f27fbbb03a3ef138bcb4df56a4330eca05",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Danish.nsh",
+      "size": 7861,
+      "sha256": "bd24163f67f7df030d458f5b0b6676d134e13f8ccf306d9c03d949a642dbb67b",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "bd24163f67f7df030d458f5b0b6676d134e13f8ccf306d9c03d949a642dbb67b",
+      "build_b_sha256": "bd24163f67f7df030d458f5b0b6676d134e13f8ccf306d9c03d949a642dbb67b",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Dutch.nlf",
+      "size": 5278,
+      "sha256": "a23625928bdbecf724dfb31e313dea70ab4d37c1829234d6b9ada8451a5d2295",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "a23625928bdbecf724dfb31e313dea70ab4d37c1829234d6b9ada8451a5d2295",
+      "build_b_sha256": "a23625928bdbecf724dfb31e313dea70ab4d37c1829234d6b9ada8451a5d2295",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Dutch.nsh",
+      "size": 7796,
+      "sha256": "a21e2349b92ddd97f1cd502ec376adec0d40e1987869197a782eb325cae012cb",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "a21e2349b92ddd97f1cd502ec376adec0d40e1987869197a782eb325cae012cb",
+      "build_b_sha256": "a21e2349b92ddd97f1cd502ec376adec0d40e1987869197a782eb325cae012cb",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/English.nlf",
+      "size": 4945,
+      "sha256": "1af27bb146b370531de867dc8eaabb8203504c488294b01a0980e2e6f5a84ea0",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "1af27bb146b370531de867dc8eaabb8203504c488294b01a0980e2e6f5a84ea0",
+      "build_b_sha256": "1af27bb146b370531de867dc8eaabb8203504c488294b01a0980e2e6f5a84ea0",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/English.nsh",
+      "size": 7616,
+      "sha256": "d85f67c5ddeeff44cc2f036f1240b2bb7f1ba903492bdff48b56d4bc8c31ac07",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "d85f67c5ddeeff44cc2f036f1240b2bb7f1ba903492bdff48b56d4bc8c31ac07",
+      "build_b_sha256": "d85f67c5ddeeff44cc2f036f1240b2bb7f1ba903492bdff48b56d4bc8c31ac07",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Esperanto.nlf",
+      "size": 5341,
+      "sha256": "a51547e4d35c2f3235fb30a30b069e43d1d3e77b3a91cfed5828320f60ea1a14",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "a51547e4d35c2f3235fb30a30b069e43d1d3e77b3a91cfed5828320f60ea1a14",
+      "build_b_sha256": "a51547e4d35c2f3235fb30a30b069e43d1d3e77b3a91cfed5828320f60ea1a14",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Esperanto.nsh",
+      "size": 7865,
+      "sha256": "6eba3bd70a87bf8ccdf89a28101aed7774005716c7cd350ccc950754352b7bbd",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "6eba3bd70a87bf8ccdf89a28101aed7774005716c7cd350ccc950754352b7bbd",
+      "build_b_sha256": "6eba3bd70a87bf8ccdf89a28101aed7774005716c7cd350ccc950754352b7bbd",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Estonian.nlf",
+      "size": 4897,
+      "sha256": "a1803d376d4383d4039ee11c7352c3508d9b1134f9656754dc1d05d6ef87a9a6",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "a1803d376d4383d4039ee11c7352c3508d9b1134f9656754dc1d05d6ef87a9a6",
+      "build_b_sha256": "a1803d376d4383d4039ee11c7352c3508d9b1134f9656754dc1d05d6ef87a9a6",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Estonian.nsh",
+      "size": 6695,
+      "sha256": "17ba536f1df47f86333c7719bbe3c6d1bab5fd1b692546fd78766a8c4dd9d4d1",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "17ba536f1df47f86333c7719bbe3c6d1bab5fd1b692546fd78766a8c4dd9d4d1",
+      "build_b_sha256": "17ba536f1df47f86333c7719bbe3c6d1bab5fd1b692546fd78766a8c4dd9d4d1",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Farsi.nlf",
+      "size": 6951,
+      "sha256": "f1495ed20b9ed1c24ddba107f226408d737d82516288e8d905c835e6b31b95c6",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "f1495ed20b9ed1c24ddba107f226408d737d82516288e8d905c835e6b31b95c6",
+      "build_b_sha256": "f1495ed20b9ed1c24ddba107f226408d737d82516288e8d905c835e6b31b95c6",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Farsi.nsh",
+      "size": 9385,
+      "sha256": "133822c755cb44aad89ff9075ccb9740c6e42d5a10f8ad10ab54b5e96f1fc952",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "133822c755cb44aad89ff9075ccb9740c6e42d5a10f8ad10ab54b5e96f1fc952",
+      "build_b_sha256": "133822c755cb44aad89ff9075ccb9740c6e42d5a10f8ad10ab54b5e96f1fc952",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Finnish.nlf",
+      "size": 5019,
+      "sha256": "cbfc5046fdba5b7a25571ff80801661a411467fd98a1fd4887c2bf877ef4c2c8",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "cbfc5046fdba5b7a25571ff80801661a411467fd98a1fd4887c2bf877ef4c2c8",
+      "build_b_sha256": "cbfc5046fdba5b7a25571ff80801661a411467fd98a1fd4887c2bf877ef4c2c8",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Finnish.nsh",
+      "size": 7122,
+      "sha256": "e85ca23d66404efea148387ca4e4efc506e75a5e23414dce985ad13c50f90848",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "e85ca23d66404efea148387ca4e4efc506e75a5e23414dce985ad13c50f90848",
+      "build_b_sha256": "e85ca23d66404efea148387ca4e4efc506e75a5e23414dce985ad13c50f90848",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/French.nlf",
+      "size": 5820,
+      "sha256": "08636d861bfbbf0e55a282cbf702a96b6b112ea64203a269b21c94501978cecc",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "08636d861bfbbf0e55a282cbf702a96b6b112ea64203a269b21c94501978cecc",
+      "build_b_sha256": "08636d861bfbbf0e55a282cbf702a96b6b112ea64203a269b21c94501978cecc",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/French.nsh",
+      "size": 8511,
+      "sha256": "f64481709d6339132ae99008831a4c6f272373bb64d809d08324829972c49a43",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "f64481709d6339132ae99008831a4c6f272373bb64d809d08324829972c49a43",
+      "build_b_sha256": "f64481709d6339132ae99008831a4c6f272373bb64d809d08324829972c49a43",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Galician.nlf",
+      "size": 5428,
+      "sha256": "0876dba60597d4c7e55b6ad3964b644ea1a59ab81be7936f07ebc06ee046ee29",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "0876dba60597d4c7e55b6ad3964b644ea1a59ab81be7936f07ebc06ee046ee29",
+      "build_b_sha256": "0876dba60597d4c7e55b6ad3964b644ea1a59ab81be7936f07ebc06ee046ee29",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Galician.nsh",
+      "size": 7298,
+      "sha256": "7587bb6e37a6770b60b049d18bec0978e628d7f0af18aa811364250488cda593",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "7587bb6e37a6770b60b049d18bec0978e628d7f0af18aa811364250488cda593",
+      "build_b_sha256": "7587bb6e37a6770b60b049d18bec0978e628d7f0af18aa811364250488cda593",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Georgian.nlf",
+      "size": 10068,
+      "sha256": "d5b075c6c1b402627c2199602080e6dba9c951ff4a6bea7aeca88da65bd0efd9",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "d5b075c6c1b402627c2199602080e6dba9c951ff4a6bea7aeca88da65bd0efd9",
+      "build_b_sha256": "d5b075c6c1b402627c2199602080e6dba9c951ff4a6bea7aeca88da65bd0efd9",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Georgian.nsh",
+      "size": 11613,
+      "sha256": "dc29a977e990412b7fe841d1f6f2f8b4e6af1a4c26db409d6636efbfb68e70d0",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "dc29a977e990412b7fe841d1f6f2f8b4e6af1a4c26db409d6636efbfb68e70d0",
+      "build_b_sha256": "dc29a977e990412b7fe841d1f6f2f8b4e6af1a4c26db409d6636efbfb68e70d0",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/German.nlf",
+      "size": 5777,
+      "sha256": "e2aa56d86cd597c6e302201009cb8118a39e5d46ec4c92e019b6bfea19756d21",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "e2aa56d86cd597c6e302201009cb8118a39e5d46ec4c92e019b6bfea19756d21",
+      "build_b_sha256": "e2aa56d86cd597c6e302201009cb8118a39e5d46ec4c92e019b6bfea19756d21",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/German.nsh",
+      "size": 8694,
+      "sha256": "28229bef48cea2f3af819337caced0137ed9441c0e59c60097329c0ad64dfce0",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "28229bef48cea2f3af819337caced0137ed9441c0e59c60097329c0ad64dfce0",
+      "build_b_sha256": "28229bef48cea2f3af819337caced0137ed9441c0e59c60097329c0ad64dfce0",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Greek.nlf",
+      "size": 8477,
+      "sha256": "b4a4176de414cebf277e06c055ea128ca06c2ba6fe6138937b7cbf33013d33e4",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "b4a4176de414cebf277e06c055ea128ca06c2ba6fe6138937b7cbf33013d33e4",
+      "build_b_sha256": "b4a4176de414cebf277e06c055ea128ca06c2ba6fe6138937b7cbf33013d33e4",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Greek.nsh",
+      "size": 10777,
+      "sha256": "c97f2e91b5c4db8d20d04c2e0ca9f0690dd678e1229efb88ce39c7b3ffc24ae3",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "c97f2e91b5c4db8d20d04c2e0ca9f0690dd678e1229efb88ce39c7b3ffc24ae3",
+      "build_b_sha256": "c97f2e91b5c4db8d20d04c2e0ca9f0690dd678e1229efb88ce39c7b3ffc24ae3",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Hebrew.nlf",
+      "size": 5949,
+      "sha256": "c954912110444c970b84e291fa73b020aa75f75f09021d5a6387c1b428f2ca6b",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "c954912110444c970b84e291fa73b020aa75f75f09021d5a6387c1b428f2ca6b",
+      "build_b_sha256": "c954912110444c970b84e291fa73b020aa75f75f09021d5a6387c1b428f2ca6b",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Hebrew.nsh",
+      "size": 8674,
+      "sha256": "8b745ca2d4030a2985b85a05798a95409fbb4712c290e081e428b79cf73081bf",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "8b745ca2d4030a2985b85a05798a95409fbb4712c290e081e428b79cf73081bf",
+      "build_b_sha256": "8b745ca2d4030a2985b85a05798a95409fbb4712c290e081e428b79cf73081bf",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Hindi.nlf",
+      "size": 10610,
+      "sha256": "f1fd207f4c6ece7121d69bf68bf0a108fc93eb0172fbf7cc241f4680d2a8ce59",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "f1fd207f4c6ece7121d69bf68bf0a108fc93eb0172fbf7cc241f4680d2a8ce59",
+      "build_b_sha256": "f1fd207f4c6ece7121d69bf68bf0a108fc93eb0172fbf7cc241f4680d2a8ce59",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Hindi.nsh",
+      "size": 13301,
+      "sha256": "d0b71a695db4b50dc523a3bfc286d72793e8ac96cf3a314fe42afbf9e7285383",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "d0b71a695db4b50dc523a3bfc286d72793e8ac96cf3a314fe42afbf9e7285383",
+      "build_b_sha256": "d0b71a695db4b50dc523a3bfc286d72793e8ac96cf3a314fe42afbf9e7285383",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Hungarian.nlf",
+      "size": 5806,
+      "sha256": "1e096270dcd8d8fddba34601c56e051abc89a793ec62445fdf14f0bbb9529c8e",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "1e096270dcd8d8fddba34601c56e051abc89a793ec62445fdf14f0bbb9529c8e",
+      "build_b_sha256": "1e096270dcd8d8fddba34601c56e051abc89a793ec62445fdf14f0bbb9529c8e",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Hungarian.nsh",
+      "size": 7534,
+      "sha256": "6d46e05dcc816cc8d7a4eac811765ed27be700ebf568c4b2e576e454069cc3bb",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "6d46e05dcc816cc8d7a4eac811765ed27be700ebf568c4b2e576e454069cc3bb",
+      "build_b_sha256": "6d46e05dcc816cc8d7a4eac811765ed27be700ebf568c4b2e576e454069cc3bb",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Icelandic.nlf",
+      "size": 5694,
+      "sha256": "d00b9681b6c185268f9ad097046c2b65835df1a34a2b7dc380a57de186c7d3c3",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "d00b9681b6c185268f9ad097046c2b65835df1a34a2b7dc380a57de186c7d3c3",
+      "build_b_sha256": "d00b9681b6c185268f9ad097046c2b65835df1a34a2b7dc380a57de186c7d3c3",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Icelandic.nsh",
+      "size": 7542,
+      "sha256": "4a7479192d33ada318b0348e9148097d91716d59472423bccc842ff4f067f274",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "4a7479192d33ada318b0348e9148097d91716d59472423bccc842ff4f067f274",
+      "build_b_sha256": "4a7479192d33ada318b0348e9148097d91716d59472423bccc842ff4f067f274",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Indonesian.nlf",
+      "size": 5758,
+      "sha256": "a095efb924f5aae164dc5a14faa7c529afe9c8b71d9027d7e7adff0efde15f32",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "a095efb924f5aae164dc5a14faa7c529afe9c8b71d9027d7e7adff0efde15f32",
+      "build_b_sha256": "a095efb924f5aae164dc5a14faa7c529afe9c8b71d9027d7e7adff0efde15f32",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Indonesian.nsh",
+      "size": 8091,
+      "sha256": "313849fccbf78455c6eebda3c4b94e3ffab4b1ec53ef75d7350c2771a8c50cc5",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "313849fccbf78455c6eebda3c4b94e3ffab4b1ec53ef75d7350c2771a8c50cc5",
+      "build_b_sha256": "313849fccbf78455c6eebda3c4b94e3ffab4b1ec53ef75d7350c2771a8c50cc5",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Irish.nlf",
+      "size": 5873,
+      "sha256": "d87c9e139f92703e589d83bc5a594d60eb829d7acd4c148f8623c818c8868236",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "d87c9e139f92703e589d83bc5a594d60eb829d7acd4c148f8623c818c8868236",
+      "build_b_sha256": "d87c9e139f92703e589d83bc5a594d60eb829d7acd4c148f8623c818c8868236",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Irish.nsh",
+      "size": 7654,
+      "sha256": "d76b23b630237df35593b541af88e1715f2df1eb425226c8c6403be03c05dcf6",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "d76b23b630237df35593b541af88e1715f2df1eb425226c8c6403be03c05dcf6",
+      "build_b_sha256": "d76b23b630237df35593b541af88e1715f2df1eb425226c8c6403be03c05dcf6",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Italian.nlf",
+      "size": 5598,
+      "sha256": "1371f958c8ccc3a0f23ab4bf1ceccefd962ba4785534531de70dacfe5d6041d6",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "1371f958c8ccc3a0f23ab4bf1ceccefd962ba4785534531de70dacfe5d6041d6",
+      "build_b_sha256": "1371f958c8ccc3a0f23ab4bf1ceccefd962ba4785534531de70dacfe5d6041d6",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Italian.nsh",
+      "size": 8466,
+      "sha256": "cd2455066b261c7b5efef941836f4dcc0711aa27434052ddbbc8db926f2ed5bb",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "cd2455066b261c7b5efef941836f4dcc0711aa27434052ddbbc8db926f2ed5bb",
+      "build_b_sha256": "cd2455066b261c7b5efef941836f4dcc0711aa27434052ddbbc8db926f2ed5bb",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Japanese.nlf",
+      "size": 6614,
+      "sha256": "3d4cdcf393b15802c75351273250e192db45d5af82d876cdc6c16151430e4642",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "3d4cdcf393b15802c75351273250e192db45d5af82d876cdc6c16151430e4642",
+      "build_b_sha256": "3d4cdcf393b15802c75351273250e192db45d5af82d876cdc6c16151430e4642",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Japanese.nsh",
+      "size": 9655,
+      "sha256": "7454128269009564b11c4fccf486143c91513bae27c9f72a4ac0f4fd6edb46c6",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "7454128269009564b11c4fccf486143c91513bae27c9f72a4ac0f4fd6edb46c6",
+      "build_b_sha256": "7454128269009564b11c4fccf486143c91513bae27c9f72a4ac0f4fd6edb46c6",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Korean.nlf",
+      "size": 5499,
+      "sha256": "f6ed4431ff6e6996773db8ea462f78a68bd1819fb2ab3fa78814ac57014b6238",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "f6ed4431ff6e6996773db8ea462f78a68bd1819fb2ab3fa78814ac57014b6238",
+      "build_b_sha256": "f6ed4431ff6e6996773db8ea462f78a68bd1819fb2ab3fa78814ac57014b6238",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Korean.nsh",
+      "size": 7874,
+      "sha256": "c2fd7f2dd2d6014e40460b85dea7da9a5f6eaa8060e6665552f7e697b7bfcb4e",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "c2fd7f2dd2d6014e40460b85dea7da9a5f6eaa8060e6665552f7e697b7bfcb4e",
+      "build_b_sha256": "c2fd7f2dd2d6014e40460b85dea7da9a5f6eaa8060e6665552f7e697b7bfcb4e",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Kurdish.nlf",
+      "size": 5853,
+      "sha256": "865d5c15fb58435fcfe28d7cac011b1d6b32898e23a8a606b4967df4c968d0ea",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "865d5c15fb58435fcfe28d7cac011b1d6b32898e23a8a606b4967df4c968d0ea",
+      "build_b_sha256": "865d5c15fb58435fcfe28d7cac011b1d6b32898e23a8a606b4967df4c968d0ea",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Kurdish.nsh",
+      "size": 7852,
+      "sha256": "cfc0e8475daf71e8d8f84e21da96674681ddb6f802226fc1a4fdc1675d72e126",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "cfc0e8475daf71e8d8f84e21da96674681ddb6f802226fc1a4fdc1675d72e126",
+      "build_b_sha256": "cfc0e8475daf71e8d8f84e21da96674681ddb6f802226fc1a4fdc1675d72e126",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Latvian.nlf",
+      "size": 5605,
+      "sha256": "84b7069796f18de481179537f2c55928e1da1272738f0c9a4f5f53b022264f3d",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "84b7069796f18de481179537f2c55928e1da1272738f0c9a4f5f53b022264f3d",
+      "build_b_sha256": "84b7069796f18de481179537f2c55928e1da1272738f0c9a4f5f53b022264f3d",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Latvian.nsh",
+      "size": 7548,
+      "sha256": "00f1b2396cf58c41e35703ccdb290ea6d5408189e2be670aa8df451585f3e051",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "00f1b2396cf58c41e35703ccdb290ea6d5408189e2be670aa8df451585f3e051",
+      "build_b_sha256": "00f1b2396cf58c41e35703ccdb290ea6d5408189e2be670aa8df451585f3e051",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Lithuanian.nlf",
+      "size": 5330,
+      "sha256": "b552f3f7ebc194101c52b11377445740a106ed689f34d9bea76b1c834fc888a0",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "b552f3f7ebc194101c52b11377445740a106ed689f34d9bea76b1c834fc888a0",
+      "build_b_sha256": "b552f3f7ebc194101c52b11377445740a106ed689f34d9bea76b1c834fc888a0",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Lithuanian.nsh",
+      "size": 7119,
+      "sha256": "29ff966c37f8dc6178380ac16f429308c0947df1f02ec308c0943564542923c0",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "29ff966c37f8dc6178380ac16f429308c0947df1f02ec308c0943564542923c0",
+      "build_b_sha256": "29ff966c37f8dc6178380ac16f429308c0947df1f02ec308c0943564542923c0",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Luxembourgish.nlf",
+      "size": 5714,
+      "sha256": "e641014e6ba4845af8798078d71ad166c9b0b3ebd90efe7fa316941e39a18307",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "e641014e6ba4845af8798078d71ad166c9b0b3ebd90efe7fa316941e39a18307",
+      "build_b_sha256": "e641014e6ba4845af8798078d71ad166c9b0b3ebd90efe7fa316941e39a18307",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Luxembourgish.nsh",
+      "size": 7713,
+      "sha256": "a699be758fbd89063b6c86b92a3723b1d40b98c8daee07e02472f242af89e72d",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "a699be758fbd89063b6c86b92a3723b1d40b98c8daee07e02472f242af89e72d",
+      "build_b_sha256": "a699be758fbd89063b6c86b92a3723b1d40b98c8daee07e02472f242af89e72d",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Macedonian.nlf",
+      "size": 8255,
+      "sha256": "9f05cffba5a82082dfed55524803d8e4a1674e8cb79a99bce699b0f3627e6e58",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "9f05cffba5a82082dfed55524803d8e4a1674e8cb79a99bce699b0f3627e6e58",
+      "build_b_sha256": "9f05cffba5a82082dfed55524803d8e4a1674e8cb79a99bce699b0f3627e6e58",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Macedonian.nsh",
+      "size": 10196,
+      "sha256": "174f260ed1b71038b4acfefad0171c8a4557b441c094e66e8543c9852d1fa8aa",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "174f260ed1b71038b4acfefad0171c8a4557b441c094e66e8543c9852d1fa8aa",
+      "build_b_sha256": "174f260ed1b71038b4acfefad0171c8a4557b441c094e66e8543c9852d1fa8aa",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Malay.nlf",
+      "size": 4793,
+      "sha256": "c6bc3b1413a63ea98a3a807581c87fa221a18fa11a0883e6bdecdf4e7380eae5",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "c6bc3b1413a63ea98a3a807581c87fa221a18fa11a0883e6bdecdf4e7380eae5",
+      "build_b_sha256": "c6bc3b1413a63ea98a3a807581c87fa221a18fa11a0883e6bdecdf4e7380eae5",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Malay.nsh",
+      "size": 6802,
+      "sha256": "ca1ede4cc5231b63a60bc4f8bd6d9b7cc3896d562dc5c93fc643f8ad218b3fc6",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "ca1ede4cc5231b63a60bc4f8bd6d9b7cc3896d562dc5c93fc643f8ad218b3fc6",
+      "build_b_sha256": "ca1ede4cc5231b63a60bc4f8bd6d9b7cc3896d562dc5c93fc643f8ad218b3fc6",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Mongolian.nlf",
+      "size": 7228,
+      "sha256": "53e0c247f0891dcd4c7df330c24845220d9b2500c934859b8ac343acdf6fcff5",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "53e0c247f0891dcd4c7df330c24845220d9b2500c934859b8ac343acdf6fcff5",
+      "build_b_sha256": "53e0c247f0891dcd4c7df330c24845220d9b2500c934859b8ac343acdf6fcff5",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Mongolian.nsh",
+      "size": 9853,
+      "sha256": "bd6125ec32e379cdf5ec1b2d93ae293678bec7c1064d143659c652d1de23ca55",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "bd6125ec32e379cdf5ec1b2d93ae293678bec7c1064d143659c652d1de23ca55",
+      "build_b_sha256": "bd6125ec32e379cdf5ec1b2d93ae293678bec7c1064d143659c652d1de23ca55",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Norwegian.nlf",
+      "size": 5074,
+      "sha256": "790be7026f30fa05c4d5ad1a94f97f4127969f3bee25d332918f0b250cae7fed",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "790be7026f30fa05c4d5ad1a94f97f4127969f3bee25d332918f0b250cae7fed",
+      "build_b_sha256": "790be7026f30fa05c4d5ad1a94f97f4127969f3bee25d332918f0b250cae7fed",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Norwegian.nsh",
+      "size": 7869,
+      "sha256": "3476a686b32419c0764a928551f1ce2abb524a0284b422bbba239e9d3b597f43",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "3476a686b32419c0764a928551f1ce2abb524a0284b422bbba239e9d3b597f43",
+      "build_b_sha256": "3476a686b32419c0764a928551f1ce2abb524a0284b422bbba239e9d3b597f43",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/NorwegianNynorsk.nlf",
+      "size": 5025,
+      "sha256": "2f995b7184a01fa2303a64c0be2c401c104e7e3c13237126638023cd7f977a65",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "2f995b7184a01fa2303a64c0be2c401c104e7e3c13237126638023cd7f977a65",
+      "build_b_sha256": "2f995b7184a01fa2303a64c0be2c401c104e7e3c13237126638023cd7f977a65",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/NorwegianNynorsk.nsh",
+      "size": 7655,
+      "sha256": "4107b9a2c6cb449f77627763ddb25bce66e931382795fadc4e452731c8f111bf",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "4107b9a2c6cb449f77627763ddb25bce66e931382795fadc4e452731c8f111bf",
+      "build_b_sha256": "4107b9a2c6cb449f77627763ddb25bce66e931382795fadc4e452731c8f111bf",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Pashto.nlf",
+      "size": 6448,
+      "sha256": "9952974c7a3aabae3dc1e2b553deb97cc7695e5060c1fa60cc16c211c5be8cb8",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "9952974c7a3aabae3dc1e2b553deb97cc7695e5060c1fa60cc16c211c5be8cb8",
+      "build_b_sha256": "9952974c7a3aabae3dc1e2b553deb97cc7695e5060c1fa60cc16c211c5be8cb8",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Pashto.nsh",
+      "size": 8532,
+      "sha256": "bfde24291e4dcaf9ee27915e98a6be5b642865ecf62f9d7aee38071420543bfb",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "bfde24291e4dcaf9ee27915e98a6be5b642865ecf62f9d7aee38071420543bfb",
+      "build_b_sha256": "bfde24291e4dcaf9ee27915e98a6be5b642865ecf62f9d7aee38071420543bfb",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Polish.nlf",
+      "size": 5607,
+      "sha256": "06bc02413e4bdd73b5169b35aa668459cf52d028aeca5f7adcb03b777fc3608f",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "06bc02413e4bdd73b5169b35aa668459cf52d028aeca5f7adcb03b777fc3608f",
+      "build_b_sha256": "06bc02413e4bdd73b5169b35aa668459cf52d028aeca5f7adcb03b777fc3608f",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Polish.nsh",
+      "size": 8339,
+      "sha256": "256252b66e88a7dc4faebd8f00020eb71384de5da4bbbd3735968cdcac1229be",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "256252b66e88a7dc4faebd8f00020eb71384de5da4bbbd3735968cdcac1229be",
+      "build_b_sha256": "256252b66e88a7dc4faebd8f00020eb71384de5da4bbbd3735968cdcac1229be",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Portuguese.nlf",
+      "size": 5426,
+      "sha256": "14325f19d8fdead0cc2831f5008acb8734ce4325fb5e09e5f260e47766c9ac98",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "14325f19d8fdead0cc2831f5008acb8734ce4325fb5e09e5f260e47766c9ac98",
+      "build_b_sha256": "14325f19d8fdead0cc2831f5008acb8734ce4325fb5e09e5f260e47766c9ac98",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Portuguese.nsh",
+      "size": 8005,
+      "sha256": "8ff23a99c8c4f791dc068e036b67e7200f730c0a822ef561b8334deb4d5b07b0",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "8ff23a99c8c4f791dc068e036b67e7200f730c0a822ef561b8334deb4d5b07b0",
+      "build_b_sha256": "8ff23a99c8c4f791dc068e036b67e7200f730c0a822ef561b8334deb4d5b07b0",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/PortugueseBR.nlf",
+      "size": 5553,
+      "sha256": "b3cde87d4c0d6410685670e4ecd511f39720be5b90843efe2f02a4060ac2a9ea",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "b3cde87d4c0d6410685670e4ecd511f39720be5b90843efe2f02a4060ac2a9ea",
+      "build_b_sha256": "b3cde87d4c0d6410685670e4ecd511f39720be5b90843efe2f02a4060ac2a9ea",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/PortugueseBR.nsh",
+      "size": 8100,
+      "sha256": "e63dc9bce1297b71d01997c37a2fa57c17d8d88f0a4516a7c0cc3af11c794087",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "e63dc9bce1297b71d01997c37a2fa57c17d8d88f0a4516a7c0cc3af11c794087",
+      "build_b_sha256": "e63dc9bce1297b71d01997c37a2fa57c17d8d88f0a4516a7c0cc3af11c794087",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Romanian.nlf",
+      "size": 6242,
+      "sha256": "679348a978000fcd237c160dc6cc7fddac9eaca9c3ddb1fd29dbe796538c0db1",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "679348a978000fcd237c160dc6cc7fddac9eaca9c3ddb1fd29dbe796538c0db1",
+      "build_b_sha256": "679348a978000fcd237c160dc6cc7fddac9eaca9c3ddb1fd29dbe796538c0db1",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Romanian.nsh",
+      "size": 8081,
+      "sha256": "a7587a93e42784b40b2301de0d4c52115d39125ded411793f17a8efeb1816df7",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "a7587a93e42784b40b2301de0d4c52115d39125ded411793f17a8efeb1816df7",
+      "build_b_sha256": "a7587a93e42784b40b2301de0d4c52115d39125ded411793f17a8efeb1816df7",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Russian.nlf",
+      "size": 7684,
+      "sha256": "0a0c8234cc4dbb91b09bca8cffe3add86c9c44dd0b5a82ca8c9045fe1fdfb37e",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "0a0c8234cc4dbb91b09bca8cffe3add86c9c44dd0b5a82ca8c9045fe1fdfb37e",
+      "build_b_sha256": "0a0c8234cc4dbb91b09bca8cffe3add86c9c44dd0b5a82ca8c9045fe1fdfb37e",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Russian.nsh",
+      "size": 10387,
+      "sha256": "7b10b84b217b11075f3273364da9a1f26af63cef07f7572cf956bb08b394d150",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "7b10b84b217b11075f3273364da9a1f26af63cef07f7572cf956bb08b394d150",
+      "build_b_sha256": "7b10b84b217b11075f3273364da9a1f26af63cef07f7572cf956bb08b394d150",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/ScotsGaelic.nlf",
+      "size": 6038,
+      "sha256": "6266a612b8eb4205666abefe566d11707b02129bd90dcab39f2f969cda0c5ab0",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "6266a612b8eb4205666abefe566d11707b02129bd90dcab39f2f969cda0c5ab0",
+      "build_b_sha256": "6266a612b8eb4205666abefe566d11707b02129bd90dcab39f2f969cda0c5ab0",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/ScotsGaelic.nsh",
+      "size": 8398,
+      "sha256": "0f3cebc745b85ad4140746b7fe67b716bf552c1011646e50369568b7e35fe32c",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "0f3cebc745b85ad4140746b7fe67b716bf552c1011646e50369568b7e35fe32c",
+      "build_b_sha256": "0f3cebc745b85ad4140746b7fe67b716bf552c1011646e50369568b7e35fe32c",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Serbian.nlf",
+      "size": 8193,
+      "sha256": "04b62a3cd1b8e7030545a050817200a5022f01cb423abe4c05e2ea859a9d1f20",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "04b62a3cd1b8e7030545a050817200a5022f01cb423abe4c05e2ea859a9d1f20",
+      "build_b_sha256": "04b62a3cd1b8e7030545a050817200a5022f01cb423abe4c05e2ea859a9d1f20",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Serbian.nsh",
+      "size": 10263,
+      "sha256": "7a6247e86fd0df6e2c6a58359615c83f0d9a833f1214a29310b7231f4415832c",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "7a6247e86fd0df6e2c6a58359615c83f0d9a833f1214a29310b7231f4415832c",
+      "build_b_sha256": "7a6247e86fd0df6e2c6a58359615c83f0d9a833f1214a29310b7231f4415832c",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/SerbianLatin.nlf",
+      "size": 5555,
+      "sha256": "43cc8d4530216a771d348d53398953b9cc87c6f4450359b0e60fae981da864ef",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "43cc8d4530216a771d348d53398953b9cc87c6f4450359b0e60fae981da864ef",
+      "build_b_sha256": "43cc8d4530216a771d348d53398953b9cc87c6f4450359b0e60fae981da864ef",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/SerbianLatin.nsh",
+      "size": 7574,
+      "sha256": "5610e96c6108f1a66ec70fa743c83410a8acf8baf49a7cbf532cb302b7e61950",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "5610e96c6108f1a66ec70fa743c83410a8acf8baf49a7cbf532cb302b7e61950",
+      "build_b_sha256": "5610e96c6108f1a66ec70fa743c83410a8acf8baf49a7cbf532cb302b7e61950",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/SimpChinese.nlf",
+      "size": 5050,
+      "sha256": "4d03518f6b472fa46d7b3719ded4eff0f1a458893feb0d0b7da2a29d65027657",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "4d03518f6b472fa46d7b3719ded4eff0f1a458893feb0d0b7da2a29d65027657",
+      "build_b_sha256": "4d03518f6b472fa46d7b3719ded4eff0f1a458893feb0d0b7da2a29d65027657",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/SimpChinese.nsh",
+      "size": 7553,
+      "sha256": "256e3e07d35d172f6d8b5a26896a27edce8d4af67d27cf0adada96f637080c46",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "256e3e07d35d172f6d8b5a26896a27edce8d4af67d27cf0adada96f637080c46",
+      "build_b_sha256": "256e3e07d35d172f6d8b5a26896a27edce8d4af67d27cf0adada96f637080c46",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Slovak.nlf",
+      "size": 6488,
+      "sha256": "800f5af00499c92fdedd42c5f3d2236d362b7a4f8aca028efe539d35365a56a2",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "800f5af00499c92fdedd42c5f3d2236d362b7a4f8aca028efe539d35365a56a2",
+      "build_b_sha256": "800f5af00499c92fdedd42c5f3d2236d362b7a4f8aca028efe539d35365a56a2",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Slovak.nsh",
+      "size": 8774,
+      "sha256": "c703cf3952251ac7f5a15cfe81fba4f1894e062e4e1e4cc8bc3b036e4f0ef191",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "c703cf3952251ac7f5a15cfe81fba4f1894e062e4e1e4cc8bc3b036e4f0ef191",
+      "build_b_sha256": "c703cf3952251ac7f5a15cfe81fba4f1894e062e4e1e4cc8bc3b036e4f0ef191",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Slovenian.nlf",
+      "size": 5171,
+      "sha256": "8b1947583a4e281b05d40da2f4a5d15fc461d0878747c6059836bd9a4df986b5",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "8b1947583a4e281b05d40da2f4a5d15fc461d0878747c6059836bd9a4df986b5",
+      "build_b_sha256": "8b1947583a4e281b05d40da2f4a5d15fc461d0878747c6059836bd9a4df986b5",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Slovenian.nsh",
+      "size": 7961,
+      "sha256": "3fb68baeceda8e07c6ca7976e956bd3047ab822f1b2b7f1a9523bd8c9f4f02ea",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "3fb68baeceda8e07c6ca7976e956bd3047ab822f1b2b7f1a9523bd8c9f4f02ea",
+      "build_b_sha256": "3fb68baeceda8e07c6ca7976e956bd3047ab822f1b2b7f1a9523bd8c9f4f02ea",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Spanish.nlf",
+      "size": 5554,
+      "sha256": "69a21d34f8fd911a69c2a4a8da27f501f6da902e9f4ec609871b22fcd0deb97d",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "69a21d34f8fd911a69c2a4a8da27f501f6da902e9f4ec609871b22fcd0deb97d",
+      "build_b_sha256": "69a21d34f8fd911a69c2a4a8da27f501f6da902e9f4ec609871b22fcd0deb97d",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Spanish.nsh",
+      "size": 8083,
+      "sha256": "beb106f197639933d8931d55ee0aaa31ea7423426c883361e98ca0a6d57fdac3",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "beb106f197639933d8931d55ee0aaa31ea7423426c883361e98ca0a6d57fdac3",
+      "build_b_sha256": "beb106f197639933d8931d55ee0aaa31ea7423426c883361e98ca0a6d57fdac3",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/SpanishInternational.nlf",
+      "size": 5554,
+      "sha256": "26eafd82568c0ee329a1f4eb291f423a81cf82dad04df6ffad5221ca95371c76",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "26eafd82568c0ee329a1f4eb291f423a81cf82dad04df6ffad5221ca95371c76",
+      "build_b_sha256": "26eafd82568c0ee329a1f4eb291f423a81cf82dad04df6ffad5221ca95371c76",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/SpanishInternational.nsh",
+      "size": 8196,
+      "sha256": "c5a7bf92ba766bd48d656584143c96afc9cdc5996f5e14b1435688e7b4153385",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "c5a7bf92ba766bd48d656584143c96afc9cdc5996f5e14b1435688e7b4153385",
+      "build_b_sha256": "c5a7bf92ba766bd48d656584143c96afc9cdc5996f5e14b1435688e7b4153385",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Swedish.nlf",
+      "size": 5345,
+      "sha256": "994679c93a66a6ab2a90905940a64e4e007336c52c15ca96a1d12d6021c0c47e",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "994679c93a66a6ab2a90905940a64e4e007336c52c15ca96a1d12d6021c0c47e",
+      "build_b_sha256": "994679c93a66a6ab2a90905940a64e4e007336c52c15ca96a1d12d6021c0c47e",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Swedish.nsh",
+      "size": 7964,
+      "sha256": "28ebff21ad87f20e3829a2074bcfef371936d123e4d9614a52529ed6c92422bd",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "28ebff21ad87f20e3829a2074bcfef371936d123e4d9614a52529ed6c92422bd",
+      "build_b_sha256": "28ebff21ad87f20e3829a2074bcfef371936d123e4d9614a52529ed6c92422bd",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Tatar.nlf",
+      "size": 7682,
+      "sha256": "5ac87cf1ac8eb8707751fa802a451c9ea1d6668a28eb83310788ff0eef2dae21",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "5ac87cf1ac8eb8707751fa802a451c9ea1d6668a28eb83310788ff0eef2dae21",
+      "build_b_sha256": "5ac87cf1ac8eb8707751fa802a451c9ea1d6668a28eb83310788ff0eef2dae21",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Tatar.nsh",
+      "size": 10183,
+      "sha256": "15f27aebf9ce2c76a323497f260de6351455f79c7d92ad86927fca2494e504ff",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "15f27aebf9ce2c76a323497f260de6351455f79c7d92ad86927fca2494e504ff",
+      "build_b_sha256": "15f27aebf9ce2c76a323497f260de6351455f79c7d92ad86927fca2494e504ff",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Thai.nlf",
+      "size": 9985,
+      "sha256": "b13695dd61cbdebe4a4025bed9fd01607ca6848a40beae837a8844adaf319b5d",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "b13695dd61cbdebe4a4025bed9fd01607ca6848a40beae837a8844adaf319b5d",
+      "build_b_sha256": "b13695dd61cbdebe4a4025bed9fd01607ca6848a40beae837a8844adaf319b5d",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Thai.nsh",
+      "size": 12621,
+      "sha256": "3678a2567d47f4775493da558ed63040a1b8ac07542317720a600e448a264a39",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "3678a2567d47f4775493da558ed63040a1b8ac07542317720a600e448a264a39",
+      "build_b_sha256": "3678a2567d47f4775493da558ed63040a1b8ac07542317720a600e448a264a39",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/TradChinese.nlf",
+      "size": 5076,
+      "sha256": "a92595266f734e272dffc5aa1abaa19ce94efe35c755329f4d9473266f39bf13",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "a92595266f734e272dffc5aa1abaa19ce94efe35c755329f4d9473266f39bf13",
+      "build_b_sha256": "a92595266f734e272dffc5aa1abaa19ce94efe35c755329f4d9473266f39bf13",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/TradChinese.nsh",
+      "size": 7519,
+      "sha256": "1d74f01a256c9981e6fe94f5df3f5e13736f4409d1378cd5d2f0177846a19a80",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "1d74f01a256c9981e6fe94f5df3f5e13736f4409d1378cd5d2f0177846a19a80",
+      "build_b_sha256": "1d74f01a256c9981e6fe94f5df3f5e13736f4409d1378cd5d2f0177846a19a80",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Turkish.nlf",
+      "size": 5743,
+      "sha256": "1774d493a5ffa87c0e8bbe2e95521ecefca4bf2017450bc3c51865111d2eac98",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "1774d493a5ffa87c0e8bbe2e95521ecefca4bf2017450bc3c51865111d2eac98",
+      "build_b_sha256": "1774d493a5ffa87c0e8bbe2e95521ecefca4bf2017450bc3c51865111d2eac98",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Turkish.nsh",
+      "size": 7951,
+      "sha256": "7c2b74589797fa13a559fb81bf289c2c9e2051aeca1c43dbb37ba4657f4a16ce",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "7c2b74589797fa13a559fb81bf289c2c9e2051aeca1c43dbb37ba4657f4a16ce",
+      "build_b_sha256": "7c2b74589797fa13a559fb81bf289c2c9e2051aeca1c43dbb37ba4657f4a16ce",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Ukrainian.nlf",
+      "size": 8073,
+      "sha256": "6ceb67eb19cfb40a790dca0bd9e7aab56a299839a65245d6e7c63d53df5a3a45",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "6ceb67eb19cfb40a790dca0bd9e7aab56a299839a65245d6e7c63d53df5a3a45",
+      "build_b_sha256": "6ceb67eb19cfb40a790dca0bd9e7aab56a299839a65245d6e7c63d53df5a3a45",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Ukrainian.nsh",
+      "size": 10062,
+      "sha256": "d7e0f38ceb7844f506f32d4b09e428abe4713e7b4fa689c112d358fac180c14f",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "d7e0f38ceb7844f506f32d4b09e428abe4713e7b4fa689c112d358fac180c14f",
+      "build_b_sha256": "d7e0f38ceb7844f506f32d4b09e428abe4713e7b4fa689c112d358fac180c14f",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Uzbek.nlf",
+      "size": 5495,
+      "sha256": "46b94d7d4f46a89be068e9fa41b288be5f170dd70450a042aaba0c087c40d0e6",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "46b94d7d4f46a89be068e9fa41b288be5f170dd70450a042aaba0c087c40d0e6",
+      "build_b_sha256": "46b94d7d4f46a89be068e9fa41b288be5f170dd70450a042aaba0c087c40d0e6",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Uzbek.nsh",
+      "size": 7483,
+      "sha256": "ff50a5d2c5397cdeeefa67e95eb9e3462d4a327ee94a2488a601bef23e1c73e4",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "ff50a5d2c5397cdeeefa67e95eb9e3462d4a327ee94a2488a601bef23e1c73e4",
+      "build_b_sha256": "ff50a5d2c5397cdeeefa67e95eb9e3462d4a327ee94a2488a601bef23e1c73e4",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Vietnamese.nlf",
+      "size": 6611,
+      "sha256": "2ef1a249a8b4dd3ed3f37606932a43bd0d424f602c50f9270ec146b5ca25b6e8",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "2ef1a249a8b4dd3ed3f37606932a43bd0d424f602c50f9270ec146b5ca25b6e8",
+      "build_b_sha256": "2ef1a249a8b4dd3ed3f37606932a43bd0d424f602c50f9270ec146b5ca25b6e8",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Vietnamese.nsh",
+      "size": 9114,
+      "sha256": "c97345007ce05caab6453985634186137318494ae894f67b2130a11618038924",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "c97345007ce05caab6453985634186137318494ae894f67b2130a11618038924",
+      "build_b_sha256": "c97345007ce05caab6453985634186137318494ae894f67b2130a11618038924",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Welsh.nlf",
+      "size": 4737,
+      "sha256": "d4aa0d517d4b0cfde3ae4aedd27d390d1eb6489bd50cffb96b07de2639cdf594",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "d4aa0d517d4b0cfde3ae4aedd27d390d1eb6489bd50cffb96b07de2639cdf594",
+      "build_b_sha256": "d4aa0d517d4b0cfde3ae4aedd27d390d1eb6489bd50cffb96b07de2639cdf594",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Language files/Welsh.nsh",
+      "size": 6891,
+      "sha256": "cb7b2724e497f86816093f7f8d52bed564938f7492cb58d25b09ef864d58985d",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "cb7b2724e497f86816093f7f8d52bed564938f7492cb58d25b09ef864d58985d",
+      "build_b_sha256": "cb7b2724e497f86816093f7f8d52bed564938f7492cb58d25b09ef864d58985d",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Modern UI 2/Deprecated.nsh",
+      "size": 1805,
+      "sha256": "100b5b74b1d0d20924e0a66a59f394c36e062ea2b94d2cad3dfd9e2239fabdba",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "100b5b74b1d0d20924e0a66a59f394c36e062ea2b94d2cad3dfd9e2239fabdba",
+      "build_b_sha256": "100b5b74b1d0d20924e0a66a59f394c36e062ea2b94d2cad3dfd9e2239fabdba",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Modern UI 2/Interface.nsh",
+      "size": 9932,
+      "sha256": "a7c989dfe337798e92f6afda32fc474ce2b83c5bdc9f97e8f61a7f0dfbc51aa4",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "a7c989dfe337798e92f6afda32fc474ce2b83c5bdc9f97e8f61a7f0dfbc51aa4",
+      "build_b_sha256": "a7c989dfe337798e92f6afda32fc474ce2b83c5bdc9f97e8f61a7f0dfbc51aa4",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Modern UI 2/Localization.nsh",
+      "size": 4623,
+      "sha256": "270325977996013febf436d927086628270a3221c3a8c8a10fae83ab4003953d",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "270325977996013febf436d927086628270a3221c3a8c8a10fae83ab4003953d",
+      "build_b_sha256": "270325977996013febf436d927086628270a3221c3a8c8a10fae83ab4003953d",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Modern UI 2/MUI2.nsh",
+      "size": 2237,
+      "sha256": "f1725dd61e842b3a2bffa00a348a299c297eb7a3a4cb6f5782a145812e0b3680",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "f1725dd61e842b3a2bffa00a348a299c297eb7a3a4cb6f5782a145812e0b3680",
+      "build_b_sha256": "f1725dd61e842b3a2bffa00a348a299c297eb7a3a4cb6f5782a145812e0b3680",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Modern UI 2/Pages.nsh",
+      "size": 9068,
+      "sha256": "16521f235fba1e9e0b433aa030c579293865fea728e6d3037a46277c50a640fc",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "16521f235fba1e9e0b433aa030c579293865fea728e6d3037a46277c50a640fc",
+      "build_b_sha256": "16521f235fba1e9e0b433aa030c579293865fea728e6d3037a46277c50a640fc",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Modern UI 2/Pages/Components.nsh",
+      "size": 6756,
+      "sha256": "13805fd49072918d3cb71ced584c4e29823a126ecef7bcf5d332e11be332ba77",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "13805fd49072918d3cb71ced584c4e29823a126ecef7bcf5d332e11be332ba77",
+      "build_b_sha256": "13805fd49072918d3cb71ced584c4e29823a126ecef7bcf5d332e11be332ba77",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Modern UI 2/Pages/Directory.nsh",
+      "size": 3472,
+      "sha256": "aa0b7e92aca98ba6bbb0a7465abf18efc34f207ecb0cb8300f1dd2ede556e20e",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "aa0b7e92aca98ba6bbb0a7465abf18efc34f207ecb0cb8300f1dd2ede556e20e",
+      "build_b_sha256": "aa0b7e92aca98ba6bbb0a7465abf18efc34f207ecb0cb8300f1dd2ede556e20e",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Modern UI 2/Pages/Finish.nsh",
+      "size": 17546,
+      "sha256": "ac6e9bf4f6152ebce31d9136c5f86f474b04df9e89dda83544cd1ed0f37c8ac6",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "ac6e9bf4f6152ebce31d9136c5f86f474b04df9e89dda83544cd1ed0f37c8ac6",
+      "build_b_sha256": "ac6e9bf4f6152ebce31d9136c5f86f474b04df9e89dda83544cd1ed0f37c8ac6",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Modern UI 2/Pages/InstallFiles.nsh",
+      "size": 4824,
+      "sha256": "bbd10b77c7622bd78651c7c1cc86425a4dfc0e4f8c56591f746a895261b91a75",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "bbd10b77c7622bd78651c7c1cc86425a4dfc0e4f8c56591f746a895261b91a75",
+      "build_b_sha256": "bbd10b77c7622bd78651c7c1cc86425a4dfc0e4f8c56591f746a895261b91a75",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Modern UI 2/Pages/License.nsh",
+      "size": 4334,
+      "sha256": "10f270377e058dc9b7401050583346ff2dceb1c94b24c88e5f9fea71b214c1b3",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "10f270377e058dc9b7401050583346ff2dceb1c94b24c88e5f9fea71b214c1b3",
+      "build_b_sha256": "10f270377e058dc9b7401050583346ff2dceb1c94b24c88e5f9fea71b214c1b3",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Modern UI 2/Pages/StartMenu.nsh",
+      "size": 7960,
+      "sha256": "47c390a1c47a062b1cf00191d11f71356dfcf220827240a545abee566f54a28b",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "47c390a1c47a062b1cf00191d11f71356dfcf220827240a545abee566f54a28b",
+      "build_b_sha256": "47c390a1c47a062b1cf00191d11f71356dfcf220827240a545abee566f54a28b",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Modern UI 2/Pages/UninstallConfirm.nsh",
+      "size": 2272,
+      "sha256": "198b24698ecfd7b8b5cc33b06b51f87f6810c555036c24f83b0ceb1eb25c829b",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "198b24698ecfd7b8b5cc33b06b51f87f6810c555036c24f83b0ceb1eb25c829b",
+      "build_b_sha256": "198b24698ecfd7b8b5cc33b06b51f87f6810c555036c24f83b0ceb1eb25c829b",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/Modern UI 2/Pages/Welcome.nsh",
+      "size": 5186,
+      "sha256": "ef5a1b6e273198322f7c0be5364f3d2302498a7a48b957ff0e4a0513712fd183",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "ef5a1b6e273198322f7c0be5364f3d2302498a7a48b957ff0e4a0513712fd183",
+      "build_b_sha256": "ef5a1b6e273198322f7c0be5364f3d2302498a7a48b957ff0e4a0513712fd183",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/UIs/default.exe",
+      "size": 88064,
+      "sha256": "26ba7a10626801c4bf69161a05b11a87936bf979dc0100eaa5da47ab11e5abbb",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "26ba7a10626801c4bf69161a05b11a87936bf979dc0100eaa5da47ab11e5abbb",
+      "build_b_sha256": "26ba7a10626801c4bf69161a05b11a87936bf979dc0100eaa5da47ab11e5abbb",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/UIs/modern_headerbmp.exe",
+      "size": 86528,
+      "sha256": "c37bca3c793963a0473afc033fa58c18d517c47a3afec4237c8ba5ddfe3a65b0",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "c37bca3c793963a0473afc033fa58c18d517c47a3afec4237c8ba5ddfe3a65b0",
+      "build_b_sha256": "c37bca3c793963a0473afc033fa58c18d517c47a3afec4237c8ba5ddfe3a65b0",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/UIs/modern_headerbmpr.exe",
+      "size": 86528,
+      "sha256": "f920907e05201fb9741a57f1e81f08eb1613b4f1790b0e3a394ef18222cf18dc",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "f920907e05201fb9741a57f1e81f08eb1613b4f1790b0e3a394ef18222cf18dc",
+      "build_b_sha256": "f920907e05201fb9741a57f1e81f08eb1613b4f1790b0e3a394ef18222cf18dc",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/UIs/modern_nodesc.exe",
+      "size": 86016,
+      "sha256": "a48484052a487fa1fc5aa2376b26a26028de76bc884071a1bf9923c9466d8722",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "a48484052a487fa1fc5aa2376b26a26028de76bc884071a1bf9923c9466d8722",
+      "build_b_sha256": "a48484052a487fa1fc5aa2376b26a26028de76bc884071a1bf9923c9466d8722",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/UIs/modern_smalldesc.exe",
+      "size": 86016,
+      "sha256": "a19e9279701dab4aa28c4e246f0c57373ca9d6939cdec4b2503913c84e82488d",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "a19e9279701dab4aa28c4e246f0c57373ca9d6939cdec4b2503913c84e82488d",
+      "build_b_sha256": "a19e9279701dab4aa28c4e246f0c57373ca9d6939cdec4b2503913c84e82488d",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/UIs/modern.exe",
+      "size": 88576,
+      "sha256": "794dbace5596e545e28099c2d1723563b6101e249861e118b025e0eabf952560",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "794dbace5596e545e28099c2d1723563b6101e249861e118b025e0eabf952560",
+      "build_b_sha256": "794dbace5596e545e28099c2d1723563b6101e249861e118b025e0eabf952560",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Contrib/UIs/sdbarker_tiny.exe",
+      "size": 88576,
+      "sha256": "565f4268ee318b8573d2384c71a72c47c05d4e0989e923c9f00f89f35007c4e4",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "565f4268ee318b8573d2384c71a72c47c05d4e0989e923c9f00f89f35007c4e4",
+      "build_b_sha256": "565f4268ee318b8573d2384c71a72c47c05d4e0989e923c9f00f89f35007c4e4",
+      "build_a_b_match": true
+    },
+    {
+      "path": "COPYING",
+      "size": 15488,
+      "sha256": "6cc665347be5c84b76bf0fd6f85fbb0c33261e89b3408aa3e3e55dbe95e12d89",
+      "classification": "LICENSE_NOTICE"
+    },
+    {
+      "path": "Include/Colors.nsh",
+      "size": 1784,
+      "sha256": "f9f08980af4a0c2a881be3a1bde2cd91dd3bbc4b29e20b7c8264bd1912e0ad03",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "f9f08980af4a0c2a881be3a1bde2cd91dd3bbc4b29e20b7c8264bd1912e0ad03",
+      "build_b_sha256": "f9f08980af4a0c2a881be3a1bde2cd91dd3bbc4b29e20b7c8264bd1912e0ad03",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/FileFunc.nsh",
+      "size": 38510,
+      "sha256": "34cedfa096e73caf76d623eea7040ba450e874bb171c4cd3c54f3b3e070e87d0",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "34cedfa096e73caf76d623eea7040ba450e874bb171c4cd3c54f3b3e070e87d0",
+      "build_b_sha256": "34cedfa096e73caf76d623eea7040ba450e874bb171c4cd3c54f3b3e070e87d0",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/Integration.nsh",
+      "size": 1196,
+      "sha256": "001534e5771e3e36f322ff6ebd204be2acf8d2bf06647e743965254cc8592b42",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "001534e5771e3e36f322ff6ebd204be2acf8d2bf06647e743965254cc8592b42",
+      "build_b_sha256": "001534e5771e3e36f322ff6ebd204be2acf8d2bf06647e743965254cc8592b42",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/LangFile.nsh",
+      "size": 5303,
+      "sha256": "5a263fc869ccd8d004bf2cacb2803e1dbbb513923cce6d87b5bcb4ce779c8d21",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "5a263fc869ccd8d004bf2cacb2803e1dbbb513923cce6d87b5bcb4ce779c8d21",
+      "build_b_sha256": "5a263fc869ccd8d004bf2cacb2803e1dbbb513923cce6d87b5bcb4ce779c8d21",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/Library.nsh",
+      "size": 20900,
+      "sha256": "9055b293eed9fa170195b6e8f27eda624abf05460065eeb4fa10e40b75278d39",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "9055b293eed9fa170195b6e8f27eda624abf05460065eeb4fa10e40b75278d39",
+      "build_b_sha256": "9055b293eed9fa170195b6e8f27eda624abf05460065eeb4fa10e40b75278d39",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/LogicLib.nsh",
+      "size": 35144,
+      "sha256": "a8421ee1c26961d330d281e25552c4143e431419f1d7ce9b68b2517e9894add1",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "a8421ee1c26961d330d281e25552c4143e431419f1d7ce9b68b2517e9894add1",
+      "build_b_sha256": "a8421ee1c26961d330d281e25552c4143e431419f1d7ce9b68b2517e9894add1",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/Memento.nsh",
+      "size": 11537,
+      "sha256": "59292c3822c20d405b8741af30cc5ec08bcb3c6482fbd5fa592813b8027fced6",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "59292c3822c20d405b8741af30cc5ec08bcb3c6482fbd5fa592813b8027fced6",
+      "build_b_sha256": "59292c3822c20d405b8741af30cc5ec08bcb3c6482fbd5fa592813b8027fced6",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/MUI.nsh",
+      "size": 50,
+      "sha256": "a8a897943521449db447c23d98609c4688e15cbfca631bddebda8c3729c7fc87",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "a8a897943521449db447c23d98609c4688e15cbfca631bddebda8c3729c7fc87",
+      "build_b_sha256": "a8a897943521449db447c23d98609c4688e15cbfca631bddebda8c3729c7fc87",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/MUI2.nsh",
+      "size": 50,
+      "sha256": "2c847d2009b55ff46f8bc1591ffda00f0194fb08ffebc0876cda669b7957b396",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "2c847d2009b55ff46f8bc1591ffda00f0194fb08ffebc0876cda669b7957b396",
+      "build_b_sha256": "2c847d2009b55ff46f8bc1591ffda00f0194fb08ffebc0876cda669b7957b396",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/nsDialogs.nsh",
+      "size": 44242,
+      "sha256": "2e069e250ade383c6972a00106a1edb4ae32ac87e54d84c8f008cba429c3a6df",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "2e069e250ade383c6972a00106a1edb4ae32ac87e54d84c8f008cba429c3a6df",
+      "build_b_sha256": "2e069e250ade383c6972a00106a1edb4ae32ac87e54d84c8f008cba429c3a6df",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/Sections.nsh",
+      "size": 6363,
+      "sha256": "b247820a09835d8da494b9b764150561bcc941381ac3ce1d2defcc6f7126c1c2",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "b247820a09835d8da494b9b764150561bcc941381ac3ce1d2defcc6f7126c1c2",
+      "build_b_sha256": "b247820a09835d8da494b9b764150561bcc941381ac3ce1d2defcc6f7126c1c2",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/StrFunc.nsh",
+      "size": 44351,
+      "sha256": "34a8aa5df21fcfaab2acba10b3036c57ea5bd7f423f9956e0374daf9e6848b75",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "34a8aa5df21fcfaab2acba10b3036c57ea5bd7f423f9956e0374daf9e6848b75",
+      "build_b_sha256": "34a8aa5df21fcfaab2acba10b3036c57ea5bd7f423f9956e0374daf9e6848b75",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/TextFunc.nsh",
+      "size": 23137,
+      "sha256": "360c304818e8561162192e164160a448668b0e5150dd3626267e7c4b812c910f",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "360c304818e8561162192e164160a448668b0e5150dd3626267e7c4b812c910f",
+      "build_b_sha256": "360c304818e8561162192e164160a448668b0e5150dd3626267e7c4b812c910f",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/UpgradeDLL.nsh",
+      "size": 4925,
+      "sha256": "11ab6cb095d5c560c0ea212f88c479f9b66445e4a9ec0f798d24eb93f7f4dfb4",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "11ab6cb095d5c560c0ea212f88c479f9b66445e4a9ec0f798d24eb93f7f4dfb4",
+      "build_b_sha256": "11ab6cb095d5c560c0ea212f88c479f9b66445e4a9ec0f798d24eb93f7f4dfb4",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/Util.nsh",
+      "size": 5028,
+      "sha256": "48b034ac0307b27bf81e91809c2dbfe2e1508d6dbbdc9edf78b5b3c5a81e28ec",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "48b034ac0307b27bf81e91809c2dbfe2e1508d6dbbdc9edf78b5b3c5a81e28ec",
+      "build_b_sha256": "48b034ac0307b27bf81e91809c2dbfe2e1508d6dbbdc9edf78b5b3c5a81e28ec",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/VB6RunTime.nsh",
+      "size": 3374,
+      "sha256": "cdccb97fd3f081e90f86ad526f09c680de8e29cdfaf9491fbba292c7f33ef5df",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "cdccb97fd3f081e90f86ad526f09c680de8e29cdfaf9491fbba292c7f33ef5df",
+      "build_b_sha256": "cdccb97fd3f081e90f86ad526f09c680de8e29cdfaf9491fbba292c7f33ef5df",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/Win/COM.nsh",
+      "size": 16856,
+      "sha256": "0091b5ecd9139f587a75ec20a63746c74c5d41a2593436f661bbdea5dec6ec95",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "0091b5ecd9139f587a75ec20a63746c74c5d41a2593436f661bbdea5dec6ec95",
+      "build_b_sha256": "0091b5ecd9139f587a75ec20a63746c74c5d41a2593436f661bbdea5dec6ec95",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/Win/Propkey.nsh",
+      "size": 8293,
+      "sha256": "456f6b34b7a0cc3f0e1fef42659bdeb0c9f48b1bbb46ab25761e88ade2d64fc7",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "456f6b34b7a0cc3f0e1fef42659bdeb0c9f48b1bbb46ab25761e88ade2d64fc7",
+      "build_b_sha256": "456f6b34b7a0cc3f0e1fef42659bdeb0c9f48b1bbb46ab25761e88ade2d64fc7",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/Win/RestartManager.nsh",
+      "size": 3461,
+      "sha256": "67149978412da9b283e2e1abe48a360093df9caf6363373e2cabe463978b7c0e",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "67149978412da9b283e2e1abe48a360093df9caf6363373e2cabe463978b7c0e",
+      "build_b_sha256": "67149978412da9b283e2e1abe48a360093df9caf6363373e2cabe463978b7c0e",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/Win/WinDef.nsh",
+      "size": 1730,
+      "sha256": "ad8d51ab4813e2168a4fd43adf8a15d75b6a13cdb9f118988bb816e2dd6a27c0",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "ad8d51ab4813e2168a4fd43adf8a15d75b6a13cdb9f118988bb816e2dd6a27c0",
+      "build_b_sha256": "ad8d51ab4813e2168a4fd43adf8a15d75b6a13cdb9f118988bb816e2dd6a27c0",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/Win/WinError.nsh",
+      "size": 8083,
+      "sha256": "b6f3584f9d1b3bf6779eae339fe4004bd5a0e8d143d4b00eb8a28b54fa2e657a",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "b6f3584f9d1b3bf6779eae339fe4004bd5a0e8d143d4b00eb8a28b54fa2e657a",
+      "build_b_sha256": "b6f3584f9d1b3bf6779eae339fe4004bd5a0e8d143d4b00eb8a28b54fa2e657a",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/Win/WinNT.nsh",
+      "size": 10160,
+      "sha256": "3ef4f864b6fb526782eacecc3b59f1989cbf4926bc426e30f75c9f26ac57dc73",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "3ef4f864b6fb526782eacecc3b59f1989cbf4926bc426e30f75c9f26ac57dc73",
+      "build_b_sha256": "3ef4f864b6fb526782eacecc3b59f1989cbf4926bc426e30f75c9f26ac57dc73",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/Win/WinUser.nsh",
+      "size": 6130,
+      "sha256": "eaac5ef935eb3deac12583e8d9df4a711c086ec1a1519d9798555bf4ac612382",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "eaac5ef935eb3deac12583e8d9df4a711c086ec1a1519d9798555bf4ac612382",
+      "build_b_sha256": "eaac5ef935eb3deac12583e8d9df4a711c086ec1a1519d9798555bf4ac612382",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/WinCore.nsh",
+      "size": 11657,
+      "sha256": "7df9217fe0ea5870905e7698c48b4923057564567a3fc0ada53e1f05d520826f",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "7df9217fe0ea5870905e7698c48b4923057564567a3fc0ada53e1f05d520826f",
+      "build_b_sha256": "7df9217fe0ea5870905e7698c48b4923057564567a3fc0ada53e1f05d520826f",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/WinMessages.nsh",
+      "size": 35867,
+      "sha256": "ead3b6612ba62012c06dca850635e389980ef5075d93df06023341e7801e45c8",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "ead3b6612ba62012c06dca850635e389980ef5075d93df06023341e7801e45c8",
+      "build_b_sha256": "ead3b6612ba62012c06dca850635e389980ef5075d93df06023341e7801e45c8",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/WinVer.nsh",
+      "size": 23910,
+      "sha256": "7e5c39d4f53554c6d3983a57e70d80c42f08a2cf4018a576e14eeddff994f3d7",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "7e5c39d4f53554c6d3983a57e70d80c42f08a2cf4018a576e14eeddff994f3d7",
+      "build_b_sha256": "7e5c39d4f53554c6d3983a57e70d80c42f08a2cf4018a576e14eeddff994f3d7",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/WordFunc.nsh",
+      "size": 41776,
+      "sha256": "53e9e928a5afc4d051c20ebd272b919b0ad2656a42530e30516ad9fe9254d2f5",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "53e9e928a5afc4d051c20ebd272b919b0ad2656a42530e30516ad9fe9254d2f5",
+      "build_b_sha256": "53e9e928a5afc4d051c20ebd272b919b0ad2656a42530e30516ad9fe9254d2f5",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Include/x64.nsh",
+      "size": 3842,
+      "sha256": "94976d048f50174bdf3ba52f76edd5382e9228b748f7fae1b76a53618edacb71",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "94976d048f50174bdf3ba52f76edd5382e9228b748f7fae1b76a53618edacb71",
+      "build_b_sha256": "94976d048f50174bdf3ba52f76edd5382e9228b748f7fae1b76a53618edacb71",
+      "build_a_b_match": true
+    },
+    {
+      "path": "LICENSES/LZMA-CPL-1.0-with-NSIS-exception.txt",
+      "size": 12344,
+      "sha256": "20a6723f07102c82ec034c8383630779c59870f242ef252254fb38937e7d02a4",
+      "classification": "LICENSE_NOTICE"
+    },
+    {
+      "path": "LICENSES/README.md",
+      "size": 696,
+      "sha256": "8150ecc3fee0e65165e2a6de8ed5e2d7719fb8b6cd8c788fd74bc7e6e1aafc2c",
+      "classification": "LICENSE_NOTICE"
+    },
+    {
+      "path": "LICENSES/zlib-LICENSE.txt",
+      "size": 1002,
+      "sha256": "e32ff4e00d9d94930537635291da39e7e612703334bf6fde8c7f1686fe8a45a2",
+      "classification": "LICENSE_NOTICE"
+    },
+    {
+      "path": "nsisconf.nsh",
+      "size": 1665,
+      "sha256": "8273545fbb4f930f08af281edba7a1821447b85891a947790e7d6d89709e85a5",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "8273545fbb4f930f08af281edba7a1821447b85891a947790e7d6d89709e85a5",
+      "build_b_sha256": "8273545fbb4f930f08af281edba7a1821447b85891a947790e7d6d89709e85a5",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Plugins/x86-ansi/nsDialogs.dll",
+      "size": 9216,
+      "sha256": "d75bd7e81e9bd6c3c733ca71666a620e1845bfc9fd5a832b4d43e628960bb8cd",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "d75bd7e81e9bd6c3c733ca71666a620e1845bfc9fd5a832b4d43e628960bb8cd",
+      "build_b_sha256": "d75bd7e81e9bd6c3c733ca71666a620e1845bfc9fd5a832b4d43e628960bb8cd",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Plugins/x86-ansi/System.dll",
+      "size": 11776,
+      "sha256": "8e67c394ae1816722b8c7471aa13fe5f64726905cace3f4327acf631a9a5b390",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "8e67c394ae1816722b8c7471aa13fe5f64726905cace3f4327acf631a9a5b390",
+      "build_b_sha256": "8e67c394ae1816722b8c7471aa13fe5f64726905cace3f4327acf631a9a5b390",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Plugins/x86-unicode/nsDialogs.dll",
+      "size": 9216,
+      "sha256": "4fc959babb7510d072f1d6201300aabf67882991ec433d1eac369e550ae42cfe",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "4fc959babb7510d072f1d6201300aabf67882991ec433d1eac369e550ae42cfe",
+      "build_b_sha256": "4fc959babb7510d072f1d6201300aabf67882991ec433d1eac369e550ae42cfe",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Plugins/x86-unicode/System.dll",
+      "size": 12288,
+      "sha256": "528398bd7a6c73dc25dcf43b8c119c95275335d2ffe0a44ff19109621bb95aee",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "528398bd7a6c73dc25dcf43b8c119c95275335d2ffe0a44ff19109621bb95aee",
+      "build_b_sha256": "528398bd7a6c73dc25dcf43b8c119c95275335d2ffe0a44ff19109621bb95aee",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Stubs/lzma_solid-x86-ansi",
+      "size": 39424,
+      "sha256": "2ff025ecb55f8b73a5f13227a1c3861f80b65a74f95988cbf5b36800cc2c377d",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "2ff025ecb55f8b73a5f13227a1c3861f80b65a74f95988cbf5b36800cc2c377d",
+      "build_b_sha256": "2ff025ecb55f8b73a5f13227a1c3861f80b65a74f95988cbf5b36800cc2c377d",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Stubs/lzma_solid-x86-unicode",
+      "size": 41472,
+      "sha256": "d582a5460edc10e974d3cd97fe66a86836105bc082f719c91fd192418e9416e6",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "d582a5460edc10e974d3cd97fe66a86836105bc082f719c91fd192418e9416e6",
+      "build_b_sha256": "d582a5460edc10e974d3cd97fe66a86836105bc082f719c91fd192418e9416e6",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Stubs/lzma-x86-ansi",
+      "size": 38912,
+      "sha256": "64e91d735bf5387a6b31a4bf780eaa43c5b74f2506da7f30fe1d8603cb84e448",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "64e91d735bf5387a6b31a4bf780eaa43c5b74f2506da7f30fe1d8603cb84e448",
+      "build_b_sha256": "64e91d735bf5387a6b31a4bf780eaa43c5b74f2506da7f30fe1d8603cb84e448",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Stubs/lzma-x86-unicode",
+      "size": 40960,
+      "sha256": "6b43e7042c7ca026dc14f3a1646ec7d4fe1ab319000fcc3958167d1703624cfd",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "6b43e7042c7ca026dc14f3a1646ec7d4fe1ab319000fcc3958167d1703624cfd",
+      "build_b_sha256": "6b43e7042c7ca026dc14f3a1646ec7d4fe1ab319000fcc3958167d1703624cfd",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Stubs/uninst",
+      "size": 766,
+      "sha256": "ba82bb5d90262417a18cec6631bbd8b880020eb159b45f264a9145196dfb8f3a",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "ba82bb5d90262417a18cec6631bbd8b880020eb159b45f264a9145196dfb8f3a",
+      "build_b_sha256": "ba82bb5d90262417a18cec6631bbd8b880020eb159b45f264a9145196dfb8f3a",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Stubs/zlib_solid-x86-ansi",
+      "size": 40960,
+      "sha256": "85b469a905431619ad3b8a0688cd972e8b5c81bfa63856899ef344c5fca242ff",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "85b469a905431619ad3b8a0688cd972e8b5c81bfa63856899ef344c5fca242ff",
+      "build_b_sha256": "85b469a905431619ad3b8a0688cd972e8b5c81bfa63856899ef344c5fca242ff",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Stubs/zlib_solid-x86-unicode",
+      "size": 42496,
+      "sha256": "330012a1fd0825a10b89fa3a9f28a6ed183cc4d0b8f2c0b0840ecc10b10f1260",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "330012a1fd0825a10b89fa3a9f28a6ed183cc4d0b8f2c0b0840ecc10b10f1260",
+      "build_b_sha256": "330012a1fd0825a10b89fa3a9f28a6ed183cc4d0b8f2c0b0840ecc10b10f1260",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Stubs/zlib-x86-ansi",
+      "size": 40448,
+      "sha256": "f45bf634429ddd61df5c3b12158b1d4e7eeb95a1ac227db9e5ef603e97ba8d8d",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "f45bf634429ddd61df5c3b12158b1d4e7eeb95a1ac227db9e5ef603e97ba8d8d",
+      "build_b_sha256": "f45bf634429ddd61df5c3b12158b1d4e7eeb95a1ac227db9e5ef603e97ba8d8d",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Stubs/zlib-x86-unicode",
+      "size": 41984,
+      "sha256": "f9de3b03177f1faf6473ccd6a39d4c7666703aa0f6b31980527f89818994dbfc",
+      "classification": "BUILD_TOOLING_PAYLOAD",
+      "build_a_sha256": "f9de3b03177f1faf6473ccd6a39d4c7666703aa0f6b31980527f89818994dbfc",
+      "build_b_sha256": "f9de3b03177f1faf6473ccd6a39d4c7666703aa0f6b31980527f89818994dbfc",
+      "build_a_b_match": true
+    },
+    {
+      "path": "Verify-Integrity.ps1",
+      "size": 4117,
+      "sha256": "420a7991caeb3242c9c8f6d5e7aea3cc4b0b28d3beb53dd1e06f7cb681b5db42",
+      "classification": "INTEGRITY_VERIFIER"
+    }
+  ]
+}

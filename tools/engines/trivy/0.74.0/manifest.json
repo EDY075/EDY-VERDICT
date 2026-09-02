@@ -1,0 +1,102 @@
+{
+  "schema_version": 2,
+  "identity": {
+    "id": "trivy",
+    "version": "0.74.0",
+    "platform": "windows",
+    "architecture": "x86_64"
+  },
+  "source": {
+    "official_source": "https://github.com/aquasecurity/trivy",
+    "release_url": "https://github.com/aquasecurity/trivy/releases/tag/v0.74.0",
+    "asset_url": "https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_windows-64bit.zip",
+    "asset_name": "trivy_0.74.0_windows-64bit.zip",
+    "asset_size": 51656892,
+    "archive_sha256": "94c40e0696e4b907a74b7b2e1438d5d72ebaca83115817407f568a002d520842"
+  },
+  "artifact": {
+    "format": "zip",
+    "entrypoint": "trivy.exe",
+    "entrypoint_size": 172239360,
+    "executable_sha256": "4c532e1f28f53282dc364671e87381cd77760fa9cafab143f576449c2207cdd5",
+    "auxiliary_hashes": [
+      {"relative_path": "LICENSE", "size": 11357, "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"},
+      {"relative_path": "README.md", "size": 5590, "sha256": "217d4d9db626c98b80f0fa214b510705d922f16b9c9452a6ce10d86788be67ba"},
+      {"relative_path": "contrib/asff.tpl", "size": 7004, "sha256": "17661a225590a90bef223a246e6f2cb18e1522edd8f70573cb94ff01c46f39b0"},
+      {"relative_path": "contrib/gitlab-codequality.tpl", "size": 3392, "sha256": "1342f7c84d0b15fb552c6e6eb9b2c265f0a5c1e6beb2f55039e7a20c592208cb"},
+      {"relative_path": "contrib/gitlab.tpl", "size": 3456, "sha256": "6921a9ba0ac4f5ed0c8f4bb6a0c23465b907e76dd5f7c7920f70fa3446523a63"},
+      {"relative_path": "contrib/html.tpl", "size": 5056, "sha256": "d36b637cc77bc1a49b1f9a2358173756cd27a5d3385fab6365c0bab09abe5f0a"},
+      {"relative_path": "contrib/junit.tpl", "size": 3132, "sha256": "d46c35736bd6caf4b728375ffa43fd157c54aa2e88ed02963aa063a0ac27938e"}
+    ],
+    "closed_set": true
+  },
+  "provenance": {
+    "evidence": [
+      {
+        "type": "published_checksum",
+        "status": "verified",
+        "source": "https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_checksums.txt",
+        "subject": "trivy_0.74.0_windows-64bit.zip",
+        "digest": {"algorithm": "sha256", "value": "94c40e0696e4b907a74b7b2e1438d5d72ebaca83115817407f568a002d520842"},
+        "verifier": "GitHub-release-digest+published-checksums+Get-FileHash",
+        "verified_at": "2026-09-02T03:45:10Z"
+      },
+      {
+        "type": "source_commit",
+        "status": "verified",
+        "source": "https://github.com/aquasecurity/trivy/commit/e1fd17a0ea4a8cf24bc4b4dd7e2cfbf4bb31b994",
+        "subject": "e1fd17a0ea4a8cf24bc4b4dd7e2cfbf4bb31b994",
+        "digest": {"algorithm": "git_sha1", "value": "e1fd17a0ea4a8cf24bc4b4dd7e2cfbf4bb31b994"},
+        "verifier": "GitHub-API-tag-resolution",
+        "verified_at": "2026-09-02T03:45:10Z"
+      },
+      {
+        "type": "sigstore",
+        "status": "present_unverified",
+        "source": "https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_windows-64bit.zip.sigstore.json",
+        "subject": "trivy_0.74.0_windows-64bit.zip",
+        "digest": {"algorithm": "sha256", "value": "94c40e0696e4b907a74b7b2e1438d5d72ebaca83115817407f568a002d520842"}
+      }
+    ]
+  },
+  "license": {
+    "spdx": "Apache-2.0",
+    "source": "https://github.com/aquasecurity/trivy/blob/main/LICENSE",
+    "redistribution_policy": "permitted",
+    "notice_required": true
+  },
+  "extraction": {
+    "max_archive_bytes": 67108864,
+    "max_expanded_bytes": 268435456,
+    "max_entries": 16,
+    "allowed_formats": ["zip"],
+    "reject_absolute_paths": true,
+    "reject_parent_traversal": true,
+    "reject_ads": true,
+    "reject_links": true,
+    "reject_case_collisions": true,
+    "reject_duplicate_paths": true
+  },
+  "process": {
+    "timeout_ms": 10000,
+    "stdout_limit_bytes": 1048576,
+    "stderr_limit_bytes": 1048576,
+    "stdin_limit_bytes": 0,
+    "kill_process_tree": true,
+    "shell": false,
+    "network_policy": "deny"
+  },
+  "version_probe": {
+    "args": ["--version"],
+    "expected_exit_codes": [0],
+    "expected_output": "0.74.0",
+    "output_stream": "stdout",
+    "network": false,
+    "timeout_ms": 5000
+  },
+  "review": {
+    "reviewed_at": "2026-09-02T03:45:10Z",
+    "reviewed_by_role": "jr_orchestrator",
+    "policy_version": "engine-policy-v2"
+  }
+}

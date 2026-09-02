@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "purpose": "Preserve prior engine/provider decisions; NOT an acquisition manifest or permission",
+  "acquisition_enabled": false,
+  "engines": [
+    {"id":"yara-x","frozen_candidate":"1.20.0","status":"NOT_DOWNLOADED","license":"BSD-3-Clause"},
+    {"id":"gitleaks","frozen_candidate":"8.30.0","status":"NOT_DOWNLOADED","license":"MIT","blocked_versions":["8.30.1"]},
+    {"id":"trivy","frozen_candidate":"0.74.0","status":"NOT_DOWNLOADED","license":"Apache-2.0"},
+    {"id":"osv-scanner","frozen_candidate":"2.5.1","status":"NOT_DOWNLOADED","license":"Apache-2.0"}
+  ],
+  "providers": [
+    {"id":"nvd","status":"CONTRACT_ONLY_NO_NETWORK"},
+    {"id":"osv","status":"CONTRACT_ONLY_NO_NETWORK"},
+    {"id":"cisa-kev","status":"CONTRACT_ONLY_NO_NETWORK"},
+    {"id":"first-epss","status":"CONTRACT_ONLY_NO_NETWORK"},
+    {"id":"urlhaus","status":"CONTRACT_ONLY_NO_NETWORK"},
+    {"id":"malwarebazaar","status":"CONTRACT_ONLY_NO_NETWORK"},
+    {"id":"virustotal","status":"CONTRACT_ONLY_NO_NETWORK"},
+    {"id":"defender","status":"OPTIONAL_DISABLED_BY_USER"}
+  ]
+}
