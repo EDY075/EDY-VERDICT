@@ -6,5 +6,6 @@ rust-version.workspace = true
 publish.workspace = true
 [dependencies]
 edy-core.workspace = true
+edy-repository.workspace = true
 serde.workspace = true
 serde_json.workspace = true

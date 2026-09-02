@@ -9,6 +9,8 @@ use edy_core::{
 };
 use serde::{Deserialize, Serialize};
 
+pub mod repository;
+
 pub const REPORT_SCHEMA: &str = "REPORT_SCHEMA_V2";
 pub const REPORT_SNAPSHOT_SCHEMA: &str = "REPORT_SNAPSHOT_V1";
 pub const HTML_RENDERER_STATUS: &str = "READY";
