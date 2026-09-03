@@ -6,4 +6,4 @@ The native master test uses the actual Tauri desktop executable, WebView2, React
 
 Security acceptance preserves Isolation, CSP, IPC/origin/navigation policy, frontend shell/filesystem/clipboard denial, redaction, explicit coverage and non-mutating remediation. Cargo deny continues to fail only at the separately classified Tauri upstream gate; it is not waived.
 
-`LEVEL 7 = COMPLETE` for the authorized local scope. Public release remains blocked by Tauri upstream, product-license selection and code signing. The local installer is unsigned, not executed, not committed and not distributed.
+`LEVEL 7 = COMPLETE`. The public source-only release candidate is authorized under the MIT License. Installer distribution remains blocked by Tauri upstream, code signing and clean-machine acceptance. The local installer is unsigned, not executed, not committed and not distributed.

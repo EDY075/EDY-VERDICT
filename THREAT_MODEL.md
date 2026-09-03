@@ -12,4 +12,4 @@ Trust boundaries are WebView to typed Rust IPC, authorized target to bounded rea
 - Supply-chain substitution: exact locks, SBOM/notices, project-local verified tooling and manifest-bound engines.
 - Unsafe remediation: production provides guidance and fresh verification only; apply and rollback are absent from the production graph.
 
-Residual release risks are the pinned Tauri transitive advisories, unsigned local artifacts, absent product-license decision, untrusted SMBIOS and optional/disabled Defender state.
+Residual release risks are the pinned Tauri transitive advisories, unsigned local artifacts, untrusted SMBIOS and optional/disabled Defender state. The project source is MIT-licensed; third-party components remain governed by their respective notices.

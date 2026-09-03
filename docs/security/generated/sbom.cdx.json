@@ -3,16 +3,23 @@
   "specVersion": "1.6",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-09-03T06:38:05.093Z",
+    "timestamp": "2026-09-03T07:23:11.165Z",
     "component": {
       "type": "application",
-      "name": "EDY VERDICT Foundation",
-      "version": "0.1.0"
+      "name": "EDY VERDICT",
+      "version": "1.0.0-rc.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
     },
     "properties": [
       {
         "name": "edy:status",
-        "value": "BLOCKED_NOT_RELEASED"
+        "value": "PUBLIC_SOURCE_RC_INSTALLER_NOT_DISTRIBUTED"
       },
       {
         "name": "edy:scope",

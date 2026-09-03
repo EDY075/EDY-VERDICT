@@ -28,7 +28,7 @@ const words: Record<Locale, Text> = {
     system: "Seguir o sistema", professional: "Profissional escuro", neon: "Cyberpunk neon",
     runtime: "Core", storage: "Armazenamento", ipc: "IPC", engines: "Engines locais", providers: "Datasets públicos",
     recentScans: "Análises locais registradas", supportBundle: "Bundle de suporte", supportUnavailable: "Não gerado automaticamente nesta release candidate; copie apenas este resumo sanitizado se precisar de suporte.",
-    version: "Versão", platform: "Plataforma", upstream: "Gate upstream", license: "Licença do produto", licensePending: "Decisão do titular pendente; distribuição pública continua bloqueada.",
+    version: "Versão", platform: "Plataforma", upstream: "Gate upstream", license: "Licença do produto", licensePending: "MIT License — Copyright (c) 2026 Edmilson Gomes.",
     limitations: "Limitações", backToSettings: "Voltar às configurações", resetOnboarding: "Mostrar introdução novamente",
   },
   en: {
@@ -41,7 +41,7 @@ const words: Record<Locale, Text> = {
     system: "Follow system", professional: "Dark professional", neon: "Cyberpunk neon",
     runtime: "Core", storage: "Storage", ipc: "IPC", engines: "Local engines", providers: "Public datasets",
     recentScans: "Recorded local scans", supportBundle: "Support bundle", supportUnavailable: "Not generated automatically in this release candidate; copy only this sanitized summary when requesting support.",
-    version: "Version", platform: "Platform", upstream: "Upstream gate", license: "Product license", licensePending: "Rights-holder decision pending; public distribution remains blocked.",
+    version: "Version", platform: "Platform", upstream: "Upstream gate", license: "Product license", licensePending: "MIT License — Copyright (c) 2026 Edmilson Gomes.",
     limitations: "Limitations", backToSettings: "Back to settings", resetOnboarding: "Show introduction again",
   },
 };
@@ -78,5 +78,5 @@ export function DiagnosticsPage({ locale, status, engines, providers, scans }: {
 
 export function AboutPage({ locale }: { readonly locale: Locale }) {
   const t=words[locale];
-  return <div className="workflow-stack" data-level7-screen="about"><section className="data-panel"><p className="eyebrow">Release candidate</p><h2>{PRODUCT_NAME}</h2><dl><dt>{t.version}</dt><dd>{PRODUCT_VERSION}</dd><dt>{t.platform}</dt><dd>{SUPPORTED_OS}</dd><dt>Tauri</dt><dd>{TAURI_PIN} (pinned)</dd><dt>{t.upstream}</dt><dd>{TAURI_UPSTREAM_STATE}</dd><dt>{t.license}</dt><dd>{t.licensePending}</dd></dl><h3>{t.limitations}</h3><ul><li>Public release and distribution are blocked until the Tauri upstream gate passes.</li><li>Local engine execution remains policy-gated; unavailable checks reduce coverage and never imply a clean result.</li><li>Microsoft Defender remains optional and disabled by user decision.</li><li>SMBIOS identity remains USER_MODIFIED / UNTRUSTED and is not used as a security assertion.</li></ul></section><section className="data-panel" data-level7-screen="capability-matrix"><h2>Capability matrix</h2><div className="table-wrap"><table><thead><tr><th>Target</th><th>Capability</th><th>State</th><th>Boundary</th></tr></thead><tbody>{CAPABILITIES.map(item=><tr key={`${item.target}/${item.capability}`}><td>{item.target}</td><td>{item.capability}</td><td><span className="severity severity-info">{item.state}</span></td><td>{item.explanation}</td></tr>)}</tbody></table></div></section></div>;
+  return <div className="workflow-stack" data-level7-screen="about"><section className="data-panel"><p className="eyebrow">Release candidate</p><h2>{PRODUCT_NAME}</h2><dl><dt>{t.version}</dt><dd>{PRODUCT_VERSION}</dd><dt>{t.platform}</dt><dd>{SUPPORTED_OS}</dd><dt>Tauri</dt><dd>{TAURI_PIN} (pinned)</dd><dt>{t.upstream}</dt><dd>{TAURI_UPSTREAM_STATE}</dd><dt>{t.license}</dt><dd>{t.licensePending}</dd></dl><h3>{t.limitations}</h3><ul><li>The public source release candidate is available; installer distribution remains blocked until release gates pass.</li><li>Local engine execution remains policy-gated; unavailable checks reduce coverage and never imply a clean result.</li><li>Microsoft Defender remains optional and disabled by user decision.</li><li>SMBIOS identity remains USER_MODIFIED / UNTRUSTED and is not used as a security assertion.</li></ul></section><section className="data-panel" data-level7-screen="capability-matrix"><h2>Capability matrix</h2><div className="table-wrap"><table><thead><tr><th>Target</th><th>Capability</th><th>State</th><th>Boundary</th></tr></thead><tbody>{CAPABILITIES.map(item=><tr key={`${item.target}/${item.capability}`}><td>{item.target}</td><td>{item.capability}</td><td><span className="severity severity-info">{item.state}</span></td><td>{item.explanation}</td></tr>)}</tbody></table></div></section></div>;
 }

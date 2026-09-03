@@ -7,4 +7,4 @@
 - Preserved Levels 0–6 capabilities and explicit coverage limits.
 - Added actual Tauri/WebView2/React/typed-IPC/SQLite Level 7 E2E at three desktop resolutions, restart persistence and hostile-input validation.
 - Added local unsigned NSIS candidate packaging and Windows build-floor checks.
-- Public release remains blocked by Tauri upstream, signing and product-license gates. No semantic release tag was created.
+- Published the source-only release candidate under the MIT License; installer distribution remains blocked by Tauri upstream, signing and clean-machine acceptance gates.

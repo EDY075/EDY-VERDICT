@@ -2,6 +2,7 @@
   "name": "@edy-verdict/desktop",
   "private": true,
   "version": "1.0.0-rc.1",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",

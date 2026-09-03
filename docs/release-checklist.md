@@ -8,9 +8,9 @@
 - [x] Secret scan, npm audit and Cargo audit pass; SBOM/notices regenerated.
 - [x] Unsigned local NSIS package built without execution or distribution.
 - [ ] Tauri upstream gate closed by a verified official release.
-- [ ] Root product license selected by the rights holder.
+- [x] Root MIT License explicitly selected by rights holder Edmilson Gomes.
 - [ ] Product signing identity, timestamping and verification configured.
 - [ ] Clean-machine install, upgrade and uninstall acceptance after those gates close.
-- [ ] Explicit authorization for public publication, push or release.
+- [x] Explicit authorization for public source publication and RC pre-release.
 
-Until every unchecked item closes, artifacts are local evaluation evidence only.
+Unchecked items block public installer distribution and a stable `v1.0.0`; they do not block the authorized source-only RC pre-release.

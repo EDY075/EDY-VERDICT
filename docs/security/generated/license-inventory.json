@@ -1,5 +1,5 @@
 {
-  "scope": "preliminary Windows resolved graph and installed npm packages; not public release clearance",
+  "scope": "Windows resolved graph and installed npm packages for the public source RC; not installer or engine-binary redistribution clearance",
   "packages": [
     {
       "ecosystem": "cargo",
