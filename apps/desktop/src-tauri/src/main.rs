@@ -29,6 +29,12 @@ use edy_desktop::ipc::{
     RepositoryAuthorizationRequest, SafeIpcError, ScanProgressView, ScanRequest, ScanSummaryView,
     UrlTargetPreviewView, WebAnalysisView,
 };
+use edy_desktop::remediation::{
+    AuthorizationView, AuthorizeRemediationRequest, CaseRemediationRequest,
+    CreateRemediationPlanRequest, RemediationActionRequest, RemediationBackend,
+    RemediationCandidate, RemediationPage, RemediationPageRequest, RemediationReportRequest,
+    RemediationReportView, VerifyRemediationRequest,
+};
 use edy_reporting::installed_apps::DatasetStatus;
 use edy_repository::RepositoryInventory;
 use edy_storage::Storage;
@@ -47,6 +53,7 @@ struct FoundationState {
     status: FoundationStatus,
     backend: Level0Backend,
     investigation: InvestigationBackend,
+    remediation: std::sync::Arc<RemediationBackend>,
     smoke: bool,
     smoke_received: AtomicBool,
 }
@@ -510,6 +517,123 @@ fn generate_investigation_report(
     state.investigation.report(request)
 }
 
+#[tauri::command]
+fn list_remediation_candidates(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+) -> Result<Vec<RemediationCandidate>, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.remediation.candidates()
+}
+#[tauri::command]
+fn cancel_remediation_verification(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: RemediationActionRequest,
+) -> Result<bool, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.remediation.cancel(request)
+}
+#[tauri::command]
+fn create_remediation_plan(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: CreateRemediationPlanRequest,
+) -> Result<edy_remediation::ManualSnapshot, SafeIpcError> {
+    ipc_guard(&window)?;
+    let finding = state.remediation.source_finding(&request)?;
+    let origin = state.backend.remediation_repository_source(&finding);
+    state.remediation.create_plan(request, origin)
+}
+#[tauri::command]
+fn get_remediation_plan(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: RemediationActionRequest,
+) -> Result<edy_remediation::ManualSnapshot, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.remediation.get(request)
+}
+#[tauri::command]
+fn list_remediation_plans(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: RemediationPageRequest,
+) -> Result<RemediationPage, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.remediation.list(request)
+}
+#[tauri::command]
+fn preview_remediation_action(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: RemediationActionRequest,
+) -> Result<edy_remediation::ManualSnapshot, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.remediation.preview(request)
+}
+#[tauri::command]
+fn authorize_remediation_action(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: AuthorizeRemediationRequest,
+) -> Result<AuthorizationView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.remediation.authorize(request)
+}
+#[tauri::command]
+fn get_remediation_action_status(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: RemediationActionRequest,
+) -> Result<edy_remediation::ManualSnapshot, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.remediation.get(request)
+}
+#[tauri::command]
+async fn verify_remediation_action(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: VerifyRemediationRequest,
+) -> Result<edy_remediation::ManualSnapshot, SafeIpcError> {
+    ipc_guard(&window)?;
+    let remediation = state.remediation.clone();
+    tauri::async_runtime::spawn_blocking(move || remediation.verify(request))
+        .await
+        .map_err(|_| SafeIpcError {
+            code: "verification_failed".into(),
+            message_safe: "Verification did not complete".into(),
+            correlation_id: uuid::Uuid::now_v7().to_string(),
+        })?
+}
+#[tauri::command]
+fn get_verification_result(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: RemediationActionRequest,
+) -> Result<edy_remediation::ManualSnapshot, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.remediation.get(request)
+}
+#[tauri::command]
+fn list_case_remediation_actions(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: CaseRemediationRequest,
+) -> Result<RemediationPage, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.remediation.list_case(request)
+}
+#[tauri::command]
+fn generate_remediation_report(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: RemediationReportRequest,
+) -> Result<RemediationReportView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.remediation.report(request)
+}
+
 fn find_project_root(start: &Path) -> Option<PathBuf> {
     start
         .ancestors()
@@ -580,6 +704,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         && std::env::args().any(|arg| arg.starts_with("--level4-native-qa="));
     let native_level5 = cfg!(debug_assertions)
         && std::env::args().any(|arg| arg.starts_with("--level5-native-qa="));
+    let native_level6 = cfg!(debug_assertions)
+        && std::env::args().any(|arg| arg.starts_with("--level6-native-qa="));
     #[cfg(all(feature = "native-e2e", debug_assertions))]
     let native_level5_scenario = std::env::args()
         .find_map(|arg| match arg.as_str() {
@@ -605,15 +731,28 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             "--level5-native-qa=1366x768" => Some((1366.0, 768.0)),
             "--level5-native-qa=1920x1080" => Some((1920.0, 1080.0)),
             "--level5-native-qa=2560x1440" => Some((2560.0, 1440.0)),
+            "--level6-native-qa=1366x768" => Some((1366.0, 768.0)),
+            "--level6-native-qa=1920x1080" => Some((1920.0, 1080.0)),
+            "--level6-native-qa=2560x1440" => Some((2560.0, 1440.0)),
             _ => None,
         })
     } else {
         None
     };
+    #[cfg(all(feature = "native-e2e", debug_assertions))]
+    let native_run_key = std::env::var("EDY_LEVEL6_E2E_RUN_ID")
+        .ok()
+        .filter(|s| !s.is_empty() && s.len() <= 20 && s.bytes().all(|b| b.is_ascii_digit()))
+        .unwrap_or_else(|| "default".into());
+    #[cfg(not(all(feature = "native-e2e", debug_assertions)))]
+    let native_run_key = "default";
+    let level6_data_directory = format!("level6-manual-native-qa-data-{native_run_key}");
     let data = local_directory(
         &root,
         if native_qa_size.is_some() {
-            if native_level5 {
+            if native_level6 {
+                &level6_data_directory
+            } else if native_level5 {
                 "level5-native-qa-data"
             } else if native_level4 {
                 "level4-native-qa-data"
@@ -652,10 +791,23 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     };
     #[cfg(not(all(feature = "native-e2e", debug_assertions)))]
     let investigation = InvestigationBackend::open(&data.join("level0.sqlite3"))?;
+    #[cfg(all(feature = "native-e2e", debug_assertions))]
+    let remediation = if native_level6 {
+        RemediationBackend::open_fixture(
+            &data.join("level0.sqlite3"),
+            &data.join("synthetic-remediation-repo"),
+        )?
+    } else {
+        RemediationBackend::open(&data.join("level0.sqlite3"))?
+    };
+    #[cfg(not(all(feature = "native-e2e", debug_assertions)))]
+    let remediation = RemediationBackend::open(&data.join("level0.sqlite3"))?;
     let webview_data = local_directory(
         &root,
         if native_qa_size.is_some() {
-            if native_level5 {
+            if native_level6 {
+                "level6-manual-native-qa-webview2"
+            } else if native_level5 {
                 "level5-native-qa-webview2"
             } else if native_level4 {
                 "level4-native-qa-webview2"
@@ -678,6 +830,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         },
         backend,
         investigation,
+        remediation: std::sync::Arc::new(remediation),
         smoke,
         smoke_received: AtomicBool::new(false),
     };
@@ -738,6 +891,18 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             get_investigation_graph,
             get_investigation_timeline,
             generate_investigation_report,
+            list_remediation_candidates,
+            cancel_remediation_verification,
+            create_remediation_plan,
+            get_remediation_plan,
+            list_remediation_plans,
+            preview_remediation_action,
+            authorize_remediation_action,
+            get_remediation_action_status,
+            verify_remediation_action,
+            get_verification_result,
+            list_case_remediation_actions,
+            generate_remediation_report,
         ])
         .setup(move |app| {
             let config = app

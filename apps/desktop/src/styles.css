@@ -87,6 +87,13 @@ tbody tr:hover { background: var(--accent-soft); }
 .finding-detail { position: sticky; top: 18px; }
 .redaction-notice, .coverage-warning { border-left: 3px solid var(--accent); padding: 9px 12px; background: var(--accent-soft); }
 .workflow-stack { display: grid; gap: 16px; }
+[data-level6-mode="manual-verification"],
+[data-level6-mode="manual-verification"] .data-panel,
+[data-level6-mode="manual-verification"] .card-list { min-width: 0; }
+[data-level6-mode="manual-verification"] .card-list article { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+[data-level6-mode="manual-verification"] pre { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 100%; min-width: 0; font-size: .8rem; }
+[data-level6-mode="manual-verification"] dd,
+[data-level6-mode="manual-verification"] strong { min-width: 0; overflow-wrap: anywhere; }
 .investigation-v2 { display: grid; gap: 16px; }
 .investigation-v2 > .workflow-stack > .investigation-metrics,
 .investigation-v2 > .workflow-stack > .data-panel:first-of-type { display: none; }

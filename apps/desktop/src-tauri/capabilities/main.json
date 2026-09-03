@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main",
-  "description": "Closed-set Level 0 through Level 5 security workflow commands from the local main webview only.",
+  "description": "Closed-set Level 0 through Level 6 security workflow commands from the local main webview only.",
   "local": true,
   "windows": ["main"],
   "webviews": ["main"],
@@ -49,6 +49,18 @@
     "allow-update-investigation-case",
     "allow-get-investigation-graph",
     "allow-get-investigation-timeline",
-    "allow-generate-investigation-report"
+    "allow-generate-investigation-report",
+    "allow-list-remediation-candidates",
+    "allow-cancel-remediation-verification",
+            "allow-create-remediation-plan",
+    "allow-get-remediation-plan",
+    "allow-list-remediation-plans",
+    "allow-preview-remediation-action",
+    "allow-authorize-remediation-action",
+    "allow-get-remediation-action-status",
+    "allow-verify-remediation-action",
+    "allow-get-verification-result",
+    "allow-list-case-remediation-actions",
+    "allow-generate-remediation-report"
   ]
 }

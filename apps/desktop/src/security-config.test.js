@@ -20,6 +20,11 @@ const commands = [
   "list_investigation_cases", "get_investigation_case", "create_investigation_case",
   "update_investigation_case", "get_investigation_graph", "get_investigation_timeline",
   "generate_investigation_report",
+  "list_remediation_candidates", "cancel_remediation_verification", "create_remediation_plan", "get_remediation_plan", "list_remediation_plans",
+  "preview_remediation_action", "authorize_remediation_action",
+  "get_remediation_action_status", "verify_remediation_action", "get_verification_result",
+  "list_case_remediation_actions",
+  "generate_remediation_report",
 ];
 
 describe("Tauri security configuration", () => {
@@ -94,6 +99,12 @@ describe("dependency-free Isolation hook", () => {
     expect(hook({cmd:"run_level5_correlation",payload:{},callback:17,error:18}).cmd).toBe("run_level5_correlation");
     expect(hook({cmd:"cancel_level5_correlation",payload:{},callback:17,error:18}).cmd).toBe("cancel_level5_correlation");
     expect(hook({cmd:"list_investigation_cases",payload:{request:{run_id:"018f4c2a-1d3b-7abc-8def-0123456789ab",offset:0,limit:100}},callback:19,error:20}).cmd).toBe("list_investigation_cases");
+    const action=`rma-v1-${"a".repeat(64)}`;
+    expect(hook({cmd:"list_remediation_plans",payload:{request:{offset:0,limit:100}},callback:21,error:22}).cmd).toBe("list_remediation_plans");
+    expect(hook({cmd:"preview_remediation_action",payload:{request:{action_id:action}},callback:23,error:24}).cmd).toBe("preview_remediation_action");
+    expect(hook({cmd:"authorize_remediation_action",payload:{request:{action_id:action,plan_sha256:"b".repeat(64),confirmed:true}},callback:25,error:26}).cmd).toBe("authorize_remediation_action");
+    expect(()=>hook({cmd:"apply_remediation_action",payload:{request:{action_id:action,authorization_token:"c".repeat(64)}},callback:27,error:28})).toThrow("IPC denied");
+    expect(()=>hook({cmd:"rollback_remediation_action",payload:{request:{action_id:action}},callback:27,error:28})).toThrow("IPC denied");
   });
 
   it.each([
@@ -114,6 +125,9 @@ describe("dependency-free Isolation hook", () => {
     { cmd: "get_installed_application", payload: { request: { scan_id: "018f4c2a-1d3b-7abc-8def-0123456789ab", application_id: "../../etc" } }, callback: 1, error: 2 },
     { cmd: "list_investigation_cases", payload: { request: { run_id: "../../etc", offset: 0, limit: 100 } }, callback: 1, error: 2 },
     { cmd: "create_investigation_case", payload: { request: { run_id: "018f4c2a-1d3b-7abc-8def-0123456789ab", item_id: "cluster-v1-unsafe" } }, callback: 1, error: 2 },
+    { cmd: "apply_remediation_action", payload: { request: { action_id: `rma-v1-${"a".repeat(64)}`, authorization_token: "raw-token" } }, callback: 1, error: 2 },
+    { cmd: "apply_remediation_action", payload: { request: { action_id: `rma-v1-${"a".repeat(64)}`, authorization_token: "b".repeat(64), path: "D:/arbitrary" } }, callback: 1, error: 2 },
+    { cmd: "patch_file", payload: { request: { path: "D:/arbitrary", replacement: "owned" } }, callback: 1, error: 2 },
   ])("rejects malformed or forbidden IPC %# before encryption", (message) => {
     expect(() => isolationHook()(message)).toThrow("IPC denied");
   });

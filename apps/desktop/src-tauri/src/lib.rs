@@ -4,3 +4,4 @@
 pub mod investigation;
 pub mod ipc;
 pub mod level0;
+pub mod remediation;

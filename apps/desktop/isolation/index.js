@@ -4,6 +4,9 @@ const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 const FINDING_ID = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|(?:yara_finding_v1|signature_finding_v1|pe_indicator_v1|reputation_finding_v1)-[0-9a-f]{64}|(?:iav1|webv1)-[0-9a-f]{32})$/;
 const APPLICATION_ID = /^appv1-[0-9a-f]{32}$/;
 const LEVEL5_ITEM = /^(?:cluster-v1|case-v1)-[0-9a-f]{64}$/;
+const REMEDIATION_ACTION = /^rma-v1-[0-9a-f]{64}$/;
+const SHA256 = /^[0-9a-f]{64}$/;
+const AUTH_TOKEN = /^[0-9a-f]{64}$/;
 const ownKeys = (value, expected) => value !== null && typeof value === "object" && !Array.isArray(value)
   && Object.keys(value).sort().join("|") === [...expected].sort().join("|");
 const idRequest = (payload, field) => ownKeys(payload, ["request"])
@@ -11,7 +14,7 @@ const idRequest = (payload, field) => ownKeys(payload, ["request"])
 const explicitPath = (value) => typeof value === "string" && value.length >= 3 && value.length <= 4096
   && !/[\u0000-\u001f\u007f]/u.test(value);
 const validPayload = (cmd, payload) => {
-  if (["get_foundation_status", "get_engine_status", "get_vulnerability_provider_status"].includes(cmd)) return ownKeys(payload, []);
+  if (["get_foundation_status", "get_engine_status", "get_vulnerability_provider_status", "list_remediation_candidates"].includes(cmd)) return ownKeys(payload, []);
   if (cmd === "create_synthetic_scan") return ownKeys(payload, ["request"])
     && ownKeys(payload.request, ["fixture_id"]) && payload.request.fixture_id === "synthetic-target-a";
   if (["get_scan", "get_scan_progress", "cancel_scan", "get_repository_inventory", "get_file_analysis", "get_installed_application_inventory", "get_url_scan_analysis", "get_url_redirect_chain", "get_url_security_headers", "get_url_cookie_observations", "get_url_reputation_status"].includes(cmd)) return idRequest(payload, "scan_id");
@@ -71,6 +74,29 @@ const validPayload = (cmd, payload) => {
   if (cmd === "generate_investigation_report") return ownKeys(payload,["request"])
     && ownKeys(payload.request,["run_id","case_id","kind"]) && UUID_V7.test(payload.request.run_id)
     && LEVEL5_ITEM.test(payload.request.case_id) && ["executive","technical","analyst"].includes(payload.request.kind);
+  if (cmd === "create_remediation_plan") return ownKeys(payload,["request"])
+    && ownKeys(payload.request,["finding_id","case_id","run_id"])
+    && typeof payload.request.finding_id === "string" && payload.request.finding_id.length >= 1 && payload.request.finding_id.length <= 128
+    && LEVEL5_ITEM.test(payload.request.case_id) && UUID_V7.test(payload.request.run_id);
+  if (["get_remediation_plan","preview_remediation_action","get_remediation_action_status","get_verification_result","cancel_remediation_verification"].includes(cmd)) return ownKeys(payload,["request"])
+    && ownKeys(payload.request,["action_id"]) && REMEDIATION_ACTION.test(payload.request.action_id);
+  if (cmd === "authorize_remediation_action") return ownKeys(payload,["request"])
+    && ownKeys(payload.request,["action_id","plan_sha256","confirmed"])
+    && REMEDIATION_ACTION.test(payload.request.action_id) && SHA256.test(payload.request.plan_sha256)
+    && payload.request.confirmed === true;
+  if (cmd === "verify_remediation_action") return ownKeys(payload,["request"])
+    && ownKeys(payload.request,["action_id","authorization_token"]) && REMEDIATION_ACTION.test(payload.request.action_id) && AUTH_TOKEN.test(payload.request.authorization_token);
+  if (cmd === "list_remediation_plans") return ownKeys(payload,["request"])
+    && ownKeys(payload.request,["offset","limit"])
+    && Number.isSafeInteger(payload.request.offset) && payload.request.offset >= 0 && payload.request.offset <= 10000
+    && Number.isSafeInteger(payload.request.limit) && payload.request.limit >= 1 && payload.request.limit <= 100;
+  if (cmd === "list_case_remediation_actions") return ownKeys(payload,["request"])
+    && ownKeys(payload.request,["case_id","offset","limit"]) && LEVEL5_ITEM.test(payload.request.case_id)
+    && Number.isSafeInteger(payload.request.offset) && payload.request.offset >= 0 && payload.request.offset <= 10000
+    && Number.isSafeInteger(payload.request.limit) && payload.request.limit >= 1 && payload.request.limit <= 100;
+  if (cmd === "generate_remediation_report") return ownKeys(payload,["request"])
+    && ownKeys(payload.request,["action_id","kind"]) && REMEDIATION_ACTION.test(payload.request.action_id)
+    && ["executive","technical","analyst"].includes(payload.request.kind);
   return false;
 };
 

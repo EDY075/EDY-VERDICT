@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { FoundationView } from "./App";
 import { parseFoundationStatus } from "./foundation";
 
+
+
 describe("Level 0 product shell", () => {
   it("renders the approved navigation and distinct verdict dimensions", () => {
     const status = parseFoundationStatus({ core: "ready", storage: "ready", ipc: "restricted", schema_version: 1 });
@@ -150,5 +152,13 @@ describe("Level 0 product shell", () => {
     expect(html).toContain("token=[REDACTED]");
     expect(html).not.toContain("EDY_FAKE_QUERY_SECRET_LEVEL4");
     expect(html).not.toContain("EDY_FAKE_COOKIE_SECRET_LEVEL4");
+  });
+
+  it("renders the production manual remediation page without mutating controls",()=>{
+    const status=parseFoundationStatus({core:"ready",storage:"ready",ipc:"restricted",schema_version:1});
+    const html=renderToStaticMarkup(<FoundationView status={status} failed={false} initialPage="remediation"/>);
+    expect(html).toContain("Automatic target changes and rollback are policy blocked");
+    expect(html).not.toContain("Apply this remediation");
+    expect(html).not.toContain(">Roll back<");
   });
 });

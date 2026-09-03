@@ -2030,6 +2030,45 @@ impl Level0Backend {
         Ok(self.load_level1(&request.scan_id)?.inventory)
     }
 
+    /// Derive rescan authority only from a stored, previously authorized original scan.
+    /// No frontend path or check-family override is accepted.
+    pub fn remediation_repository_source(
+        &self,
+        finding: &edy_core::CorrelationFinding,
+    ) -> Option<crate::remediation::RepositoryGuidanceSource> {
+        for scan_id in &finding.source_scans {
+            let Ok(scan) = self.load_level1(scan_id) else {
+                continue;
+            };
+            let Some(original) = scan
+                .findings
+                .iter()
+                .find(|f| f.id == finding.finding_id || f.fingerprint == finding.finding_id)
+            else {
+                continue;
+            };
+            let matches: Vec<_> = scan
+                .observations
+                .iter()
+                .filter(|o| {
+                    o.engine_id == "edy-inventory"
+                        && original.rule_ids.contains(&o.rule_id)
+                        && matches!(
+                            o.rule_id.as_str(),
+                            "missing-lockfile" | "malformed-lockfile"
+                        )
+                })
+                .collect();
+            if matches.len() == 1 {
+                return Some(crate::remediation::RepositoryGuidanceSource {
+                    root: std::path::PathBuf::from(scan.inventory.canonical_root),
+                    observation: matches[0].clone(),
+                });
+            }
+        }
+        None
+    }
+
     fn load_level1(&self, scan_id: &str) -> Result<Level1StoredScan, SafeIpcError> {
         let id = parse_scan_id(scan_id)?;
         let blob = self

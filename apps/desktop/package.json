@@ -7,8 +7,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src vite.config.ts vitest.config.ts eslint.config.js isolation/index.js",
     "test": "vitest run",
-    "build": "tsc --noEmit && vite build",
-    "tauri": "tauri"
+    "build": "tsc --noEmit && vite build"
   },
   "dependencies": {
     "@tauri-apps/api": "2.11.1",
