@@ -16,6 +16,7 @@ pub enum InvestigationAudience {
 #[serde(deny_unknown_fields)]
 pub struct InvestigationReport {
     pub schema: &'static str,
+    pub product_version: String,
     pub audience: InvestigationAudience,
     pub case: InvestigationCase,
     pub audience_focus: String,
@@ -39,7 +40,7 @@ impl InvestigationReport {
                 "Analyst context: case workflow, finding membership, evidence references and chronological audit trail."
             }
         };
-        Self{schema:LEVEL5_REPORT_SCHEMA,audience,case:case.clone(),audience_focus:audience_focus.into(),conclusion:"Correlated evidence requires analyst review; this case does not establish causation, compromise, breach, or a complete attack chain.".into(),limitations:vec!["Correlation does not prove causation.".into(),"A shared CVE does not mean the same asset or compromise.".into(),"A suggested case does not prove an incident occurred.".into(),"Blast radius is observed only across associated analyzed targets.".into(),"Unavailable providers reduce case coverage and confidence.".into(),"Priority is distinct from severity; confidence is distinct from risk.".into()]}
+        Self{schema:LEVEL5_REPORT_SCHEMA,product_version:crate::PRODUCT_VERSION.into(),audience,case:case.clone(),audience_focus:audience_focus.into(),conclusion:"Correlated evidence requires analyst review; this case does not establish causation, compromise, breach, or a complete attack chain.".into(),limitations:vec!["Correlation does not prove causation.".into(),"A shared CVE does not mean the same asset or compromise.".into(),"A suggested case does not prove an incident occurred.".into(),"Blast radius is observed only across associated analyzed targets.".into(),"Unavailable providers reduce case coverage and confidence.".into(),"Priority is distinct from severity; confidence is distinct from risk.".into()]}
     }
     pub fn json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string_pretty(self)

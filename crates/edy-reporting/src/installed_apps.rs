@@ -21,6 +21,7 @@ pub struct DatasetStatus {
 #[serde(deny_unknown_fields)]
 pub struct InstalledApplicationReport {
     pub schema: &'static str,
+    pub product_version: String,
     pub kind: ReportKind,
     pub scan_id: String,
     pub verdict: String,
@@ -63,6 +64,7 @@ impl InstalledApplicationReport {
         limitations.dedup();
         Self {
             schema: LEVEL3_REPORT_SCHEMA,
+            product_version: crate::PRODUCT_VERSION.into(),
             kind,
             scan_id: scan_id.into(),
             verdict: if unavailable {

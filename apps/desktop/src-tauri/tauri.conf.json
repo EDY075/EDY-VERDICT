@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "EDY VERDICT Foundation",
-  "version": "0.1.0",
-  "identifier": "dev.edyverdict.foundation",
+  "productName": "EDY VERDICT",
+  "version": "1.0.0-rc.1",
+  "identifier": "com.edyverdict.desktop",
   "build": {
     "beforeBuildCommand": "pnpm build",
     "beforeDevCommand": "pnpm build",
@@ -12,11 +12,11 @@
     "withGlobalTauri": false,
     "windows": [{
       "label": "main",
-      "title": "EDY VERDICT — Foundation Build",
+      "title": "EDY VERDICT",
       "url": "index.html",
       "create": false,
-      "width": 760,
-      "height": 520,
+      "width": 1180,
+      "height": 760,
       "minWidth": 360,
       "minHeight": 400,
       "devtools": false,

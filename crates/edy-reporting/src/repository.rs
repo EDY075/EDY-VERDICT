@@ -10,6 +10,7 @@ pub const LEVEL1_REPORT_SCHEMA: &str = "LEVEL1_REPOSITORY_REPORT_V1";
 #[serde(deny_unknown_fields)]
 pub struct RepositoryReport {
     pub schema: &'static str,
+    pub product_version: String,
     pub kind: ReportKind,
     pub scan_id: String,
     pub verdict: String,
@@ -43,6 +44,7 @@ impl RepositoryReport {
             && matches!(inventory.status, edy_repository::InventoryStatus::Complete);
         Self {
             schema: LEVEL1_REPORT_SCHEMA,
+            product_version: crate::PRODUCT_VERSION.into(),
             kind,
             scan_id: scan_id.into(),
             verdict: if coverage_complete {

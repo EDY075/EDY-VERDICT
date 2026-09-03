@@ -6,6 +6,7 @@ use serde::Serialize;
 #[serde(deny_unknown_fields)]
 pub struct FileReport {
     pub schema: &'static str,
+    pub product_version: String,
     pub kind: ReportKind,
     pub scan_id: String,
     pub file_name: String,
@@ -54,6 +55,7 @@ impl FileReport {
         ];
         Self {
             schema: "EDY_FILE_REPORT_V1",
+            product_version: crate::PRODUCT_VERSION.into(),
             kind,
             scan_id: scan_id.into(),
             file_name: std::path::Path::new(&analysis.target.canonical_path)

@@ -1,17 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { FoundationStatus } from "./foundation";
 import { level0Api } from "./level0-api";
 import { level5Api } from "./investigation-api";
 import type { Cluster, CorrelationSummary, InvestigationCase, InvestigationGraph, InvestigationReport } from "./investigation-api";
 import { ManualRemediationPanel } from "./ManualRemediationPanel";
 import type { DatasetStatus, EngineStatus, FileAnalysisView, FileAuthorization, FileTargetPreview, FindingView, InstalledApplicationAuthorization, InstalledApplicationInventory, InstalledApplicationPreview, ReportView, ScanProgress, ScanSummary, RepositoryAuthorization, QueryPolicy, UrlTargetPreview, UrlTargetAuthorization, WebAnalysisView } from "./level0-api";
+import { AboutPage, DiagnosticsPage, PrivacyPage, SettingsPage } from "./ProductPages";
+import { localizeTree } from "./i18n";
+import { completeOnboarding, loadLocale, loadTheme, onboardingComplete, PRODUCT_VERSION, resetOnboarding, savePreference, type Locale, type Theme } from "./product";
 
-type Locale = "pt-BR" | "en";
-type Theme = "professional" | "neon";
-type Page = "overview" | "new-scan" | "web-url" | "installed-apps" | "investigations" | "remediation" | "progress" | "findings" | "history" | "engines" | "reports" | "settings";
+type Page = "overview" | "new-scan" | "web-url" | "installed-apps" | "investigations" | "remediation" | "progress" | "findings" | "history" | "engines" | "reports" | "settings" | "privacy" | "diagnostics" | "about";
 type InvestigationUiState = "idle" | "running" | "complete" | "partial_correlation" | "cancelled" | "error";
 
-const pages: readonly Page[] = ["overview", "new-scan", "web-url", "installed-apps", "investigations", "remediation", "progress", "findings", "history", "engines", "reports", "settings"];
+const pages: readonly Page[] = ["overview", "new-scan", "web-url", "installed-apps", "history", "findings", "investigations", "remediation", "reports", "progress", "engines", "settings", "about"];
 const terminalStates = new Set(["cancelled", "completed", "partial", "failed"]);
 
 function safeUiError(error: unknown, fallback: string): string {
@@ -40,8 +41,8 @@ const copy = {
   "pt-BR": {
     product: "EDY VERDICT", edition: "Centro de segurança local", overview: "Visão geral", "new-scan": "Nova análise",
     "web-url": "Web / URL", "installed-apps": "Aplicativos instalados", investigations: "Investigações", progress: "Progresso", findings: "Achados", history: "Histórico", engines: "Engines", reports: "Relatórios",
-    remediation: "Remediação",
-    settings: "Configurações", foundation: "Fundação Level 0", available: "Infraestrutura disponível",
+    remediation: "Remediação", privacy: "Privacidade", diagnostics: "Diagnóstico", about: "Sobre",
+    settings: "Configurações", foundation: "Centro de segurança local", available: "Infraestrutura disponível",
     unavailable: "Infraestrutura indisponível", checking: "Validando infraestrutura…", noData: "Nenhum dado disponível",
     noDataDetail: "A interface não usa demonstrações silenciosas. Os dados aparecem somente após resposta válida do backend.",
     coverage: "Cobertura", risk: "Risco", confidence: "Confiança", status: "Estado", blocker: "Bloqueio conhecido",
@@ -51,10 +52,10 @@ const copy = {
     executive: "Executivo", technical: "Técnico", developer: "Desenvolvedor", generate: "Gerar relatório",
   },
   en: {
-    product: "EDY VERDICT", edition: "Local security center", overview: "Overview", "new-scan": "New Scan",
+    product: "EDY VERDICT", edition: "Local security center", overview: "Home", "new-scan": "New Scan",
     "web-url": "Web / URL", "installed-apps": "Installed Apps", investigations: "Investigations", progress: "Scan Progress", findings: "Findings", history: "History", engines: "Engines", reports: "Reports",
-    remediation: "Remediation",
-    settings: "Settings", foundation: "Level 0 Foundation", available: "Infrastructure available",
+    remediation: "Remediation", privacy: "Privacy", diagnostics: "Diagnostics", about: "About",
+    settings: "Settings", foundation: "Local security center", available: "Infrastructure available",
     unavailable: "Infrastructure unavailable", checking: "Validating infrastructure…", noData: "No data available",
     noDataDetail: "The interface never uses silent demos. Data appears only after a valid backend response.",
     coverage: "Coverage", risk: "Risk", confidence: "Confidence", status: "Status", blocker: "Known blocker",
@@ -117,8 +118,8 @@ interface ProductViewProps {
   readonly onInvestigationReport?: (caseId:string,kind:InvestigationReport["kind"])=>void;
 }
 
-function EmptyState({ title, detail }: { readonly title: string; readonly detail: string }) {
-  return <section className="empty-state" data-mode="production-empty"><div className="radar" aria-hidden="true"><span /></div><div><h2>{title}</h2><p>{detail}</p></div></section>;
+function EmptyState({ title, detail, actions }: { readonly title: string; readonly detail: string; readonly actions?: ReactNode }) {
+  return <section className="empty-state" data-mode="production-empty"><div className="radar" aria-hidden="true"><span /></div><div><h2>{title}</h2><p>{detail}</p>{actions && <div className="empty-actions">{actions}</div>}</div></section>;
 }
 
 type InvestigationPanelProps={readonly summary:CorrelationSummary|null;readonly state:InvestigationUiState;readonly clusters:readonly Cluster[];readonly cases:readonly InvestigationCase[];readonly graph:InvestigationGraph|null;readonly report:InvestigationReport|null;readonly busy:boolean;readonly onRun:(()=>void)|undefined;readonly onCancel:(()=>void)|undefined;readonly onOpen:((id:string)=>void)|undefined;readonly onAdvance:((id:string)=>void)|undefined;readonly onReport:((id:string,kind:InvestigationReport["kind"])=>void)|undefined};
@@ -162,8 +163,12 @@ export function FoundationView({
   filePreview = null, fileAuthorization = null, fileAnalysis = null, onInspectFile, onAuthorizeFile, onStartFile, installedPreview=null, installedAuthorization=null, installedInventory=null, providerStatus=[], onPreviewInstalled, onAuthorizeInstalled, onStartInstalled, onRefreshProviders, urlPreview=null, urlAuthorization=null, webAnalysis=null, onPreviewUrl, onAuthorizeUrl, onStartUrl, correlation=null, clusters=[], cases=[], investigationGraph=null, investigationReport=null, investigationState="idle", onRunCorrelation, onCancelCorrelation, onOpenCase, onAdvanceCase, onInvestigationReport,initialPage = "overview",
 }: ProductViewProps) {
   const [page, setPage] = useState<Page>(initialPage);
-  const [locale, setLocale] = useState<Locale>("pt-BR");
-  const [theme, setTheme] = useState<Theme>("professional");
+  const [locale, setLocale] = useState<Locale>(loadLocale);
+  const [theme, setTheme] = useState<Theme>(loadTheme);
+  const [history, setHistory] = useState<readonly Page[]>([]);
+  const [showOnboarding, setShowOnboarding] = useState(() => !onboardingComplete());
+  const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
   const [repositoryPath, setRepositoryPath] = useState("");
   const [filePath, setFilePath] = useState(filePreview?.requested_path ?? "");
   const [urlInput,setUrlInput]=useState("");
@@ -185,6 +190,24 @@ export function FoundationView({
     && (statusFilter === "all" || finding.status === statusFilter)
     && (confidenceFilter === "all" || finding.confidence === confidenceFilter));
   const findingDetail = findings.find((finding) => finding.id === selectedFindingId) ?? visibleFindings[0] ?? null;
+  const navigate = (next: Page) => {
+    if (next === page) return;
+    setHistory(current => [...current.slice(-11), page]);
+    setPage(next);
+  };
+  const goBack = () => setHistory(current => {
+    const previous = current.at(-1);
+    if (previous !== undefined) setPage(previous);
+    return previous === undefined ? current : current.slice(0, -1);
+  });
+  const changeLocale = (next: Locale) => { setLocale(next); savePreference("locale", next); };
+  const changeTheme = (next: Theme) => { setTheme(next); savePreference("theme", next); };
+  useEffect(() => { titleRef.current?.focus({ preventScroll: true }); }, [page]);
+  useEffect(() => {
+    const connected=()=>setOnline(true), disconnected=()=>setOnline(false);
+    globalThis.addEventListener?.("online",connected); globalThis.addEventListener?.("offline",disconnected);
+    return()=>{globalThis.removeEventListener?.("online",connected);globalThis.removeEventListener?.("offline",disconnected);};
+  },[]);
 
   const content = (() => {
     if(page==="investigations") return <InvestigationsPanel summary={correlation} state={investigationState} clusters={clusters} cases={cases} graph={investigationGraph} report={investigationReport} busy={busy} onRun={onRunCorrelation} onCancel={onCancelCorrelation} onOpen={onOpenCase} onAdvance={onAdvanceCase} onReport={onInvestigationReport}/>;
@@ -211,17 +234,23 @@ export function FoundationView({
       : <section className="data-panel"><div className="report-actions">{(["executive", "technical", "developer"] as const).map((kind) => <button className="secondary" disabled={busy || onReport === undefined} key={kind} onClick={() => onReport?.(kind)}>{text.generate}: {text[kind]}</button>)}</div>{report && <pre className="report-json" aria-label="JSON report">{report.json}</pre>}</section>;
     if (page === "overview" && fileAnalysis?.analysis) { const analysis=fileAnalysis.analysis; return <section className="level2-analysis" data-level2-screen="analysis"><div className="data-panel"><div className="panel-heading"><div><p className="eyebrow">File / Binary Security</p><h2>{analysis.verdict.disposition}</h2></div><span className={`severity severity-${analysis.verdict.risk}`}>{analysis.verdict.risk}</span></div><p>No safety guarantee is made. Coverage limitations remain visible.</p></div><div className="analysis-grid"><article className="data-panel"><h2>File Identity</h2><dl><dt>Location</dt><dd><code>{analysis.target.canonical_path}</code></dd><dt>Volume ID</dt><dd>{analysis.target.identity.volume_id}</dd><dt>File ID</dt><dd>{analysis.target.identity.file_id}</dd><dt>Size</dt><dd>{analysis.target.identity.size}</dd></dl></article><article className="data-panel" data-level2-screen="hashes"><h2>Hashes</h2><dl><dt>SHA-256</dt><dd><code>{analysis.hashes.sha256}</code></dd><dt>SHA-512</dt><dd><code>{analysis.hashes.sha512}</code></dd><dt>Bytes hashed</dt><dd>{analysis.hashes.bytes_hashed}</dd></dl></article><article className="data-panel" data-level2-screen="pe"><h2>PE Metadata</h2><dl><dt>Classification</dt><dd>{analysis.classification}</dd><dt>Architecture</dt><dd>{analysis.pe?.architecture ?? "Not applicable"}</dd><dt>Subsystem</dt><dd>{analysis.pe?.subsystem ?? "—"}</dd><dt>Entry point RVA</dt><dd>{analysis.pe?.entry_point_rva ?? "—"}</dd><dt>Image base</dt><dd>{analysis.pe?.image_base ?? "—"}</dd><dt>Sections</dt><dd>{analysis.pe?.sections.map(section => `${section.name}: virtual=${section.virtual_size}, raw=${section.raw_size}`).join("; ") ?? "—"}</dd><dt>Parser</dt><dd>{analysis.pe_error ?? "completed"}</dd></dl></article><article className="data-panel" data-level2-screen="signature"><h2>Digital Signature</h2><dl><dt>Presence</dt><dd>{analysis.authenticode.signature_present ? "Present" : "Unsigned"}</dd><dt>Cryptographic status</dt><dd>{analysis.authenticode.cryptographic_status}</dd><dt>Trust chain</dt><dd>{analysis.authenticode.trust_chain_status}</dd><dt>Publisher</dt><dd>{analysis.authenticode.publisher?.subject ?? "Unavailable"}</dd><dt>Issuer</dt><dd>{analysis.authenticode.publisher?.issuer ?? "Unavailable"}</dd><dt>Signing time (signer assertion)</dt><dd>{analysis.authenticode.publisher?.signing_time ?? "Absent"}</dd><dt>Countersignature present</dt><dd>{analysis.authenticode.publisher?.timestamp_present === true ? "Present" : analysis.authenticode.publisher?.timestamp_present === false ? "Absent" : "Unknown"}</dd><dt>Trusted timestamp</dt><dd>{analysis.authenticode.publisher?.trusted_timestamp_present === true ? "Validated offline" : analysis.authenticode.publisher?.trusted_timestamp_present === false ? "Absent" : "Not established offline"}</dd><dt>Network</dt><dd>Offline / cache-only; revocation not checked</dd></dl></article><article className="data-panel"><h2>YARA</h2><p className="coverage-warning">Unavailable by execution policy</p></article><article className="data-panel"><h2>Reputation</h2><p className="coverage-warning">Not checked — no upload and no network lookup</p></article><article className="data-panel"><h2>Findings</h2>{analysis.findings.length===0?<p>No findings from available checks. This is not a clean guarantee.</p>:analysis.findings.map(finding=><div key={finding.id}><strong>{finding.title}</strong><p>{finding.category} · {finding.severity}</p></div>)}</article><article className="data-panel" data-level2-screen="coverage"><h2>Coverage</h2><dl><dt>Hashing</dt><dd>{analysis.coverage.hashing}</dd><dt>Classification</dt><dd>{analysis.coverage.classification}</dd><dt>PE</dt><dd>{analysis.coverage.pe_inspection}</dd><dt>Authenticode</dt><dd>{analysis.coverage.authenticode}</dd><dt>YARA</dt><dd>{analysis.coverage.yara}</dd><dt>Reputation</dt><dd>{analysis.coverage.reputation}</dd></dl></article></div></section>; }
     if (page === "overview" && fileAnalysis?.terminal_error) return <section className="data-panel" data-level2-screen={fileAnalysis.progress.phase}><h2>{fileAnalysis.progress.phase}</h2><p className="coverage-warning">{fileAnalysis.terminal_error}</p><p>No final file verdict was generated.</p></section>;
-    if (page === "settings") return <section className="data-panel"><h2>Local-first</h2><p>{text.syntheticNote}</p><dl><dt>Operating system</dt><dd>Windows 10</dd><dt>Network providers</dt><dd>Disabled by default</dd><dt>Defender provider</dt><dd>Optional / disabled</dd></dl></section>;
-    return scan === null ? <EmptyState title={text.noData} detail={text.noDataDetail} /> : <section className="data-panel"><div className="panel-heading"><div><h2>{scan.verdict ?? scan.state}</h2><code>{scan.id}</code></div><span className={`severity severity-${scan.risk ?? "info"}`}>{scan.risk ?? "pending"}</span></div><dl><dt>{text.status}</dt><dd>{scan.state}</dd><dt>{text.coverage}</dt><dd>{coverage}</dd><dt>Planned</dt><dd>{scan.coverage.total}</dd><dt>Executed / passed</dt><dd>{scan.coverage.completed}</dd><dt>Failed</dt><dd>{scan.coverage.failed}</dd><dt>Unavailable</dt><dd>{scan.coverage.unavailable}</dd><dt>Skipped</dt><dd>{scan.coverage.skipped}</dd><dt>{text.risk}</dt><dd>{scan.risk ?? "—"}</dd><dt>{text.confidence}</dt><dd>{scan.confidence ?? "—"}</dd></dl>{scan.state === "partial" && <p className="coverage-warning">Partial coverage: unavailable checks are recorded and are not treated as a security pass.</p>}{scan.state === "cancelled" && <p className="coverage-warning">Cancelled: no final verdict was generated.</p>}</section>;
+    if (page === "settings") return <SettingsPage locale={locale} theme={theme} onLocale={changeLocale} onTheme={changeTheme} onOpen={navigate} onResetOnboarding={() => { resetOnboarding(); setShowOnboarding(true); }} />;
+    if (page === "privacy") return <PrivacyPage locale={locale} />;
+    if (page === "diagnostics") return <DiagnosticsPage locale={locale} status={status} engines={engines} providers={providerStatus} scans={scans} />;
+    if (page === "about") return <AboutPage locale={locale} />;
+    return scan === null ? <EmptyState title={text.noData} detail={text.noDataDetail} actions={<><button className="primary" onClick={() => navigate("new-scan")}>{text["new-scan"]}</button><button className="secondary" onClick={() => navigate("settings")}>{text.settings}</button></>} /> : <section className="data-panel"><div className="panel-heading"><div><h2>{scan.verdict ?? scan.state}</h2><code>{scan.id}</code></div><span className={`severity severity-${scan.risk ?? "info"}`}>{scan.risk ?? "pending"}</span></div><dl><dt>{text.status}</dt><dd>{scan.state}</dd><dt>{text.coverage}</dt><dd>{coverage}</dd><dt>Planned</dt><dd>{scan.coverage.total}</dd><dt>Executed / passed</dt><dd>{scan.coverage.completed}</dd><dt>Failed</dt><dd>{scan.coverage.failed}</dd><dt>Unavailable</dt><dd>{scan.coverage.unavailable}</dd><dt>Skipped</dt><dd>{scan.coverage.skipped}</dd><dt>{text.risk}</dt><dd>{scan.risk ?? "—"}</dd><dt>{text.confidence}</dt><dd>{scan.confidence ?? "—"}</dd></dl>{scan.state === "partial" && <p className="coverage-warning">Partial coverage: unavailable checks are recorded and are not treated as a security pass.</p>}{scan.state === "cancelled" && <p className="coverage-warning">Cancelled: no final verdict was generated.</p>}</section>;
   })();
 
-  return <div className={`app-shell theme-${theme}`} lang={locale}>
-    <aside className="sidebar" aria-label="Primary navigation"><div className="brand"><span className="brand-mark" aria-hidden="true">EV</span><div><strong>{text.product}</strong><small>{text.edition}</small></div></div><nav>{pages.map((item) => <button key={item} className={page === item ? "active" : ""} aria-current={page === item ? "page" : undefined} onClick={() => setPage(item)}>{text[item]}</button>)}</nav><div className="sidebar-footer"><span className="status-dot" aria-hidden="true" />Windows 10 · Local-first</div></aside>
-    <main aria-labelledby="title"><header className="topbar"><div><p className="eyebrow">{text.foundation}</p><h1 id="title">{text[page]}</h1></div><div className="controls"><label>{text.language}<select aria-label={text.language} value={locale} onChange={(event) => setLocale(event.target.value as Locale)}><option value="pt-BR">PT-BR</option><option value="en">EN</option></select></label><label>{text.theme}<select aria-label={text.theme} value={theme} onChange={(event) => setTheme(event.target.value as Theme)}><option value="professional">{text.professional}</option><option value="neon">{text.neon}</option></select></label></div></header>
+  return <div className={`app-shell theme-${theme}`} lang={locale} data-product-version={PRODUCT_VERSION}>
+    <a className="skip-link" href="#workspace">{locale === "pt-BR" ? "Pular para o conteúdo" : "Skip to content"}</a>
+    <aside className="sidebar" aria-label={locale === "pt-BR" ? "Navegação principal" : "Primary navigation"}><div className="brand"><span className="brand-mark" aria-hidden="true">EV</span><div><strong>{text.product}</strong><small>{text.edition}</small></div></div><nav>{pages.map((item) => <button key={item} className={page === item ? "active" : ""} aria-current={page === item ? "page" : undefined} onClick={() => navigate(item)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); navigate(item); } }}>{text[item]}</button>)}</nav><div className="sidebar-footer"><span className="status-dot" aria-hidden="true" />Windows 10 · Local-first · {PRODUCT_VERSION}</div></aside>
+    <main id="workspace" aria-labelledby="title"><header className="topbar"><div className="heading-stack"><button className="back-button" onClick={goBack} disabled={history.length === 0} aria-label={locale === "pt-BR" ? "Voltar à página anterior" : "Go back to previous page"}>←</button><div><p className="eyebrow">{text.foundation}</p><h1 id="title" ref={titleRef} tabIndex={-1}>{text[page]}</h1></div></div><div className="controls"><label>{text.language}<select aria-label={text.language} value={locale} onChange={(event) => changeLocale(event.target.value as Locale)}><option value="pt-BR">PT-BR</option><option value="en">EN</option></select></label><label>{text.theme}<select aria-label={text.theme} value={theme} onChange={(event) => changeTheme(event.target.value as Theme)}><option value="system">{locale === "pt-BR" ? "Sistema" : "System"}</option><option value="professional">{text.professional}</option><option value="neon">{text.neon}</option></select></label></div></header>
+      {showOnboarding && <section className="onboarding" aria-labelledby="onboarding-title" data-level7-screen="onboarding"><div><p className="eyebrow">{locale === "pt-BR" ? "Primeiro uso" : "First run"}</p><h2 id="onboarding-title">{locale === "pt-BR" ? "Segurança local, sem promessas silenciosas" : "Local security without silent assurances"}</h2><p>{locale === "pt-BR" ? "Escolha um alvo, revise o escopo e confirme antes de qualquer análise. Cobertura indisponível permanece visível e nunca equivale a um resultado limpo." : "Choose a target, review the scope, and confirm before analysis. Unavailable coverage remains visible and never equals a clean result."}</p></div><div className="report-actions"><button className="primary" onClick={() => { completeOnboarding(); setShowOnboarding(false); }}>{locale === "pt-BR" ? "Entendi" : "Got it"}</button><button className="secondary" onClick={() => navigate("privacy")}>{locale === "pt-BR" ? "Ver privacidade" : "View privacy"}</button></div></section>}
+      {!online && <section className="offline-banner" role="status" data-level7-screen="offline"><strong>{locale === "pt-BR" ? "Modo offline" : "Offline mode"}</strong><span>{locale === "pt-BR" ? "Histórico e recursos locais continuam disponíveis; providers de rede não serão consultados." : "History and local features remain available; network providers will not be queried."}</span></section>}
       <section className="status-strip" aria-label="Infrastructure status" aria-live="polite" aria-atomic="true"><span className={ready ? "status-dot ready" : "status-dot"} aria-hidden="true" /><strong>{ready ? text.available : failed ? text.unavailable : text.checking}</strong><span>{ready ? "Core · Storage · IPC restricted" : "Fail closed"}</span></section>
-      {error && <div className="safe-error" role="alert">{error}</div>}
+      {error && <div className="safe-error" role="alert"><strong>{locale === "pt-BR" ? "A operação não foi concluída" : "The operation did not complete"}</strong><p>{error}</p><details><summary>{locale === "pt-BR" ? "Detalhes seguros" : "Safe details"}</summary><code>{error}</code></details><div className="report-actions"><button className="secondary" onClick={() => globalThis.location?.reload()}>{locale === "pt-BR" ? "Recarregar dados locais" : "Reload local data"}</button></div></div>}
       <section className="metric-grid" aria-label="Verdict dimensions"><article><span>{text.coverage}</span><strong>{coverage}</strong><small>{scan?.state ?? text.noData}</small></article><article><span>{text.risk}</span><strong>{scan?.risk ?? "—"}</strong><small>{text.risk}</small></article><article><span>{text.confidence}</span><strong>{scan?.confidence ?? "—"}</strong><small>{text.confidence}</small></article><article><span>{text.status}</span><strong>{scan?.state ?? "—"}</strong><small>{scan?.verdict ?? text.noData}</small></article></section>
-      {content}<footer><strong>{text.blocker}:</strong> {text.upstream}</footer>
+      {localizeTree(content, locale)}<footer><strong>{text.blocker}:</strong> {text.upstream}</footer>
     </main>
   </div>;
 }

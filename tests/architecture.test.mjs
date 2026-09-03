@@ -98,3 +98,23 @@ test('approved pins, lockfiles and script restrictions are present', () => {
   const desktop=JSON.parse(readFileSync('apps/desktop/package.json'));
   for (const version of Object.values({...desktop.dependencies,...desktop.devDependencies})) assert.match(version,/^\d+\.\d+\.\d+$/);
 });
+
+test('release-candidate identity is coherent across Cargo, frontend, Tauri and reports', () => {
+  const version='1.0.0-rc.1';
+  const rootPackage=JSON.parse(readFileSync('package.json','utf8'));
+  const desktopPackage=JSON.parse(readFileSync('apps/desktop/package.json','utf8'));
+  const tauri=JSON.parse(readFileSync('apps/desktop/src-tauri/tauri.conf.json','utf8'));
+  const workspace=readFileSync('Cargo.toml','utf8');
+  const product=readFileSync('apps/desktop/src/product.ts','utf8');
+  assert.equal(rootPackage.version,version);
+  assert.equal(desktopPackage.version,version);
+  assert.equal(tauri.version,version);
+  assert.equal(tauri.productName,'EDY VERDICT');
+  assert.match(workspace,new RegExp(`\\[workspace\\.package\\][\\s\\S]*?version = "${version.replaceAll('.','\\.')}"`));
+  assert(product.includes(`PRODUCT_VERSION = "${version}"`));
+  for(const name of ['edy-cli','edy-core','edy-desktop','edy-engine-manager','edy-providers','edy-remediation','edy-reporting','edy-repository','edy-storage']){
+    const entry=new RegExp(`name = "${name}"\\r?\\nversion = "${version.replaceAll('.','\\.')}"`);
+    assert.match(readFileSync('Cargo.lock','utf8'),entry);
+  }
+  assert.match(readFileSync('crates/edy-reporting/src/lib.rs','utf8'),/PRODUCT_VERSION.*env!\("CARGO_PKG_VERSION"\)/);
+});

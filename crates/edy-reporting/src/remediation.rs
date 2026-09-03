@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize)]
 pub struct ManualRemediationReport {
     pub schema: &'static str,
+    pub product_version: String,
     pub action_id: String,
     pub case_id: Option<String>,
     pub finding_id: String,
@@ -19,6 +20,7 @@ impl ManualRemediationReport {
     pub fn from_snapshot(s: &edy_remediation::ManualSnapshot) -> Self {
         Self {
             schema: "EDY_MANUAL_VERIFICATION_REPORT_V1",
+            product_version: crate::PRODUCT_VERSION.into(),
             action_id: s.plan.actions[0].action_id.clone(),
             case_id: s.plan.case_id.clone(),
             finding_id: s.plan.finding_id.clone(),
@@ -61,6 +63,7 @@ pub enum RemediationAudience {
 #[serde(deny_unknown_fields)]
 pub struct RemediationReport {
     pub schema: String,
+    pub product_version: String,
     pub audience: RemediationAudience,
     pub action_id: String,
     pub finding_id: String,
@@ -137,6 +140,7 @@ impl RemediationReport {
         }
         Self {
             schema: "EDY_REMEDIATION_REPORT_V1".into(),
+            product_version: crate::PRODUCT_VERSION.into(),
             audience,
             action_id: action.action_id.clone(),
             finding_id: action.finding_id.clone(),
@@ -156,6 +160,7 @@ impl RemediationReport {
     pub fn from_guidance(action: &GuidanceAction, audience: RemediationAudience) -> Self {
         Self {
             schema: "EDY_REMEDIATION_REPORT_V1".into(),
+            product_version: crate::PRODUCT_VERSION.into(),
             audience,
             action_id: action.action_id.clone(),
             finding_id: action.finding_id.clone(),

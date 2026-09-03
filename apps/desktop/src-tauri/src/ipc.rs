@@ -629,6 +629,13 @@ impl Level0Backend {
         Ok(backend)
     }
 
+    #[cfg(all(feature = "native-e2e", debug_assertions))]
+    pub fn open_level7_fixture(project_root: &Path, database: &Path) -> Result<Self, SafeIpcError> {
+        let mut backend = Self::open_internal(project_root, database, true)?;
+        backend.level4_fixture = true;
+        Ok(backend)
+    }
+
     fn open_internal(
         project_root: &Path,
         database: &Path,

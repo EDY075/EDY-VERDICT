@@ -10,6 +10,7 @@ pub const LEVEL4_REPORT_SCHEMA: &str = "LEVEL4_PASSIVE_WEB_REPORT_V1";
 #[serde(deny_unknown_fields)]
 pub struct WebSecurityReport {
     pub schema: &'static str,
+    pub product_version: String,
     pub kind: ReportKind,
     pub scan_id: String,
     pub conclusion: String,
@@ -41,6 +42,7 @@ impl WebSecurityReport {
         };
         Self {
             schema: LEVEL4_REPORT_SCHEMA,
+            product_version: crate::PRODUCT_VERSION.into(),
             kind,
             scan_id: analysis.scan_id.clone(),
             conclusion: conclusion.into(),

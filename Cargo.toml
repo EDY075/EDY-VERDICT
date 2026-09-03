@@ -3,19 +3,19 @@ resolver = "3"
 members = ["crates/edy-core", "crates/edy-repository", "crates/edy-engine-manager", "crates/edy-providers", "crates/edy-remediation", "crates/edy-storage", "crates/edy-reporting", "crates/edy-cli", "apps/desktop/src-tauri"]
 
 [workspace.package]
-version = "0.1.0"
+version = "1.0.0-rc.1"
 edition = "2024"
 rust-version = "1.98"
 publish = false
 
 [workspace.dependencies]
-edy-core = { version = "=0.1.0", path = "crates/edy-core" }
-edy-repository = { version = "=0.1.0", path = "crates/edy-repository" }
-edy-engine-manager = { version = "=0.1.0", path = "crates/edy-engine-manager" }
-edy-providers = { version = "=0.1.0", path = "crates/edy-providers" }
-edy-remediation = { version = "=0.1.0", path = "crates/edy-remediation" }
-edy-storage = { version = "=0.1.0", path = "crates/edy-storage" }
-edy-reporting = { version = "=0.1.0", path = "crates/edy-reporting" }
+edy-core = { version = "=1.0.0-rc.1", path = "crates/edy-core" }
+edy-repository = { version = "=1.0.0-rc.1", path = "crates/edy-repository" }
+edy-engine-manager = { version = "=1.0.0-rc.1", path = "crates/edy-engine-manager" }
+edy-providers = { version = "=1.0.0-rc.1", path = "crates/edy-providers" }
+edy-remediation = { version = "=1.0.0-rc.1", path = "crates/edy-remediation" }
+edy-storage = { version = "=1.0.0-rc.1", path = "crates/edy-storage" }
+edy-reporting = { version = "=1.0.0-rc.1", path = "crates/edy-reporting" }
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.149"
 rusqlite = { version = "=0.40.2", features = ["bundled", "backup", "limits"] }

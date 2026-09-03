@@ -902,7 +902,7 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "edy-cli"
-version = "0.1.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "edy-core",
  "edy-engine-manager",
@@ -915,7 +915,7 @@ dependencies = [
 
 [[package]]
 name = "edy-core"
-version = "0.1.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -924,7 +924,7 @@ dependencies = [
 
 [[package]]
 name = "edy-desktop"
-version = "0.1.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "edy-core",
  "edy-engine-manager",
@@ -945,7 +945,7 @@ dependencies = [
 
 [[package]]
 name = "edy-engine-manager"
-version = "0.1.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "edy-core",
  "edy-repository",
@@ -957,7 +957,7 @@ dependencies = [
 
 [[package]]
 name = "edy-providers"
-version = "0.1.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "edy-core",
  "flate2",
@@ -972,7 +972,7 @@ dependencies = [
 
 [[package]]
 name = "edy-remediation"
-version = "0.1.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -984,7 +984,7 @@ dependencies = [
 
 [[package]]
 name = "edy-reporting"
-version = "0.1.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "edy-core",
  "edy-engine-manager",
@@ -996,7 +996,7 @@ dependencies = [
 
 [[package]]
 name = "edy-repository"
-version = "0.1.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "edy-core",
  "serde",
@@ -1006,7 +1006,7 @@ dependencies = [
 
 [[package]]
 name = "edy-storage"
-version = "0.1.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "edy-core",
  "edy-remediation",

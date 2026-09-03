@@ -64,8 +64,11 @@ impl IntegrityStatus {
 
 pub fn run(args: &[String], project_root: &Path) -> CommandResult {
     match args {
-        [command] if command == "version" => {
+        [command] if command == "version" || command == "--version" || command == "-V" => {
             CommandResult::success([format!("edy-verdict {}", env!("CARGO_PKG_VERSION"))])
+        }
+        [command] if command == "help" || command == "--help" || command == "-h" => {
+            CommandResult::success([usage(), exit_code_contract()])
         }
         [command] if command == "doctor" => doctor(project_root),
         [command] if command == "engines" => engine_list(project_root),
@@ -156,7 +159,11 @@ pub fn run(args: &[String], project_root: &Path) -> CommandResult {
 }
 
 fn usage() -> String {
-    "Usage: edy-verdict <doctor|engines|validate-manifest|version|correlate|clusters list|clusters show|cases list|cases show|remediation plans list|remediation plans show|remediation status|remediation receipt>".into()
+    "Usage: edy-verdict <doctor|engines|validate-manifest|version|correlate|clusters list|clusters show|cases list|cases show|remediation plans list|remediation plans show|remediation status|remediation receipt> [--json]".into()
+}
+
+fn exit_code_contract() -> String {
+    "Exit codes: 0=success; 1=validated operation unavailable or failed safely; 2=invalid or unsupported command".into()
 }
 
 fn remediation_store(root: &Path) -> Result<ManualRemediationStore, CommandResult> {
@@ -612,6 +619,15 @@ mod tests {
     fn exposes_only_the_four_safe_commands() {
         let root = Path::new(".");
         assert_eq!(run(&["version".into()], root).exit_code, 0);
+        for command in ["help", "--help", "-h"] {
+            let result = run(&[command.into()], root);
+            assert_eq!(result.exit_code, 0);
+            assert!(result.stdout.contains("Exit codes:"));
+        }
+        assert_eq!(
+            run(&["--version".into()], root).stdout,
+            "edy-verdict 1.0.0-rc.1"
+        );
         for command in ["scan", "fix", "remediate", "url-test", "shell"] {
             let result = run(&[command.into()], root);
             assert_eq!(result.exit_code, 2);

@@ -4,6 +4,8 @@
 //! Rendering is separated from persistence: callers capture an immutable [`ReportSnapshot`]
 //! before producing one or more projections. A renderer therefore has no database or clock.
 
+pub const PRODUCT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 use edy_core::{
     Availability, Confidence, EngineRunState, FindingStatus, ScanResult, Severity, VerdictKind,
 };
@@ -421,6 +423,7 @@ pub enum ReportContract {
 #[serde(deny_unknown_fields)]
 pub struct ReportDocument {
     pub schema: String,
+    pub product_version: String,
     pub snapshot_schema: String,
     pub kind: ReportKind,
     pub scan_id: String,
@@ -455,6 +458,7 @@ impl ReportDocument {
     pub fn from_snapshot(kind: ReportKind, snapshot: &ReportSnapshot) -> Self {
         Self {
             schema: REPORT_SCHEMA.into(),
+            product_version: PRODUCT_VERSION.into(),
             snapshot_schema: snapshot.schema.clone(),
             kind,
             scan_id: snapshot.metadata.scan_id.clone(),

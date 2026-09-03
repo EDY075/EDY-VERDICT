@@ -706,6 +706,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         && std::env::args().any(|arg| arg.starts_with("--level5-native-qa="));
     let native_level6 = cfg!(debug_assertions)
         && std::env::args().any(|arg| arg.starts_with("--level6-native-qa="));
+    let native_level7 = cfg!(debug_assertions)
+        && std::env::args().any(|arg| arg.starts_with("--level7-native-qa="));
     #[cfg(all(feature = "native-e2e", debug_assertions))]
     let native_level5_scenario = std::env::args()
         .find_map(|arg| match arg.as_str() {
@@ -734,23 +736,34 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             "--level6-native-qa=1366x768" => Some((1366.0, 768.0)),
             "--level6-native-qa=1920x1080" => Some((1920.0, 1080.0)),
             "--level6-native-qa=2560x1440" => Some((2560.0, 1440.0)),
+            "--level7-native-qa=1366x768" => Some((1366.0, 768.0)),
+            "--level7-native-qa=1920x1080" => Some((1920.0, 1080.0)),
+            "--level7-native-qa=2560x1440" => Some((2560.0, 1440.0)),
             _ => None,
         })
     } else {
         None
     };
     #[cfg(all(feature = "native-e2e", debug_assertions))]
-    let native_run_key = std::env::var("EDY_LEVEL6_E2E_RUN_ID")
-        .ok()
-        .filter(|s| !s.is_empty() && s.len() <= 20 && s.bytes().all(|b| b.is_ascii_digit()))
-        .unwrap_or_else(|| "default".into());
+    let native_run_key = std::env::var(if native_level7 {
+        "EDY_LEVEL7_E2E_RUN_ID"
+    } else {
+        "EDY_LEVEL6_E2E_RUN_ID"
+    })
+    .ok()
+    .filter(|s| !s.is_empty() && s.len() <= 20 && s.bytes().all(|b| b.is_ascii_digit()))
+    .unwrap_or_else(|| "default".into());
     #[cfg(not(all(feature = "native-e2e", debug_assertions)))]
     let native_run_key = "default";
     let level6_data_directory = format!("level6-manual-native-qa-data-{native_run_key}");
+    let level7_data_directory = format!("level7-product-native-qa-data-{native_run_key}");
+    let level7_webview_directory = format!("level7-product-native-qa-webview2-{native_run_key}");
     let data = local_directory(
         &root,
         if native_qa_size.is_some() {
-            if native_level6 {
+            if native_level7 {
+                &level7_data_directory
+            } else if native_level6 {
                 &level6_data_directory
             } else if native_level5 {
                 "level5-native-qa-data"
@@ -772,7 +785,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     // Do not reject that valid database with the obsolete pre-Level-0 v1 literal.
     drop(storage);
     #[cfg(all(feature = "native-e2e", debug_assertions))]
-    let backend = if native_level4 {
+    let backend = if native_level7 {
+        Level0Backend::open_level7_fixture(&root, &data.join("level0.sqlite3"))?
+    } else if native_level4 {
         Level0Backend::open_level4_fixture(&root, &data.join("level0.sqlite3"))?
     } else if _native_level3_degraded {
         Level0Backend::open_level3_degraded_fixture(&root, &data.join("level0.sqlite3"))?
@@ -784,7 +799,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(not(all(feature = "native-e2e", debug_assertions)))]
     let backend = Level0Backend::open(&root, &data.join("level0.sqlite3"))?;
     #[cfg(all(feature = "native-e2e", debug_assertions))]
-    let investigation = if native_level5 {
+    let investigation = if native_level7 || native_level5 {
         InvestigationBackend::open_fixture(&data.join("level0.sqlite3"), native_level5_scenario)?
     } else {
         InvestigationBackend::open(&data.join("level0.sqlite3"))?
@@ -792,7 +807,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(not(all(feature = "native-e2e", debug_assertions)))]
     let investigation = InvestigationBackend::open(&data.join("level0.sqlite3"))?;
     #[cfg(all(feature = "native-e2e", debug_assertions))]
-    let remediation = if native_level6 {
+    let remediation = if native_level7 || native_level6 {
         RemediationBackend::open_fixture(
             &data.join("level0.sqlite3"),
             &data.join("synthetic-remediation-repo"),
@@ -805,7 +820,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let webview_data = local_directory(
         &root,
         if native_qa_size.is_some() {
-            if native_level6 {
+            if native_level7 {
+                &level7_webview_directory
+            } else if native_level6 {
                 "level6-manual-native-qa-webview2"
             } else if native_level5 {
                 "level5-native-qa-webview2"
