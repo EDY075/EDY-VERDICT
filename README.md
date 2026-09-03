@@ -20,6 +20,10 @@ Read `docs/LEVEL_0_REPORT.md` for the exact boundary. The independent release ga
 **Level -1C FAIL / WAITING TAURI UPSTREAM** because five Windows transitive `unic-*`
 advisories still block promotion.
 
+Levels 1–6 are implemented on the work branch. Level 6 production remediation is deliberately
+non-mutating: guidance, manual change outside EDY VERDICT and explicitly authorized fresh
+verification. Automatic apply/rollback is policy blocked; see `docs/LEVEL_6_REPORT.md`.
+
 Authorized foundation reproduction (PowerShell, from this directory):
 
 ```powershell
@@ -27,20 +31,23 @@ Authorized foundation reproduction (PowerShell, from this directory):
 # Provision-Toolchains.ps1 is an explicit provisioning command, never a startup hook.
 pnpm install --frozen-lockfile
 pnpm build
-cargo test --workspace --locked
-cargo clippy --workspace --all-targets --locked -- -D warnings
-cargo fmt --all -- --check
+./scripts/Invoke-ProjectRust.ps1 -Action WorkspaceTest
+./scripts/Invoke-ProjectRust.ps1 -Action WorkspaceClippy
+./scripts/Invoke-ProjectRust.ps1 -Action FmtCheck
 pnpm typecheck
 pnpm lint
 pnpm test
-cargo audit
-cargo deny check
+./scripts/Invoke-ProjectRust.ps1 -Action CargoAudit
+./scripts/Invoke-ProjectRust.ps1 -Action CargoDeny
 pnpm audit --audit-level=high
 ```
 
-Pinned development auditors were built with `cargo install cargo-audit --version
-0.22.2 --locked --root .local/audit-tools` and `cargo install cargo-deny --version
-0.20.2 --locked --root .local/audit-tools`, always inside the project environment.
+Pinned development auditors are cargo-audit 0.22.2 and cargo-deny 0.20.2, already
+provisioned in `.local/audit-tools`. Do not reinstall or invoke them directly.
+All controlled Rust execution must use the closed-action project wrapper; loading
+the environment alone does not waive that requirement. The direct-command static
+gate runs before wrapper actions. Manual commands outside wrappers remain an
+operational responsibility: no global shell interception is installed.
 `Collect-Evidence.ps1` records gates without launching the application. Its
 `-RunAuthorizedFakeCredentialTest` switch writes/deletes the documented fake target;
 omit it unless that specific native test is authorized. Never use a real API key.
