@@ -1,8 +1,19 @@
+param(
+    [switch]$ExplicitProjectLocalProvisioning
+)
+
 # Explicitly authorized project-local Level -1C provisioning. No engines/installers.
 $ErrorActionPreference = 'Stop'
+if (-not $ExplicitProjectLocalProvisioning) {
+    throw 'PROJECT_LOCAL_PROVISIONING_DENIED: explicit provisioning authorization is required'
+}
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
-$RustupExe = (Get-Command rustup.exe -ErrorAction Stop).Source
 . (Join-Path $PSScriptRoot 'Enter-Project.ps1')
+& (Join-Path $PSScriptRoot 'Assert-ProjectRustEnvironment.ps1') `
+    -WorkingDirectory $ProjectRoot `
+    -CandidateRustupHome $env:RUSTUP_HOME `
+    -CandidateCargoHome $env:CARGO_HOME | Out-Null
+$RustupExe = (Get-Command rustup.exe -ErrorAction Stop).Source
 $Toolchains = Join-Path $ProjectRoot '.local/toolchains'
 $Downloads = Join-Path $ProjectRoot '.local/downloads'
 New-Item -ItemType Directory -Path $Toolchains,$Downloads -Force | Out-Null
