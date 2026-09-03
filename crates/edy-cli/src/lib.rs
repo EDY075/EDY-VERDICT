@@ -5,6 +5,7 @@ use edy_core::{GraphLimits, correlate_investigation};
 use edy_engine_manager::manifest::EngineManifest;
 use edy_engine_manager::receipt::{EngineReceipt, IntegrityObservation, ObservedArtifact};
 use edy_storage::level0_snapshot::Level5SnapshotStore;
+use edy_storage::manual_remediation::ManualRemediationStore;
 use std::fs::{self, File};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
@@ -107,13 +108,148 @@ pub fn run(args: &[String], project_root: &Path) -> CommandResult {
         {
             show_case(project_root, run_id, case_id, true)
         }
+        [group, plans, command]
+            if group == "remediation" && plans == "plans" && command == "list" =>
+        {
+            remediation_list(project_root, false)
+        }
+        [group, plans, command, json]
+            if group == "remediation"
+                && plans == "plans"
+                && command == "list"
+                && json == "--json" =>
+        {
+            remediation_list(project_root, true)
+        }
+        [group, plans, command, action_id]
+            if group == "remediation" && plans == "plans" && command == "show" =>
+        {
+            remediation_show(project_root, action_id, false)
+        }
+        [group, plans, command, action_id, json]
+            if group == "remediation"
+                && plans == "plans"
+                && command == "show"
+                && json == "--json" =>
+        {
+            remediation_show(project_root, action_id, true)
+        }
+        [group, command, action_id] if group == "remediation" && command == "status" => {
+            remediation_status(project_root, action_id, false)
+        }
+        [group, command, action_id, json]
+            if group == "remediation" && command == "status" && json == "--json" =>
+        {
+            remediation_status(project_root, action_id, true)
+        }
+        [group, command, action_id] if group == "remediation" && command == "receipt" => {
+            remediation_receipt(project_root, action_id, false)
+        }
+        [group, command, action_id, json]
+            if group == "remediation" && command == "receipt" && json == "--json" =>
+        {
+            remediation_receipt(project_root, action_id, true)
+        }
         [] => CommandResult::error(2, usage()),
         _ => CommandResult::error(2, format!("Unsupported or unsafe command.\n{}", usage())),
     }
 }
 
 fn usage() -> String {
-    "Usage: edy-verdict <doctor|engines|validate-manifest|version|correlate|clusters list|clusters show|cases list|cases show>".into()
+    "Usage: edy-verdict <doctor|engines|validate-manifest|version|correlate|clusters list|clusters show|cases list|cases show|remediation plans list|remediation plans show|remediation status|remediation receipt>".into()
+}
+
+fn remediation_store(root: &Path) -> Result<ManualRemediationStore, CommandResult> {
+    if !root.is_absolute() {
+        return Err(CommandResult::error(
+            1,
+            "Level 6 project-local database is unavailable",
+        ));
+    }
+    let candidates = [
+        root.join(".local/data/level0.sqlite3"),
+        root.join(".local/data/edy-verdict.sqlite3"),
+    ];
+    let database = candidates
+        .iter()
+        .find(|path| path.is_file())
+        .ok_or_else(|| CommandResult::error(1, "Level 6 project-local database is unavailable"))?;
+    ManualRemediationStore::open_read_only(database)
+        .map_err(|_| CommandResult::error(1, "Level 6 database failed integrity validation"))
+}
+
+fn remediation_list(root: &Path, json: bool) -> CommandResult {
+    let store = match remediation_store(root) {
+        Ok(value) => value,
+        Err(error) => return error,
+    };
+    match store.list(None, 0, 100) {
+        Ok(items) if json => json_result(&items),
+        Ok(items) => CommandResult::success(items.into_iter().map(|item| {
+            format!(
+                "{} state={:?} finding={}",
+                item.plan.actions[0].action_id, item.state, item.plan.finding_id
+            )
+        })),
+        Err(_) => CommandResult::error(1, "Remediation plans could not be read"),
+    }
+}
+fn remediation_show(root: &Path, action_id: &str, json: bool) -> CommandResult {
+    let store = match remediation_store(root) {
+        Ok(value) => value,
+        Err(error) => return error,
+    };
+    match store.get(action_id) {
+        Ok(item) if json => json_result(&item.plan),
+        Ok(item) => CommandResult::success([
+            format!("action_id={action_id}"),
+            format!("plan_id={}", item.plan.plan_id),
+            format!("plan_sha256={}", item.plan.plan_sha256),
+            format!("safety_class={:?}", item.plan.actions[0].safety_class),
+        ]),
+        Err(_) => CommandResult::error(1, "Remediation plan was not found"),
+    }
+}
+fn remediation_status(root: &Path, action_id: &str, json: bool) -> CommandResult {
+    let store = match remediation_store(root) {
+        Ok(value) => value,
+        Err(error) => return error,
+    };
+    match store.get(action_id) {
+        Ok(item) if json => json_result(&item),
+        Ok(item) => CommandResult::success([
+            format!("action_id={action_id}"),
+            format!("state={:?}", item.state),
+            format!(
+                "verification={:?}",
+                item.verification.as_ref().map(|value| value.outcome)
+            ),
+            "automatic_mutation=POLICY_BLOCKED".into(),
+        ]),
+        Err(_) => CommandResult::error(1, "Remediation status was not found"),
+    }
+}
+fn remediation_receipt(root: &Path, action_id: &str, json: bool) -> CommandResult {
+    // Compatibility read route: reports verification, never an automatic-change receipt.
+    let store = match remediation_store(root) {
+        Ok(s) => s,
+        Err(e) => return e,
+    };
+    match store.get(action_id) {
+        Ok(item) => {
+            let report = edy_reporting::remediation::ManualRemediationReport::from_snapshot(&item);
+            if json {
+                json_result(&report)
+            } else {
+                CommandResult::success([
+                    format!("action_id={action_id}"),
+                    report.status.clone(),
+                    "automatic_mutation=POLICY_BLOCKED".into(),
+                ])
+            }
+        }
+        Err(_) => CommandResult::error(1, "Verification report is not available"),
+    }
 }
 
 fn investigation_store(root: &Path) -> Result<Level5SnapshotStore, CommandResult> {
@@ -476,11 +612,76 @@ mod tests {
     fn exposes_only_the_four_safe_commands() {
         let root = Path::new(".");
         assert_eq!(run(&["version".into()], root).exit_code, 0);
-        for command in ["scan", "fix", "remediation", "url-test", "shell"] {
+        for command in ["scan", "fix", "remediate", "url-test", "shell"] {
             let result = run(&[command.into()], root);
             assert_eq!(result.exit_code, 2);
             assert!(result.stderr.contains("unsafe"));
         }
+    }
+
+    #[test]
+    fn level6_cli_exposes_reads_but_no_apply_or_rollback() {
+        let root = Path::new(".");
+        for args in [
+            vec!["remediation", "apply", "rma-v1-dead"],
+            vec!["remediation", "rollback", "rma-v1-dead"],
+            vec!["remediation", "patch", "rma-v1-dead"],
+        ] {
+            let result = run(
+                &args.into_iter().map(str::to_owned).collect::<Vec<_>>(),
+                root,
+            );
+            assert_eq!(result.exit_code, 2);
+            assert!(result.stderr.contains("unsafe"));
+        }
+        assert_eq!(
+            run(&["remediation".into(), "plans".into(), "list".into()], root).exit_code,
+            1
+        );
+    }
+
+    #[test]
+    fn level6_cli_reads_schema_eight_without_modifying_the_database() {
+        let root = std::env::temp_dir().join(format!(
+            "edy-cli-manual-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let data = root.join(".local/data");
+        fs::create_dir_all(&data).unwrap();
+        let path = data.join("level0.sqlite3");
+        drop(ManualRemediationStore::open(&path).unwrap());
+        let before = fs::read(&path).unwrap();
+        let list = run(
+            &[
+                "remediation".into(),
+                "plans".into(),
+                "list".into(),
+                "--json".into(),
+            ],
+            &root,
+        );
+        assert_eq!(list.exit_code, 0);
+        assert_eq!(list.stdout, "[]");
+        for verb in ["status", "receipt"] {
+            assert_eq!(
+                run(
+                    &[
+                        "remediation".into(),
+                        verb.into(),
+                        format!("rma-v1-{}", "a".repeat(64))
+                    ],
+                    &root
+                )
+                .exit_code,
+                1
+            );
+        }
+        assert_eq!(fs::read(&path).unwrap(), before);
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

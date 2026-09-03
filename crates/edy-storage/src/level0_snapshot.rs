@@ -297,7 +297,7 @@ impl Level0SnapshotStore {
             "PRAGMA foreign_keys=ON; PRAGMA trusted_schema=OFF; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;",
         )?;
         let version: u32 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
-        if version > 6 {
+        if version > 8 {
             return Err(SnapshotError::Integrity);
         }
         connection.execute_batch(LEVEL0_SCHEMA)?;
@@ -410,7 +410,7 @@ impl Level1SnapshotStore {
             "PRAGMA trusted_schema=OFF; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;",
         )?;
         let version: u32 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
-        if version > 6 {
+        if version > 8 {
             return Err(SnapshotError::Integrity);
         }
         let transaction = connection.unchecked_transaction()?;
@@ -539,7 +539,7 @@ impl Level2SnapshotStore {
             "PRAGMA trusted_schema=OFF; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;",
         )?;
         let version: u32 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
-        if version > 6 {
+        if version > 8 {
             return Err(SnapshotError::Integrity);
         }
         let transaction = connection.unchecked_transaction()?;
@@ -683,7 +683,7 @@ impl Level3SnapshotStore {
             "PRAGMA trusted_schema=OFF; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;",
         )?;
         let version: u32 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
-        if version > 6 {
+        if version > 8 {
             return Err(SnapshotError::Integrity);
         }
         let transaction = connection.unchecked_transaction()?;
@@ -811,7 +811,7 @@ impl Level4SnapshotStore {
             "PRAGMA trusted_schema=OFF; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;",
         )?;
         let version: u32 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
-        if version > 6 {
+        if version > 8 {
             return Err(SnapshotError::Integrity);
         }
         let transaction = connection.unchecked_transaction()?;
@@ -939,7 +939,7 @@ impl Level4SnapshotStore {
 /// Forward-only, integrity-checked Level 5 graph/case snapshot. The typed domain owns the
 /// schema; this boundary atomically persists only redacted normalized observations/results.
 pub struct Level5SnapshotStore {
-    connection: Connection,
+    pub(crate) connection: Connection,
 }
 
 impl Level5SnapshotStore {
@@ -956,7 +956,7 @@ impl Level5SnapshotStore {
             "PRAGMA foreign_keys=ON; PRAGMA query_only=ON; PRAGMA trusted_schema=OFF;",
         )?;
         let version: u32 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
-        if version != 6 {
+        if !(6..=8).contains(&version) {
             return Err(SnapshotError::Integrity);
         }
         verify_schema(&connection)?;
@@ -983,7 +983,7 @@ impl Level5SnapshotStore {
             "PRAGMA foreign_keys=ON; PRAGMA trusted_schema=OFF; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;",
         )?;
         let version: u32 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
-        if version > 6 {
+        if version > 8 {
             return Err(SnapshotError::Integrity);
         }
         let tx = connection.unchecked_transaction()?;

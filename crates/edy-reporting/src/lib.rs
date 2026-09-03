@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 pub mod file;
 pub mod installed_apps;
 pub mod investigation;
+pub mod remediation;
 pub mod repository;
 pub mod web;
 

@@ -1,18 +1,19 @@
 [package]
-name = "edy-storage"
+name = "edy-remediation"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+
+[features]
+default = []
+native-e2e = []
+test-remediation-executor = []
+
 [dependencies]
-edy-core.workspace = true
-edy-remediation.workspace = true
-rusqlite.workspace = true
 serde.workspace = true
-sha2.workspace = true
 serde_json.workspace = true
-zeroize.workspace = true
-[dev-dependencies]
+sha2.workspace = true
+time.workspace = true
 uuid.workspace = true
-[target.'cfg(windows)'.dependencies]
 windows-sys.workspace = true

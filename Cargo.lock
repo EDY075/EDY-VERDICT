@@ -929,6 +929,7 @@ dependencies = [
  "edy-core",
  "edy-engine-manager",
  "edy-providers",
+ "edy-remediation",
  "edy-reporting",
  "edy-repository",
  "edy-storage",
@@ -970,11 +971,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "edy-remediation"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
+ "time",
+ "uuid",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "edy-reporting"
 version = "0.1.0"
 dependencies = [
  "edy-core",
  "edy-engine-manager",
+ "edy-remediation",
  "edy-repository",
  "serde",
  "serde_json",
@@ -995,10 +1009,12 @@ name = "edy-storage"
 version = "0.1.0"
 dependencies = [
  "edy-core",
+ "edy-remediation",
  "rusqlite",
  "serde",
  "serde_json",
  "sha2",
+ "uuid",
  "windows-sys 0.61.2",
  "zeroize",
 ]

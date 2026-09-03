@@ -1,6 +1,8 @@
 //! Project-local SQLite persistence and native secret storage.
 //! Secrets remain exclusively in the native credential adapter, never in SQL.
 pub mod level0_snapshot;
+pub mod level6_snapshot;
+pub mod manual_remediation;
 pub mod secrets;
 
 pub use edy_core::{
