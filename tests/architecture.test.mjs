@@ -31,7 +31,7 @@ test('workspace has exactly the frozen crates and internal edges', () => {
 });
 test('core cannot depend on infrastructure directly or transitively', () => {
   const core=metadata.packages.find(p=>p.name==='edy-core');
-  assert.deepEqual(core.dependencies.map(d=>d.name).sort(),['serde','serde_json']);
+  assert.deepEqual(core.dependencies.map(d=>d.name).sort(),['serde','serde_json','sha2']);
   assert.match(readFileSync('crates/edy-core/src/lib.rs','utf8'),/forbid\(unsafe_code\)/);
   assert.doesNotMatch(readFileSync('crates/edy-core/src/lib.rs','utf8'),/\b(tauri|tokio|rusqlite|reqwest|webview2)\s*::/i);
   const full=JSON.parse(cargo(['metadata','--locked','--format-version','1','--filter-platform','x86_64-pc-windows-msvc'],{maxBuffer:64*1024*1024}));

@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory)]
     [ValidateSet(
-        'WorkspaceTest','WorkspaceClippy','WorkspaceBuildRelease','FmtWrite','FmtCheck','CredentialFakeTest',
+        'WorkspaceTest','WorkspaceClippy','WorkspaceBuildRelease','GenerateLockOffline','FmtWrite','FmtCheck','CredentialFakeTest',
         'CargoAudit','CargoAuditJson','CargoDeny','CargoDenyJson',
         'RustcVersion','CargoVersion','RustfmtVersion','ClippyVersion',
         'CargoAuditVersion','CargoDenyVersion'
@@ -34,6 +34,7 @@ switch ($Action) {
     'WorkspaceTest' { $Executable=$Cargo; $Arguments=@('test','--workspace','--locked') }
     'WorkspaceClippy' { $Executable=$Cargo; $Arguments=@('clippy','--workspace','--all-targets','--locked','--','-D','warnings') }
     'WorkspaceBuildRelease' { $Executable=$Cargo; $Arguments=@('build','--workspace','--release','--locked') }
+    'GenerateLockOffline' { $Executable=$Cargo; $Arguments=@('generate-lockfile','--offline') }
     'FmtWrite' { $Executable=$Cargo; $Arguments=@('fmt','--all') }
     'FmtCheck' { $Executable=$Cargo; $Arguments=@('fmt','--all','--','--check') }
     'CredentialFakeTest' { $Executable=$Cargo; $Arguments=@('test','-p','edy-storage','--locked','secrets::tests','--','--ignored','--test-threads=1') }
