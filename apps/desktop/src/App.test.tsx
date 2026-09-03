@@ -139,4 +139,16 @@ describe("Level 0 product shell", () => {
     for(const label of ["Provider status","stale_cache","stale_age_over_24h","unavailable","no_validated_cache"])expect(html).toContain(label);
     expect(html).not.toContain("No vulnerabilities");
   });
+
+  it("renders Level 4 authorization and passive evidence without query or cookie values",()=>{
+    const status=parseFoundationStatus({core:"ready",storage:"ready",ipc:"restricted",schema_version:1});
+    const target={display_url:"https://target.example/path?token=[REDACTED]",scheme:"https" as const,canonical_host:"target.example",path:"/path",port:443 as const,query_present:true,query_parameter_names:["token"],fragment_present:false,idna_ascii:false,public_ip_literal:false};
+    const progress={scan_id:"018f4c2a-1d3b-7abc-8def-0123456789ab",phase:"reporting",completed_tasks:7,total_tasks:7,percent:100,elapsed_ms:10,current_engine:null,status:"partial" as const};
+    const analysis={schema:"PASSIVE_WEB_ANALYSIS_V1" as const,scan_id:progress.scan_id,state:"partial",query_policy:"send" as const,target,final_target:target,dns:[{canonical_host:"target.example",public_addresses:["93.184.216.34"],selected_address:"93.184.216.34",address_families:["ipv4"],resolved_at_utc:"2026-09-02T00:00:00Z",state:"resolved_public_and_pinned"}],tls:[{attempted:true,certificate_state:"valid",validation_enabled:true,hostname_validation_enabled:true,protocol:null,cipher:null,subject:null,issuer:null,not_before:null,not_after:null,fingerprint_sha256:null,san_count:null,error:null}],redirects:[],final_http_status:200,headers:[{name:"content-security-policy",state:"observed",value_sanitized:"default-src 'self'",interpretation:"Observed",class:"informational",guidance:"Review"}],cookies:[{safe_identifier:"session",secure:true,http_only:true,same_site:"lax",domain_present:false,path:null,max_age_or_expires_present:false,partitioned:false,prefix:null,observations:[]}],reputation:{provider:"URLhaus",state:"unavailable_byok_not_configured",exact_match:null,dataset_version:null,explanation:"Not checked — optional provider not configured."},findings:[],risk:"info" as const,confidence:"high" as const,coverage:{dns:"executed",tls:"executed",http:"executed",redirects:"executed",headers:"executed",cookies:"executed",reputation:"unavailable",limitations:["Passive only"]}};
+    const html=renderToStaticMarkup(<FoundationView status={status} failed={false} initialPage="web-url" urlPreview={{preview_id:progress.scan_id,target,query_policy:"send",requires_confirmation:true}} urlAuthorization={{authorization_id:"018f4c2a-1d3b-7abc-8def-0123456789ac",target,query_policy:"send"}} webAnalysis={{scan_id:progress.scan_id,state:"partial",progress,analysis,terminal_error:null}}/>);
+    for(const label of ["Web / URL Security","Sanitized preview","DNS / Target","TLS","Redirects","Security headers","Cookie attributes","Value never retained","Reputation","Coverage"])expect(html).toContain(label);
+    expect(html).toContain("token=[REDACTED]");
+    expect(html).not.toContain("EDY_FAKE_QUERY_SECRET_LEVEL4");
+    expect(html).not.toContain("EDY_FAKE_COOKIE_SECRET_LEVEL4");
+  });
 });

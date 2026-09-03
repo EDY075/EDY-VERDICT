@@ -12,7 +12,9 @@ const commands = [
   "create_repository_scan", "get_repository_inventory", "inspect_file_target", "authorize_file_target",
   "create_file_scan", "get_file_analysis", "preview_installed_applications", "authorize_installed_applications", "create_installed_application_scan",
   "get_installed_application_inventory", "get_installed_application", "get_vulnerability_provider_status",
-  "refresh_public_vulnerability_data", "create_synthetic_scan", "get_scan", "list_scans",
+  "refresh_public_vulnerability_data", "preview_url_target", "authorize_url_target", "create_url_scan",
+  "get_url_scan_analysis", "get_url_redirect_chain", "get_url_security_headers",
+  "get_url_cookie_observations", "get_url_reputation_status", "create_synthetic_scan", "get_scan", "list_scans",
   "get_scan_progress", "cancel_scan", "list_findings", "get_finding", "generate_report",
 ];
 
@@ -83,6 +85,8 @@ describe("dependency-free Isolation hook", () => {
     expect(hook({cmd:"preview_installed_applications",payload:{request:{include_system_components:false}},callback:7,error:8}).cmd).toBe("preview_installed_applications");
     expect(hook({cmd:"authorize_installed_applications",payload:{request:{preview_id:"018f4c2a-1d3b-7abc-8def-0123456789ab",confirmed:true}},callback:9,error:10}).cmd).toBe("authorize_installed_applications");
     expect(hook({cmd:"get_installed_application",payload:{request:{scan_id:"018f4c2a-1d3b-7abc-8def-0123456789ab",application_id:`appv1-${"a".repeat(32)}`}},callback:11,error:12}).cmd).toBe("get_installed_application");
+    expect(hook({cmd:"preview_url_target",payload:{request:{url:"https://target.example/?token=secret",query_policy:"strip"}},callback:13,error:14}).cmd).toBe("preview_url_target");
+    expect(hook({cmd:"authorize_url_target",payload:{request:{preview_id:"018f4c2a-1d3b-7abc-8def-0123456789ab",confirmed:true}},callback:15,error:16}).cmd).toBe("authorize_url_target");
   });
 
   it.each([

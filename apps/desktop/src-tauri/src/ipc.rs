@@ -10,6 +10,7 @@ use edy_core::{
     ScanId, ScanResult, ScanState, Severity, Sha256Digest, StructuredFact, TargetId, Timestamp,
     VulnerabilityRecord, correlate_installed_vulnerabilities, normalize_inventory,
 };
+use edy_core::{PassiveWebAnalysis, QueryPolicy, SanitizedUrlTarget, WebFinding};
 use edy_engine_manager::file_security::{
     AuthorizedFileTarget, DEFAULT_MAX_FILE_SIZE, FileAnalysis, FileSecurityErrorKind,
     FileTargetPreview, analyze_authorized_file, authorize_file_target, inspect_file_target,
@@ -24,9 +25,16 @@ use edy_providers::installed_apps::{
     promote_validated_cache, read_validated_cache_metadata_with_fallback,
     resolve_display_icon_candidate, sha256,
 };
+#[cfg(all(feature = "native-e2e", debug_assertions))]
+use edy_providers::web::LocalUrlhausDataset;
+use edy_providers::web::{
+    PreparedUrlTarget, ProductionHttpTransport, SystemDnsResolver, UnavailableUrlhaus,
+    execute_passive_scan, prepare_url,
+};
 use edy_reporting::file::FileReport;
 use edy_reporting::installed_apps::{DatasetStatus, InstalledApplicationReport};
 use edy_reporting::repository::RepositoryReport;
+use edy_reporting::web::WebSecurityReport;
 use edy_reporting::{REPORT_SCHEMA, ReportDocument, ReportEvidence, ReportKind, ReportSnapshot};
 use edy_repository::{
     AuthorizedRepositoryTarget, CorrelatedRepositoryFinding, LicenseState,
@@ -34,7 +42,9 @@ use edy_repository::{
     aggregate_repository_posture, correlate_repository_observations, inspect, inspect_revalidated,
     normalize_license_state,
 };
-use edy_storage::level0_snapshot::{Level1SnapshotStore, Level2SnapshotStore, Level3SnapshotStore};
+use edy_storage::level0_snapshot::{
+    Level1SnapshotStore, Level2SnapshotStore, Level3SnapshotStore, Level4SnapshotStore,
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -202,6 +212,54 @@ pub struct RefreshPublicDataRequest {
     pub confirmed: bool,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PreviewUrlTargetRequest {
+    pub url: String,
+    pub query_policy: QueryPolicy,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AuthorizeUrlTargetRequest {
+    pub preview_id: String,
+    pub confirmed: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CreateUrlScanRequest {
+    pub authorization_id: String,
+    pub confirmed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct UrlTargetPreviewView {
+    pub preview_id: String,
+    pub target: SanitizedUrlTarget,
+    pub query_policy: QueryPolicy,
+    pub requires_confirmation: bool,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct AuthorizedUrlTargetView {
+    pub authorization_id: String,
+    pub target: SanitizedUrlTarget,
+    pub query_policy: QueryPolicy,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct WebAnalysisView {
+    pub scan_id: String,
+    pub state: String,
+    pub progress: ScanProgressView,
+    pub analysis: Option<PassiveWebAnalysis>,
+    pub terminal_error: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct InstalledApplicationPreviewView {
@@ -297,6 +355,18 @@ struct Level3AuthorizationSession {
     inventory_fingerprint: String,
 }
 
+#[derive(Clone)]
+struct Level4PreviewSession {
+    target: PreparedUrlTarget,
+    query_policy: QueryPolicy,
+}
+
+#[derive(Clone)]
+struct Level4AuthorizationSession {
+    target: PreparedUrlTarget,
+    query_policy: QueryPolicy,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 struct Level2StoredScan {
@@ -338,10 +408,102 @@ struct Level3StoredScan {
     provider_status: Vec<DatasetStatus>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct Level4StoredScan {
+    scan_id: String,
+    authorization_id: String,
+    target_fingerprint: String,
+    state: String,
+    progress: ScanProgressView,
+    analysis: Option<PassiveWebAnalysis>,
+    terminal_error: Option<String>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Level3FixtureProviderMode {
     Ready,
     Degraded,
+}
+
+#[cfg(all(feature = "native-e2e", debug_assertions))]
+struct Level4FixtureResolver;
+#[cfg(all(feature = "native-e2e", debug_assertions))]
+impl edy_providers::web::DnsResolver for Level4FixtureResolver {
+    fn resolve(
+        &self,
+        host: &str,
+        _port: u16,
+    ) -> Result<Vec<std::net::IpAddr>, edy_providers::web::WebProviderError> {
+        if host == "blocked.example" {
+            return Ok(vec!["127.0.0.1".parse().expect("fixed blocked fixture IP")]);
+        }
+        Ok(vec![
+            "93.184.216.34".parse().expect("fixed public fixture IP"),
+        ])
+    }
+}
+
+#[cfg(all(feature = "native-e2e", debug_assertions))]
+struct Level4FixtureTransport;
+#[cfg(all(feature = "native-e2e", debug_assertions))]
+impl edy_providers::web::HttpTransport for Level4FixtureTransport {
+    fn get(
+        &self,
+        request: &edy_providers::web::TransportRequest<'_>,
+        cancelled: &dyn Fn() -> bool,
+    ) -> Result<edy_providers::web::TransportResponse, edy_providers::web::WebProviderError> {
+        if cancelled() {
+            return Err(edy_providers::web::WebProviderError::new("CANCELLED"));
+        }
+        let host = &request.target().sanitized().canonical_host;
+        if host == "redirect.example" {
+            return edy_providers::web::TransportResponse::new(
+                302,
+                vec![("location".into(), "https://target.example/final".into())],
+            );
+        }
+        if host == "redirect-private.example" {
+            return edy_providers::web::TransportResponse::new(
+                302,
+                vec![("location".into(), "https://blocked.example/private".into())],
+            );
+        }
+        if host == "downgrade.example" {
+            return edy_providers::web::TransportResponse::new(
+                302,
+                vec![("location".into(), "http://target.example/final".into())],
+            );
+        }
+        if host == "bad.example" {
+            return edy_providers::web::TransportResponse::new(
+                200,
+                vec![(
+                    "set-cookie".into(),
+                    "tracking=EDY_FAKE_COOKIE_SECRET_LEVEL4; SameSite=None".into(),
+                )],
+            );
+        }
+        edy_providers::web::TransportResponse::new(
+            200,
+            vec![
+                (
+                    "strict-transport-security".into(),
+                    "max-age=31536000".into(),
+                ),
+                (
+                    "content-security-policy".into(),
+                    "default-src 'self'; object-src 'none'; frame-ancestors 'none'".into(),
+                ),
+                ("x-content-type-options".into(), "nosniff".into()),
+                ("referrer-policy".into(), "no-referrer".into()),
+                (
+                    "set-cookie".into(),
+                    "session=EDY_FAKE_COOKIE_SECRET_LEVEL4; Secure; HttpOnly; SameSite=Lax".into(),
+                ),
+            ],
+        )
+    }
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -434,6 +596,10 @@ pub struct Level0Backend {
     level3_authorizations: Arc<Mutex<BTreeMap<String, Level3AuthorizationSession>>>,
     level3_fixture: bool,
     level3_fixture_provider_mode: Level3FixtureProviderMode,
+    level4: Arc<Mutex<Level4SnapshotStore>>,
+    level4_previews: Arc<Mutex<BTreeMap<String, Level4PreviewSession>>>,
+    level4_authorizations: Arc<Mutex<BTreeMap<String, Level4AuthorizationSession>>>,
+    level4_fixture: bool,
 }
 
 impl Level0Backend {
@@ -453,6 +619,13 @@ impl Level0Backend {
     ) -> Result<Self, SafeIpcError> {
         let mut backend = Self::open_internal(project_root, database, true)?;
         backend.level3_fixture_provider_mode = Level3FixtureProviderMode::Degraded;
+        Ok(backend)
+    }
+
+    #[cfg(all(feature = "native-e2e", debug_assertions))]
+    pub fn open_level4_fixture(project_root: &Path, database: &Path) -> Result<Self, SafeIpcError> {
+        let mut backend = Self::open_internal(project_root, database, false)?;
+        backend.level4_fixture = true;
         Ok(backend)
     }
 
@@ -503,7 +676,352 @@ impl Level0Backend {
             level3_authorizations: Arc::new(Mutex::new(BTreeMap::new())),
             level3_fixture,
             level3_fixture_provider_mode: Level3FixtureProviderMode::Ready,
+            level4: Arc::new(Mutex::new(Level4SnapshotStore::open(database).map_err(
+                |_| SafeIpcError::new("storage_unavailable", "Web analysis storage is unavailable"),
+            )?)),
+            level4_previews: Arc::new(Mutex::new(BTreeMap::new())),
+            level4_authorizations: Arc::new(Mutex::new(BTreeMap::new())),
+            level4_fixture: false,
         })
+    }
+
+    pub fn preview_url_target(
+        &self,
+        request: PreviewUrlTargetRequest,
+    ) -> Result<UrlTargetPreviewView, SafeIpcError> {
+        let target = prepare_url(&request.url)
+            .map_err(|_| SafeIpcError::new("url_target_refused", "URL target was refused"))?;
+        let sanitized = target
+            .clone()
+            .with_query_policy(request.query_policy)
+            .sanitized()
+            .clone();
+        let preview_id = new_uuid_v7();
+        let mut previews = self.level4_previews.lock().map_err(|_| {
+            SafeIpcError::new("authorization_unavailable", "URL preview is unavailable")
+        })?;
+        if previews.len() >= 8 {
+            previews.clear();
+        }
+        previews.insert(
+            preview_id.clone(),
+            Level4PreviewSession {
+                target,
+                query_policy: request.query_policy,
+            },
+        );
+        Ok(UrlTargetPreviewView {
+            preview_id,
+            target: sanitized,
+            query_policy: request.query_policy,
+            requires_confirmation: true,
+        })
+    }
+
+    pub fn authorize_url_target(
+        &self,
+        request: AuthorizeUrlTargetRequest,
+    ) -> Result<AuthorizedUrlTargetView, SafeIpcError> {
+        if !request.confirmed {
+            return Err(SafeIpcError::new(
+                "confirmation_required",
+                "Explicit URL authorization is required",
+            ));
+        }
+        parse_scan_id(&request.preview_id)?;
+        let preview = self
+            .level4_previews
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new("authorization_unavailable", "URL preview is unavailable")
+            })?
+            .remove(&request.preview_id)
+            .ok_or_else(|| SafeIpcError::new("preview_expired", "URL preview expired"))?;
+        let authorization_id = new_uuid_v7();
+        let sanitized = preview
+            .target
+            .clone()
+            .with_query_policy(preview.query_policy)
+            .sanitized()
+            .clone();
+        self.level4_authorizations
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new(
+                    "authorization_unavailable",
+                    "URL authorization is unavailable",
+                )
+            })?
+            .insert(
+                authorization_id.clone(),
+                Level4AuthorizationSession {
+                    target: preview.target,
+                    query_policy: preview.query_policy,
+                },
+            );
+        Ok(AuthorizedUrlTargetView {
+            authorization_id,
+            target: sanitized,
+            query_policy: preview.query_policy,
+        })
+    }
+
+    pub fn create_url_scan(
+        &self,
+        request: CreateUrlScanRequest,
+    ) -> Result<ScanSummaryView, SafeIpcError> {
+        if !request.confirmed {
+            return Err(SafeIpcError::new(
+                "confirmation_required",
+                "Explicit passive URL scan confirmation is required",
+            ));
+        }
+        parse_scan_id(&request.authorization_id)?;
+        let authorization = self
+            .level4_authorizations
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new(
+                    "authorization_unavailable",
+                    "URL authorization is unavailable",
+                )
+            })?
+            .remove(&request.authorization_id)
+            .ok_or_else(|| {
+                SafeIpcError::new("authorization_expired", "URL authorization expired")
+            })?;
+        let scan_id = new_uuid_v7();
+        let target_fingerprint = sha256(
+            serde_json::to_string(
+                authorization
+                    .target
+                    .clone()
+                    .with_query_policy(authorization.query_policy)
+                    .sanitized(),
+            )
+            .map_err(|_| SafeIpcError::new("url_target_invalid", "URL target is invalid"))?
+            .as_bytes(),
+        );
+        let stored = Level4StoredScan {
+            scan_id: scan_id.clone(),
+            authorization_id: request.authorization_id,
+            target_fingerprint,
+            state: "preparing".into(),
+            progress: ScanProgressView {
+                scan_id: scan_id.clone(),
+                phase: "url_authorization".into(),
+                completed_tasks: 0,
+                total_tasks: 7,
+                percent: Some(0),
+                elapsed_ms: 0,
+                current_engine: None,
+                status: "preparing".into(),
+            },
+            analysis: None,
+            terminal_error: None,
+        };
+        let payload = serde_json::to_vec(&stored).map_err(|_| {
+            SafeIpcError::new("url_scan_invalid", "URL scan could not be serialized")
+        })?;
+        self.level4
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new("storage_unavailable", "Web analysis storage is unavailable")
+            })?
+            .create(
+                &scan_id,
+                &stored.authorization_id,
+                &stored.target_fingerprint,
+                &payload,
+            )
+            .map_err(|_| {
+                SafeIpcError::new("storage_unavailable", "URL scan could not be stored")
+            })?;
+        let token = CancellationToken::default();
+        self.jobs
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new("scan_unavailable", "URL scan scheduler is unavailable")
+            })?
+            .insert(scan_id.clone(), token.clone());
+        let store = Arc::clone(&self.level4);
+        let jobs = Arc::clone(&self.jobs);
+        let fixture = self.level4_fixture;
+        let result = level4_summary(&stored);
+        std::thread::spawn(move || {
+            let started = std::time::Instant::now();
+            let mut next = stored;
+            next.state = "running".into();
+            next.progress.phase = "dns_and_transport".into();
+            next.progress.status = "running".into();
+            next.progress.completed_tasks = 1;
+            next.progress.percent = Some(14);
+            let _ = replace_level4_snapshot(&store, &next);
+            #[cfg(all(feature = "native-e2e", debug_assertions))]
+            let analysis = if fixture {
+                let delay_steps =
+                    if authorization.target.sanitized().canonical_host == "delay.example" {
+                        200
+                    } else {
+                        40
+                    };
+                for _ in 0..delay_steps {
+                    if token.is_requested() {
+                        break;
+                    }
+                    std::thread::sleep(Duration::from_millis(10));
+                }
+                if authorization.target.sanitized().canonical_host == "bad.example" {
+                    let reputation =
+                        LocalUrlhausDataset::from_urls("synthetic-1", &["https://bad.example/"])
+                            .expect("fixed synthetic URLhaus fixture");
+                    execute_passive_scan(
+                        &next.scan_id,
+                        authorization.target,
+                        authorization.query_policy,
+                        &Level4FixtureResolver,
+                        &Level4FixtureTransport,
+                        &reputation,
+                        "2026-09-02T00:00:00Z",
+                        &|| token.is_requested(),
+                    )
+                } else {
+                    execute_passive_scan(
+                        &next.scan_id,
+                        authorization.target,
+                        authorization.query_policy,
+                        &Level4FixtureResolver,
+                        &Level4FixtureTransport,
+                        &UnavailableUrlhaus,
+                        "2026-09-02T00:00:00Z",
+                        &|| token.is_requested(),
+                    )
+                }
+            } else {
+                execute_passive_scan(
+                    &next.scan_id,
+                    authorization.target,
+                    authorization.query_policy,
+                    &SystemDnsResolver,
+                    &ProductionHttpTransport,
+                    &UnavailableUrlhaus,
+                    "2026-09-02T00:00:00Z",
+                    &|| token.is_requested(),
+                )
+            };
+            #[cfg(not(all(feature = "native-e2e", debug_assertions)))]
+            let analysis = {
+                let _ = fixture;
+                execute_passive_scan(
+                    &next.scan_id,
+                    authorization.target,
+                    authorization.query_policy,
+                    &SystemDnsResolver,
+                    &ProductionHttpTransport,
+                    &UnavailableUrlhaus,
+                    "2026-09-02T00:00:00Z",
+                    &|| token.is_requested(),
+                )
+            };
+            match analysis {
+                Ok(value) => {
+                    next.state = value.state.clone();
+                    next.analysis = Some(value);
+                    next.progress.phase = "reporting".into();
+                    next.progress.status = next.state.clone();
+                    next.progress.completed_tasks = 7;
+                    next.progress.percent = Some(100);
+                }
+                Err(error) if error.code() == "CANCELLED" => {
+                    next.state = "cancelled".into();
+                    next.progress.phase = "cancelled".into();
+                    next.progress.status = "cancelled".into();
+                    next.progress.percent = None;
+                }
+                Err(error) => {
+                    next.state = "failed".into();
+                    next.progress.phase = "failed".into();
+                    next.progress.status = "failed".into();
+                    next.progress.percent = None;
+                    next.terminal_error = Some(error.code().into());
+                }
+            }
+            next.progress.elapsed_ms =
+                u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
+            let _ = replace_level4_snapshot(&store, &next);
+            let _ = jobs.lock().map(|mut active| active.remove(&scan_id));
+        });
+        Ok(result)
+    }
+
+    pub fn get_url_scan_analysis(
+        &self,
+        request: &ScanRequest,
+    ) -> Result<WebAnalysisView, SafeIpcError> {
+        let stored = self.load_level4(&request.scan_id)?;
+        Ok(WebAnalysisView {
+            scan_id: stored.scan_id,
+            state: stored.state,
+            progress: stored.progress,
+            analysis: stored.analysis,
+            terminal_error: stored.terminal_error,
+        })
+    }
+
+    pub fn get_url_redirect_chain(
+        &self,
+        request: &ScanRequest,
+    ) -> Result<Vec<edy_core::RedirectObservation>, SafeIpcError> {
+        Ok(self.require_level4_analysis(&request.scan_id)?.redirects)
+    }
+    pub fn get_url_security_headers(
+        &self,
+        request: &ScanRequest,
+    ) -> Result<Vec<edy_core::HeaderObservation>, SafeIpcError> {
+        Ok(self.require_level4_analysis(&request.scan_id)?.headers)
+    }
+    pub fn get_url_cookie_observations(
+        &self,
+        request: &ScanRequest,
+    ) -> Result<Vec<edy_core::CookieObservation>, SafeIpcError> {
+        Ok(self.require_level4_analysis(&request.scan_id)?.cookies)
+    }
+    pub fn get_url_reputation_status(
+        &self,
+        request: &ScanRequest,
+    ) -> Result<edy_core::ReputationObservation, SafeIpcError> {
+        Ok(self.require_level4_analysis(&request.scan_id)?.reputation)
+    }
+
+    fn require_level4_analysis(&self, scan_id: &str) -> Result<PassiveWebAnalysis, SafeIpcError> {
+        self.load_level4(scan_id)?.analysis.ok_or_else(|| {
+            SafeIpcError::new("analysis_unavailable", "Web analysis is not available")
+        })
+    }
+
+    fn load_level4(&self, scan_id: &str) -> Result<Level4StoredScan, SafeIpcError> {
+        parse_scan_id(scan_id)?;
+        let blob = self
+            .level4
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new("storage_unavailable", "Web analysis storage is unavailable")
+            })?
+            .load(scan_id)
+            .map_err(|_| SafeIpcError::new("scan_not_found", "Web analysis scan was not found"))?;
+        let stored: Level4StoredScan = serde_json::from_slice(&blob.payload).map_err(|_| {
+            SafeIpcError::new(
+                "storage_snapshot_invalid",
+                "Web analysis snapshot is invalid",
+            )
+        })?;
+        if stored.scan_id != scan_id {
+            return Err(SafeIpcError::new(
+                "storage_snapshot_invalid",
+                "Web analysis snapshot is incoherent",
+            ));
+        }
+        Ok(stored)
     }
 
     pub fn preview_installed_applications(
@@ -1644,6 +2162,9 @@ impl Level0Backend {
         if let Ok(scan) = self.load_level3(&request.scan_id) {
             return Ok(level3_summary(&scan));
         }
+        if let Ok(scan) = self.load_level4(&request.scan_id) {
+            return Ok(level4_summary(&scan));
+        }
         if let Ok(scan) = self.load_level1(&request.scan_id) {
             return Ok(level1_summary(&scan));
         }
@@ -1713,6 +2234,19 @@ impl Level0Backend {
             for id in ids {
                 scans.push(level3_summary(&self.load_level3(&id)?));
             }
+            let ids = self
+                .level4
+                .lock()
+                .map_err(|_| {
+                    SafeIpcError::new("storage_unavailable", "Web analysis storage is unavailable")
+                })?
+                .list_ids(0, request.limit)
+                .map_err(|_| {
+                    SafeIpcError::new("storage_unavailable", "Web analysis storage is unavailable")
+                })?;
+            for id in ids {
+                scans.push(level4_summary(&self.load_level4(&id)?));
+            }
             scans.truncate(request.limit as usize);
         }
         Ok(scans)
@@ -1724,6 +2258,9 @@ impl Level0Backend {
             return Ok(progress(&scan));
         }
         if let Ok(scan) = self.load_level3(&request.scan_id) {
+            return Ok(scan.progress);
+        }
+        if let Ok(scan) = self.load_level4(&request.scan_id) {
             return Ok(scan.progress);
         }
         if let Ok(scan) = self.load_level1(&request.scan_id) {
@@ -1765,6 +2302,9 @@ impl Level0Backend {
         }
         if self.load_level3(&request.scan_id).is_ok() {
             return request_level3_cancellation(&self.level3, &request.scan_id, &token);
+        }
+        if self.load_level4(&request.scan_id).is_ok() {
+            return request_level4_cancellation(&self.level4, &request.scan_id, &token);
         }
         if self.load_level2(&request.scan_id).is_ok() {
             return request_level2_cancellation(&self.level2, &request.scan_id, &token);
@@ -1828,6 +2368,21 @@ impl Level0Backend {
                     .map(|finding| level3_finding_view(&scan.scan_id, finding))
                     .collect());
             }
+            if let Ok(scan) = self.load_level4(&request.scan_id) {
+                return Ok(scan
+                    .analysis
+                    .as_ref()
+                    .map(|analysis| {
+                        analysis
+                            .findings
+                            .iter()
+                            .skip(request.offset as usize)
+                            .take(request.limit as usize)
+                            .map(|finding| level4_finding_view(&scan.scan_id, finding))
+                            .collect()
+                    })
+                    .unwrap_or_default());
+            }
             if let Ok(scan) = self.load_level1(&request.scan_id) {
                 return Ok(scan
                     .findings
@@ -1862,6 +2417,27 @@ impl Level0Backend {
     }
 
     pub fn get_finding(&self, request: &FindingRequest) -> Result<FindingView, SafeIpcError> {
+        let level4_ids = self
+            .level4
+            .lock()
+            .map_err(|_| {
+                SafeIpcError::new("storage_unavailable", "Web analysis storage is unavailable")
+            })?
+            .list_ids(0, 50)
+            .map_err(|_| {
+                SafeIpcError::new("storage_unavailable", "Web analysis storage is unavailable")
+            })?;
+        for id in level4_ids {
+            let scan = self.load_level4(&id)?;
+            if let Some(finding) = scan.analysis.as_ref().and_then(|analysis| {
+                analysis
+                    .findings
+                    .iter()
+                    .find(|finding| finding.fingerprint == request.finding_id)
+            }) {
+                return Ok(level4_finding_view(&scan.scan_id, finding));
+            }
+        }
         let level3_ids = self
             .level3
             .lock()
@@ -1959,6 +2535,23 @@ impl Level0Backend {
     pub fn report(&self, request: &GenerateReportRequest) -> Result<ReportView, SafeIpcError> {
         let id = parse_scan_id(&request.scan_id)?;
         let Ok(scan) = self.repository()?.load(&id) else {
+            if let Ok(stored) = self.load_level4(&request.scan_id) {
+                let analysis = stored.analysis.as_ref().ok_or_else(|| {
+                    SafeIpcError::new(
+                        "report_unavailable",
+                        "Report is unavailable until web analysis is terminal",
+                    )
+                })?;
+                let report = WebSecurityReport::capture(request.kind, analysis);
+                return Ok(ReportView {
+                    scan_id: stored.scan_id,
+                    kind: request.kind,
+                    schema: REPORT_SCHEMA,
+                    json: report.json().map_err(|_| {
+                        SafeIpcError::new("report_failed", "Report could not be rendered")
+                    })?,
+                });
+            }
             if let Ok(stored) = self.load_level3(&request.scan_id) {
                 if stored.state != "partial" && stored.state != "completed" {
                     return Err(SafeIpcError::new(
@@ -2354,6 +2947,69 @@ fn level3_summary(scan: &Level3StoredScan) -> ScanSummaryView {
                 0
             },
         },
+    }
+}
+
+fn level4_summary(scan: &Level4StoredScan) -> ScanSummaryView {
+    let terminal = matches!(scan.state.as_str(), "partial" | "completed" | "failed");
+    let analysis = scan.analysis.as_ref();
+    let unavailable = analysis.map_or(0, |value| {
+        u32::from(value.coverage.reputation == "unavailable")
+    });
+    let failed = u32::from(scan.state == "failed");
+    ScanSummaryView {
+        id: scan.scan_id.clone(),
+        state: scan.state.clone(),
+        verdict: terminal.then(|| {
+            if scan.state == "failed" {
+                "inconclusive"
+            } else if analysis.is_some_and(|value| value.findings.is_empty()) {
+                "no_issue_established_from_passive_evidence"
+            } else {
+                "review_required"
+            }
+            .into()
+        }),
+        risk: analysis.map(|value| label(value.risk)),
+        confidence: analysis.map(|value| label(value.confidence)),
+        coverage: CoverageView {
+            total: scan.progress.total_tasks,
+            completed: scan
+                .progress
+                .completed_tasks
+                .saturating_sub(unavailable)
+                .saturating_sub(failed),
+            failed,
+            unavailable,
+            skipped: if scan.state == "cancelled" {
+                scan.progress
+                    .total_tasks
+                    .saturating_sub(scan.progress.completed_tasks)
+            } else {
+                0
+            },
+        },
+    }
+}
+
+fn level4_finding_view(scan_id: &str, finding: &WebFinding) -> FindingView {
+    FindingView {
+        id: finding.fingerprint.clone(),
+        scan_id: scan_id.into(),
+        title: finding.title.clone(),
+        category: finding.family.clone(),
+        severity: label(finding.severity),
+        risk: label(finding.severity),
+        confidence: label(finding.confidence),
+        status: "open".into(),
+        sources: vec!["passive_web_observation".into()],
+        affected_component: "authorized_url_origin".into(),
+        rule_ids: vec![finding.fingerprint_version.clone()],
+        evidence_ids: finding.evidence.clone(),
+        remediation_guidance: finding.guidance.clone(),
+        limitations: vec![
+            "Passive point-in-time evidence does not prove exploitability or safety.".into(),
+        ],
     }
 }
 
@@ -2874,6 +3530,75 @@ fn replace_level3_snapshot(
     Ok(())
 }
 
+fn replace_level4_snapshot(
+    store: &Arc<Mutex<Level4SnapshotStore>>,
+    proposed: &Level4StoredScan,
+) -> Result<(), SafeIpcError> {
+    let mut store = store.lock().map_err(|_| {
+        SafeIpcError::new("storage_unavailable", "Web analysis storage is unavailable")
+    })?;
+    let blob = store
+        .load(&proposed.scan_id)
+        .map_err(|_| SafeIpcError::new("web_storage_failed", "Web analysis could not be loaded"))?;
+    let current: Level4StoredScan = serde_json::from_slice(&blob.payload)
+        .map_err(|_| SafeIpcError::new("web_storage_failed", "Web analysis snapshot is invalid"))?;
+    let mut next = proposed.clone();
+    if matches!(
+        current.state.as_str(),
+        "partial" | "completed" | "failed" | "cancelled"
+    ) {
+        next = current;
+    } else if current.state == "cancellation_requested" {
+        next.state = "cancelled".into();
+        next.progress.phase = "cancelled".into();
+        next.progress.status = "cancelled".into();
+        next.progress.percent = None;
+        next.analysis = None;
+        next.terminal_error = Some("CANCELLED".into());
+    }
+    let payload = serde_json::to_vec(&next)
+        .map_err(|_| SafeIpcError::new("web_storage_failed", "Web analysis could not be stored"))?;
+    store
+        .replace(&proposed.scan_id, blob.revision, &payload)
+        .map_err(|_| SafeIpcError::new("web_storage_failed", "Web analysis could not be stored"))?;
+    Ok(())
+}
+
+fn request_level4_cancellation(
+    store: &Arc<Mutex<Level4SnapshotStore>>,
+    scan_id: &str,
+    token: &CancellationToken,
+) -> Result<ScanProgressView, SafeIpcError> {
+    let failure = || {
+        SafeIpcError::new(
+            "cancel_unavailable",
+            "Web analysis cancellation could not be persisted",
+        )
+    };
+    let mut store = store.lock().map_err(|_| failure())?;
+    let blob = store.load(scan_id).map_err(|_| failure())?;
+    let mut current: Level4StoredScan =
+        serde_json::from_slice(&blob.payload).map_err(|_| failure())?;
+    if matches!(
+        current.state.as_str(),
+        "partial" | "completed" | "failed" | "cancelled"
+    ) {
+        return Err(SafeIpcError::new(
+            "scan_not_cancellable",
+            "Scan is already terminal",
+        ));
+    }
+    current.state = "cancellation_requested".into();
+    current.progress.status = "cancellation_requested".into();
+    current.analysis = None;
+    let payload = serde_json::to_vec(&current).map_err(|_| failure())?;
+    store
+        .replace(scan_id, blob.revision, &payload)
+        .map_err(|_| failure())?;
+    token.request();
+    Ok(current.progress)
+}
+
 fn request_level3_cancellation(
     store: &Arc<Mutex<Level3SnapshotStore>>,
     scan_id: &str,
@@ -3380,6 +4105,189 @@ mod tests {
             Level0Backend::open_internal(&project, &temporary.join("level0.sqlite3"), fixture)
                 .unwrap();
         (Temp(temporary), backend)
+    }
+
+    #[cfg(all(feature = "native-e2e", debug_assertions))]
+    fn level4_backend() -> (Temp, Level0Backend) {
+        let project = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../..")
+            .canonicalize()
+            .unwrap();
+        let temporary = project.join("_intake/ipc-tests").join(new_uuid_v7());
+        std::fs::create_dir_all(&temporary).unwrap();
+        let backend =
+            Level0Backend::open_level4_fixture(&project, &temporary.join("level0.sqlite3"))
+                .unwrap();
+        (Temp(temporary), backend)
+    }
+
+    #[cfg(all(feature = "native-e2e", debug_assertions))]
+    #[test]
+    fn level4_fixture_authorizes_scans_redacts_and_reports() {
+        let (_temp, backend) = level4_backend();
+        let preview = backend
+            .preview_url_target(PreviewUrlTargetRequest {
+                url: "https://target.example/path?token=EDY_FAKE_QUERY_SECRET_LEVEL4#fragment"
+                    .into(),
+                query_policy: QueryPolicy::Send,
+            })
+            .unwrap();
+        assert!(preview.target.display_url.contains("token=[REDACTED]"));
+        assert!(
+            !preview
+                .target
+                .display_url
+                .contains("EDY_FAKE_QUERY_SECRET_LEVEL4")
+        );
+        assert!(
+            backend
+                .authorize_url_target(AuthorizeUrlTargetRequest {
+                    preview_id: preview.preview_id.clone(),
+                    confirmed: false
+                })
+                .is_err()
+        );
+        let authorization = backend
+            .authorize_url_target(AuthorizeUrlTargetRequest {
+                preview_id: preview.preview_id,
+                confirmed: true,
+            })
+            .unwrap();
+        let started = backend
+            .create_url_scan(CreateUrlScanRequest {
+                authorization_id: authorization.authorization_id,
+                confirmed: true,
+            })
+            .unwrap();
+        let terminal = wait_terminal(&backend, &started.id);
+        assert_eq!(terminal.state, "partial");
+        let analysis = backend
+            .get_url_scan_analysis(&ScanRequest {
+                scan_id: started.id.clone(),
+            })
+            .unwrap()
+            .analysis
+            .unwrap();
+        let json = serde_json::to_string(&analysis).unwrap();
+        assert!(!json.contains("EDY_FAKE_QUERY_SECRET_LEVEL4"));
+        assert!(!json.contains("EDY_FAKE_COOKIE_SECRET_LEVEL4"));
+        assert!(
+            analysis
+                .cookies
+                .iter()
+                .all(|cookie| cookie.safe_identifier == "session")
+        );
+        let report = backend
+            .report(&GenerateReportRequest {
+                scan_id: started.id.clone(),
+                kind: ReportKind::Technical,
+            })
+            .unwrap();
+        assert!(!report.json.contains("EDY_FAKE_QUERY_SECRET_LEVEL4"));
+        assert!(!report.json.contains("EDY_FAKE_COOKIE_SECRET_LEVEL4"));
+        assert!(
+            !backend
+                .level4
+                .lock()
+                .unwrap()
+                .contains_bytes(b"EDY_FAKE_QUERY_SECRET_LEVEL4")
+                .unwrap()
+        );
+    }
+
+    #[cfg(all(feature = "native-e2e", debug_assertions))]
+    #[test]
+    fn level4_fixture_cancellation_is_terminal_and_has_no_analysis() {
+        let (_temp, backend) = level4_backend();
+        let preview = backend
+            .preview_url_target(PreviewUrlTargetRequest {
+                url: "https://target.example/delay".into(),
+                query_policy: QueryPolicy::Strip,
+            })
+            .unwrap();
+        let authorization = backend
+            .authorize_url_target(AuthorizeUrlTargetRequest {
+                preview_id: preview.preview_id,
+                confirmed: true,
+            })
+            .unwrap();
+        let started = backend
+            .create_url_scan(CreateUrlScanRequest {
+                authorization_id: authorization.authorization_id,
+                confirmed: true,
+            })
+            .unwrap();
+        backend
+            .cancel(&ScanRequest {
+                scan_id: started.id.clone(),
+            })
+            .unwrap();
+        let terminal = wait_terminal(&backend, &started.id);
+        assert_eq!(terminal.state, "cancelled");
+        assert!(
+            backend
+                .get_url_scan_analysis(&ScanRequest {
+                    scan_id: started.id
+                })
+                .unwrap()
+                .analysis
+                .is_none()
+        );
+    }
+
+    #[cfg(all(feature = "native-e2e", debug_assertions))]
+    #[test]
+    fn level4_target_b_correlates_weak_cookie_headers_and_exact_reputation() {
+        let (_temp, backend) = level4_backend();
+        let preview = backend
+            .preview_url_target(PreviewUrlTargetRequest {
+                url: "https://bad.example/".into(),
+                query_policy: QueryPolicy::Strip,
+            })
+            .unwrap();
+        let authorization = backend
+            .authorize_url_target(AuthorizeUrlTargetRequest {
+                preview_id: preview.preview_id,
+                confirmed: true,
+            })
+            .unwrap();
+        let started = backend
+            .create_url_scan(CreateUrlScanRequest {
+                authorization_id: authorization.authorization_id,
+                confirmed: true,
+            })
+            .unwrap();
+        wait_terminal(&backend, &started.id);
+        let analysis = backend
+            .get_url_scan_analysis(&ScanRequest {
+                scan_id: started.id,
+            })
+            .unwrap()
+            .analysis
+            .unwrap();
+        assert_eq!(analysis.reputation.exact_match, Some(true));
+        assert!(
+            analysis.cookies.iter().any(|cookie| {
+                !cookie.secure && cookie.same_site == edy_core::SameSiteState::None
+            })
+        );
+        assert!(
+            analysis
+                .findings
+                .iter()
+                .any(|finding| finding.family == "URL_REPUTATION")
+        );
+        assert!(
+            analysis
+                .findings
+                .iter()
+                .any(|finding| finding.family == "COOKIE_SECURITY")
+        );
+        assert!(
+            !serde_json::to_string(&analysis)
+                .unwrap()
+                .contains("EDY_FAKE_COOKIE_SECRET_LEVEL4")
+        );
     }
 
     fn wait_terminal(backend: &Level0Backend, scan_id: &str) -> ScanSummaryView {

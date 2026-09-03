@@ -10,15 +10,17 @@ use std::time::Duration;
 use edy_core::InstalledApplication;
 use edy_desktop::ipc::{
     AuthorizeFileTargetRequest, AuthorizeInstalledApplicationRequest,
-    AuthorizeRepositoryTargetRequest, AuthorizedFileTargetView, AuthorizedInstalledApplicationView,
-    AuthorizedRepositoryTargetView, CreateFileScanRequest, CreateInstalledApplicationScanRequest,
-    CreateRepositoryScanRequest, CreateSyntheticScanRequest, EngineStatusView, FileAnalysisView,
+    AuthorizeRepositoryTargetRequest, AuthorizeUrlTargetRequest, AuthorizedFileTargetView,
+    AuthorizedInstalledApplicationView, AuthorizedRepositoryTargetView, AuthorizedUrlTargetView,
+    CreateFileScanRequest, CreateInstalledApplicationScanRequest, CreateRepositoryScanRequest,
+    CreateSyntheticScanRequest, CreateUrlScanRequest, EngineStatusView, FileAnalysisView,
     FileTargetPreviewView, FindingRequest, FindingView, GenerateReportRequest,
     InspectFileTargetRequest, InstalledApplicationInventoryView,
     InstalledApplicationPreviewRequest, InstalledApplicationPreviewView,
     InstalledApplicationRequest, Level0Backend, ListFindingsRequest, ListScansRequest,
-    PublicDataRefreshView, RefreshPublicDataRequest, ReportView, RepositoryAuthorizationRequest,
-    SafeIpcError, ScanProgressView, ScanRequest, ScanSummaryView,
+    PreviewUrlTargetRequest, PublicDataRefreshView, RefreshPublicDataRequest, ReportView,
+    RepositoryAuthorizationRequest, SafeIpcError, ScanProgressView, ScanRequest, ScanSummaryView,
+    UrlTargetPreviewView, WebAnalysisView,
 };
 use edy_reporting::installed_apps::DatasetStatus;
 use edy_repository::RepositoryInventory;
@@ -243,6 +245,86 @@ fn refresh_public_vulnerability_data(
 }
 
 #[tauri::command]
+fn preview_url_target(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: PreviewUrlTargetRequest,
+) -> Result<UrlTargetPreviewView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.preview_url_target(request)
+}
+
+#[tauri::command]
+fn authorize_url_target(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: AuthorizeUrlTargetRequest,
+) -> Result<AuthorizedUrlTargetView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.authorize_url_target(request)
+}
+
+#[tauri::command]
+fn create_url_scan(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: CreateUrlScanRequest,
+) -> Result<ScanSummaryView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.create_url_scan(request)
+}
+
+#[tauri::command]
+fn get_url_scan_analysis(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: ScanRequest,
+) -> Result<WebAnalysisView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.get_url_scan_analysis(&request)
+}
+
+#[tauri::command]
+fn get_url_redirect_chain(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: ScanRequest,
+) -> Result<Vec<edy_core::RedirectObservation>, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.get_url_redirect_chain(&request)
+}
+
+#[tauri::command]
+fn get_url_security_headers(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: ScanRequest,
+) -> Result<Vec<edy_core::HeaderObservation>, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.get_url_security_headers(&request)
+}
+
+#[tauri::command]
+fn get_url_cookie_observations(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: ScanRequest,
+) -> Result<Vec<edy_core::CookieObservation>, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.get_url_cookie_observations(&request)
+}
+
+#[tauri::command]
+fn get_url_reputation_status(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: ScanRequest,
+) -> Result<edy_core::ReputationObservation, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.backend.get_url_reputation_status(&request)
+}
+
+#[tauri::command]
 fn create_synthetic_scan(
     window: WebviewWindow,
     state: tauri::State<'_, FoundationState>,
@@ -388,6 +470,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             arg.starts_with("--level3-native-qa=")
                 || arg.starts_with("--level3-native-qa-degraded=")
         });
+    let native_level4 = cfg!(debug_assertions)
+        && std::env::args().any(|arg| arg.starts_with("--level4-native-qa="));
     // Explicit debug-only native QA, not a production setting or IPC surface. Real handlers,
     // Isolation and React remain unchanged; only local data isolation and viewport differ.
     let native_qa_size: Option<(f64, f64)> = if cfg!(debug_assertions) {
@@ -399,6 +483,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             "--level3-native-qa=1920x1080" => Some((1920.0, 1080.0)),
             "--level3-native-qa=2560x1440" => Some((2560.0, 1440.0)),
             "--level3-native-qa-degraded=1366x768" => Some((1366.0, 768.0)),
+            "--level4-native-qa=1366x768" => Some((1366.0, 768.0)),
+            "--level4-native-qa=1920x1080" => Some((1920.0, 1080.0)),
+            "--level4-native-qa=2560x1440" => Some((2560.0, 1440.0)),
             _ => None,
         })
     } else {
@@ -407,7 +494,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let data = local_directory(
         &root,
         if native_qa_size.is_some() {
-            if native_level3 {
+            if native_level4 {
+                "level4-native-qa-data"
+            } else if native_level3 {
                 "level3-native-qa-data"
             } else {
                 "level2-native-qa-data"
@@ -423,7 +512,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     // Do not reject that valid database with the obsolete pre-Level-0 v1 literal.
     drop(storage);
     #[cfg(all(feature = "native-e2e", debug_assertions))]
-    let backend = if _native_level3_degraded {
+    let backend = if native_level4 {
+        Level0Backend::open_level4_fixture(&root, &data.join("level0.sqlite3"))?
+    } else if _native_level3_degraded {
         Level0Backend::open_level3_degraded_fixture(&root, &data.join("level0.sqlite3"))?
     } else if native_level3 {
         Level0Backend::open_level3_fixture(&root, &data.join("level0.sqlite3"))?
@@ -435,7 +526,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let webview_data = local_directory(
         &root,
         if native_qa_size.is_some() {
-            if native_level3 {
+            if native_level4 {
+                "level4-native-qa-webview2"
+            } else if native_level3 {
                 "level3-native-qa-webview2"
             } else {
                 "level2-native-qa-webview2"
@@ -486,6 +579,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             get_installed_application,
             get_vulnerability_provider_status,
             refresh_public_vulnerability_data,
+            preview_url_target,
+            authorize_url_target,
+            create_url_scan,
+            get_url_scan_analysis,
+            get_url_redirect_chain,
+            get_url_security_headers,
+            get_url_cookie_observations,
+            get_url_reputation_status,
             create_synthetic_scan,
             get_scan,
             list_scans,

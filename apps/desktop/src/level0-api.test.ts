@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseEngineStatus, parseFileAnalysisView, parseFileAuthorization, parseFileTargetPreview, parseFinding, parseInstalledApplicationInventory, parseInstalledApplicationPreview, parseReport, parseScanProgress, parseScanSummary } from "./level0-api";
+import { parseEngineStatus, parseFileAnalysisView, parseFileAuthorization, parseFileTargetPreview, parseFinding, parseInstalledApplicationInventory, parseInstalledApplicationPreview, parseReport, parseScanProgress, parseScanSummary, parseUrlTargetPreview, parseWebAnalysisView } from "./level0-api";
 
 const scanId = "018f4c2a-1d3b-7abc-8def-0123456789ab";
 
@@ -66,5 +66,17 @@ describe("Level 0 IPC response validation", () => {
     expect(parsed.snapshot.applications[0]?.identity.state).toBe("curated");expect(parsed.findings[0]?.kev?.cve).toBe("CVE-2099-0001");
     expect(()=>parseInstalledApplicationInventory({scan_id:scanId,state:"completed",snapshot:{schema:"INSTALLED_APPLICATION_SNAPSHOT_V1",applications:[application],coverage},findings:[{...finding,affected:"unknown"}],provider_status})).toThrow();
     expect(()=>parseInstalledApplicationPreview({preview_id:scanId,application_count:1,system_component_count:0,inventory_fingerprint:"a".repeat(64),coverage,requires_confirmation:false})).toThrow();
+  });
+
+  it("validates Level 4 sanitized targets and bounded passive analysis",()=>{
+    const target={display_url:"https://target.example/path?token=[REDACTED]",scheme:"https",canonical_host:"target.example",path:"/path",port:443,query_present:true,query_parameter_names:["token"],fragment_present:true,idna_ascii:false,public_ip_literal:false};
+    expect(parseUrlTargetPreview({preview_id:scanId,target,query_policy:"send",requires_confirmation:true}).target.display_url).not.toContain("EDY_FAKE_QUERY_SECRET_LEVEL4");
+    const progress={scan_id:scanId,phase:"reporting",completed_tasks:7,total_tasks:7,percent:100,elapsed_ms:10,current_engine:null,status:"partial"};
+    const analysis={schema:"PASSIVE_WEB_ANALYSIS_V1",scan_id:scanId,state:"partial",query_policy:"send",target,final_target:target,dns:[{canonical_host:"target.example",public_addresses:["93.184.216.34"],selected_address:"93.184.216.34",address_families:["ipv4"],resolved_at_utc:"2026-09-02T00:00:00Z",state:"resolved_public_and_pinned"}],tls:[{attempted:true,certificate_state:"valid",validation_enabled:true,hostname_validation_enabled:true,protocol:null,cipher:null,subject:null,issuer:null,not_before:null,not_after:null,fingerprint_sha256:null,san_count:null,error:null}],redirects:[],final_http_status:200,headers:[],cookies:[{safe_identifier:"session",secure:true,http_only:true,same_site:"lax",domain_present:false,path:null,max_age_or_expires_present:false,partitioned:false,prefix:null,observations:[]}],reputation:{provider:"URLhaus",state:"unavailable_byok_not_configured",exact_match:null,dataset_version:null,explanation:"Not checked"},findings:[],risk:"info",confidence:"high",coverage:{dns:"executed",tls:"executed",http:"executed",redirects:"executed",headers:"executed",cookies:"executed",reputation:"unavailable",limitations:["Passive only"]}};
+    const parsed=parseWebAnalysisView({scan_id:scanId,state:"partial",progress,analysis,terminal_error:null});
+    expect(parsed.analysis?.dns[0]?.selected_address).toBe("93.184.216.34");
+    expect(parsed.analysis?.cookies[0]?.safe_identifier).toBe("session");
+    expect(JSON.stringify(parsed)).not.toContain("EDY_FAKE_COOKIE_SECRET_LEVEL4");
+    expect(()=>parseUrlTargetPreview({preview_id:scanId,target:{...target,port:444},query_policy:"send",requires_confirmation:true})).toThrow();
   });
 });

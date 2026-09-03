@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import type { FoundationStatus } from "./foundation";
 import { level0Api } from "./level0-api";
-import type { DatasetStatus, EngineStatus, FileAnalysisView, FileAuthorization, FileTargetPreview, FindingView, InstalledApplicationAuthorization, InstalledApplicationInventory, InstalledApplicationPreview, ReportView, ScanProgress, ScanSummary, RepositoryAuthorization } from "./level0-api";
+import type { DatasetStatus, EngineStatus, FileAnalysisView, FileAuthorization, FileTargetPreview, FindingView, InstalledApplicationAuthorization, InstalledApplicationInventory, InstalledApplicationPreview, ReportView, ScanProgress, ScanSummary, RepositoryAuthorization, QueryPolicy, UrlTargetPreview, UrlTargetAuthorization, WebAnalysisView } from "./level0-api";
 
 type Locale = "pt-BR" | "en";
 type Theme = "professional" | "neon";
-type Page = "overview" | "new-scan" | "installed-apps" | "progress" | "findings" | "history" | "engines" | "reports" | "settings";
+type Page = "overview" | "new-scan" | "web-url" | "installed-apps" | "progress" | "findings" | "history" | "engines" | "reports" | "settings";
 
-const pages: readonly Page[] = ["overview", "new-scan", "installed-apps", "progress", "findings", "history", "engines", "reports", "settings"];
+const pages: readonly Page[] = ["overview", "new-scan", "web-url", "installed-apps", "progress", "findings", "history", "engines", "reports", "settings"];
 const terminalStates = new Set(["cancelled", "completed", "partial", "failed"]);
 
 function safeUiError(error: unknown, fallback: string): string {
@@ -26,6 +26,8 @@ function safeUiError(error: unknown, fallback: string): string {
     limit_exceeded: "The file exceeds the configured 256 MiB limit.",
     reparse_point_refused: "Links, junctions and reparse paths are refused.",
     target_changed: "Target changed: renew authorization before analysis.",
+    url_target_refused: "URL refused by the public-internet and SSRF policy.",
+    authorization_expired: "URL authorization expired; preview and confirm it again.",
   };
   return messages[code] ?? fallback;
 }
@@ -33,7 +35,7 @@ function safeUiError(error: unknown, fallback: string): string {
 const copy = {
   "pt-BR": {
     product: "EDY VERDICT", edition: "Centro de segurança local", overview: "Visão geral", "new-scan": "Nova análise",
-    "installed-apps": "Aplicativos instalados", progress: "Progresso", findings: "Achados", history: "Histórico", engines: "Engines", reports: "Relatórios",
+    "web-url": "Web / URL", "installed-apps": "Aplicativos instalados", progress: "Progresso", findings: "Achados", history: "Histórico", engines: "Engines", reports: "Relatórios",
     settings: "Configurações", foundation: "Fundação Level 0", available: "Infraestrutura disponível",
     unavailable: "Infraestrutura indisponível", checking: "Validando infraestrutura…", noData: "Nenhum dado disponível",
     noDataDetail: "A interface não usa demonstrações silenciosas. Os dados aparecem somente após resposta válida do backend.",
@@ -45,7 +47,7 @@ const copy = {
   },
   en: {
     product: "EDY VERDICT", edition: "Local security center", overview: "Overview", "new-scan": "New Scan",
-    "installed-apps": "Installed Apps", progress: "Scan Progress", findings: "Findings", history: "History", engines: "Engines", reports: "Reports",
+    "web-url": "Web / URL", "installed-apps": "Installed Apps", progress: "Scan Progress", findings: "Findings", history: "History", engines: "Engines", reports: "Reports",
     settings: "Settings", foundation: "Level 0 Foundation", available: "Infrastructure available",
     unavailable: "Infrastructure unavailable", checking: "Validating infrastructure…", noData: "No data available",
     noDataDetail: "The interface never uses silent demos. Data appears only after a valid backend response.",
@@ -90,6 +92,12 @@ interface ProductViewProps {
   readonly onAuthorizeInstalled?: (previewId:string) => void;
   readonly onStartInstalled?: () => void;
   readonly onRefreshProviders?: () => void;
+  readonly urlPreview?: UrlTargetPreview|null;
+  readonly urlAuthorization?: UrlTargetAuthorization|null;
+  readonly webAnalysis?: WebAnalysisView|null;
+  readonly onPreviewUrl?: (url:string, policy:QueryPolicy)=>void;
+  readonly onAuthorizeUrl?: (previewId:string)=>void;
+  readonly onStartUrl?: ()=>void;
 }
 
 function EmptyState({ title, detail }: { readonly title: string; readonly detail: string }) {
@@ -110,13 +118,17 @@ function InstalledAppsPanel({preview,authorization,inventory,providers,busy,onPr
 export function FoundationView({
   status, failed, engines = [], scans = [], selected = null, progress = null, findings = [], report = null,
   error = null, busy = false, onStart, onCancel, onSelect, onReport, repositoryAuthorization = null, onAuthorizeRepository, onStartRepository,
-  filePreview = null, fileAuthorization = null, fileAnalysis = null, onInspectFile, onAuthorizeFile, onStartFile, installedPreview=null, installedAuthorization=null, installedInventory=null, providerStatus=[], onPreviewInstalled, onAuthorizeInstalled, onStartInstalled, onRefreshProviders, initialPage = "overview",
+  filePreview = null, fileAuthorization = null, fileAnalysis = null, onInspectFile, onAuthorizeFile, onStartFile, installedPreview=null, installedAuthorization=null, installedInventory=null, providerStatus=[], onPreviewInstalled, onAuthorizeInstalled, onStartInstalled, onRefreshProviders, urlPreview=null, urlAuthorization=null, webAnalysis=null, onPreviewUrl, onAuthorizeUrl, onStartUrl, initialPage = "overview",
 }: ProductViewProps) {
   const [page, setPage] = useState<Page>(initialPage);
   const [locale, setLocale] = useState<Locale>("pt-BR");
   const [theme, setTheme] = useState<Theme>("professional");
   const [repositoryPath, setRepositoryPath] = useState("");
   const [filePath, setFilePath] = useState(filePreview?.requested_path ?? "");
+  const [urlInput,setUrlInput]=useState("");
+  const [queryPolicy,setQueryPolicy]=useState<QueryPolicy>("strip");
+  const [dismissedWebTerminal,setDismissedWebTerminal]=useState<string|null>(null);
+  useEffect(()=>{if(urlPreview)setUrlInput(urlPreview.target.display_url);},[urlPreview]);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [severityFilter, setSeverityFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -134,6 +146,9 @@ export function FoundationView({
   const findingDetail = findings.find((finding) => finding.id === selectedFindingId) ?? visibleFindings[0] ?? null;
 
   const content = (() => {
+    if(page==="web-url"&&dismissedWebTerminal!==scan?.id&&(webAnalysis?.state==="cancelled"||scan?.state==="cancelled")) return <section className="data-panel" data-level4-screen="cancelled"><h2>Passive URL analysis cancelled</h2><p className="coverage-warning">No final security verdict was generated.</p><p>Late worker results cannot replace this terminal state.</p><button className="secondary" onClick={()=>setDismissedWebTerminal(scan?.id??null)}>Analyze another URL</button></section>;
+    if(page==="web-url"&&dismissedWebTerminal!==scan?.id&&(webAnalysis?.terminal_error||(scan?.state==="failed"&&progress?.phase==="failed"))) return <section className="data-panel" data-level4-screen="error"><h2>Passive URL analysis stopped safely</h2><p className="coverage-warning">{webAnalysis?.terminal_error??"DNS or transport policy rejected the target before completion."}</p><p>No request is retried and no final security verdict is generated.</p><button className="secondary" onClick={()=>setDismissedWebTerminal(scan?.id??null)}>Analyze another URL</button></section>;
+    if(page==="web-url") return <div className="workflow-stack" data-level4-screen={webAnalysis?.analysis?"analysis":urlAuthorization?"confirmation":urlPreview?"preview":"authorization"}><section className="action-panel"><h2>Web / URL Security</h2><p>Passive checks only: public DNS, validated TLS, bounded redirects, selected headers, cookie attributes and optional exact-match reputation. No body, JavaScript, crawler, form or exploit probe.</p><label>Explicit URL<input aria-label="Web URL" value={urlInput} disabled={busy} onChange={event=>setUrlInput(event.target.value)} /></label><label>Query policy<select aria-label="Query policy" value={queryPolicy} disabled={busy} onChange={event=>setQueryPolicy(event.target.value as QueryPolicy)}><option value="strip">Strip values before network request</option><option value="send">Send values once, never retain them</option></select></label><button className="secondary" disabled={!ready||busy||urlInput.length<10||onPreviewUrl===undefined} onClick={()=>onPreviewUrl?.(urlInput,queryPolicy)}>Validate target</button>{urlPreview&&<div className="data-panel"><h3>Sanitized preview</h3><code>{urlPreview.target.display_url}</code><dl><dt>Host</dt><dd>{urlPreview.target.canonical_host}</dd><dt>Scheme / port</dt><dd>{urlPreview.target.scheme} / {urlPreview.target.port}</dd><dt>Query</dt><dd>{urlPreview.target.query_present?`${urlPreview.target.query_parameter_names.join(", ")} · values redacted`:"absent or stripped"}</dd><dt>Fragment</dt><dd>{urlPreview.target.fragment_present?"removed":"absent"}</dd></dl><button className="secondary" disabled={busy||onAuthorizeUrl===undefined} onClick={()=>onAuthorizeUrl?.(urlPreview.preview_id)}>Authorize this exact sanitized target</button></div>}{urlAuthorization&&<div className="confirmation-panel"><strong>URL authorization captured</strong><code>{urlAuthorization.target.display_url}</code><p>One bounded passive request chain will be attempted. Proxies are bypassed and every hop is DNS-validated and IP-pinned.</p><button className="primary" disabled={busy||onStartUrl===undefined} onClick={onStartUrl}>Confirm passive URL analysis</button></div>}</section>{webAnalysis?.analysis&&<section className="analysis-grid"><article className="data-panel"><h2>DNS / Target</h2><code>{webAnalysis.analysis.target.display_url}</code><p>{webAnalysis.analysis.dns.map(item=>`${item.canonical_host}: ${item.public_addresses.join(", ")}`).join(" · ")}</p></article><article className="data-panel"><h2>TLS</h2><p>{webAnalysis.analysis.tls.map(item=>`${item.certificate_state}; validation=${item.validation_enabled}; hostname=${item.hostname_validation_enabled}`).join(" · ")||"Not applicable"}</p></article><article className="data-panel"><h2>Redirects</h2><p>{webAnalysis.analysis.redirects.map(item=>`${item.status} ${item.source_host} → ${item.destination_host} (${item.outcome})`).join(" · ")||"No redirect observed"}</p></article><article className="data-panel"><h2>Security headers</h2>{webAnalysis.analysis.headers.map(item=><p key={item.name}><strong>{item.name}</strong>: {item.state} — {item.interpretation}</p>)}</article><article className="data-panel"><h2>Cookie attributes</h2>{webAnalysis.analysis.cookies.map(item=><p key={item.safe_identifier}><strong>{item.safe_identifier}</strong>: Secure={String(item.secure)}, HttpOnly={String(item.http_only)}, SameSite={item.same_site}. Value never retained.</p>)}</article><article className="data-panel"><h2>Reputation</h2><p>{webAnalysis.analysis.reputation.state}: {webAnalysis.analysis.reputation.explanation}</p></article><article className="data-panel"><h2>Coverage</h2><dl>{Object.entries(webAnalysis.analysis.coverage).filter(([key])=>key!=="limitations").map(([key,value])=><><dt>{key}</dt><dd>{String(value)}</dd></>)}</dl><p className="coverage-warning">{webAnalysis.analysis.coverage.limitations.join(" ")}</p></article></section>}</div>;
     if(page==="installed-apps") return <InstalledAppsPanel preview={installedPreview} authorization={installedAuthorization} inventory={installedInventory} providers={providerStatus} busy={busy} onPreview={onPreviewInstalled} onAuthorize={onAuthorizeInstalled} onStart={onStartInstalled} onRefresh={onRefreshProviders}/>;
     if (page === "new-scan") return <div className="workflow-stack"><section className="action-panel"><h2>File / Binary Security</h2><p>One explicit local file only. Preview never starts analysis.</p><label>File path<input aria-label="File path" value={filePath} disabled={busy} onChange={(event)=>setFilePath(event.target.value)} /></label><button className="secondary" disabled={!ready||busy||filePath.length===0||onInspectFile===undefined} onClick={()=>onInspectFile?.(filePath)}>Preview file</button>{filePreview && filePreview.requested_path === filePath && <div className="data-panel" data-level2-screen="file-authorization"><h3>File preview</h3><dl><dt>File name</dt><dd>{filePreview.file_name}</dd><dt>Resolved location</dt><dd><code>{filePreview.canonical_path}</code></dd><dt>Size</dt><dd>{filePreview.identity.size} bytes</dd><dt>Detected type</dt><dd>{filePreview.detected_type}</dd><dt>Proposed checks</dt><dd>{filePreview.proposed_checks.join(", ")}</dd><dt>Policy limitations</dt><dd>{filePreview.policy_limitations.join(" ")}</dd></dl><button className="secondary" disabled={busy||onAuthorizeFile===undefined} onClick={()=>onAuthorizeFile?.(filePreview.preview_id)}>Authorize this exact file</button></div>}{fileAuthorization && filePreview?.requested_path === filePath && <div className="confirmation-panel"><strong>Authorization captured</strong><code>{fileAuthorization.canonical_path}</code><p>Analysis still requires explicit confirmation. YARA-X is unavailable by execution policy; reputation will be Not checked.</p><button className="primary" disabled={busy||onStartFile===undefined} onClick={onStartFile}>Confirm file analysis</button></div>}</section><section className="action-panel"><h2>Repository Security</h2><p>Repository inventory available. Some security checks are unavailable until execution policy requirements are satisfied.</p><label>Repository path<input aria-label="Repository path" value={repositoryPath} onChange={(event)=>setRepositoryPath(event.target.value)} /></label><button className="secondary" disabled={!ready||busy||repositoryPath.length===0||onAuthorizeRepository===undefined} onClick={()=>onAuthorizeRepository?.(repositoryPath)}>Authorize and inspect</button>{repositoryAuthorization && <div className="data-panel"><h3>Authorization preview</h3><code>{repositoryAuthorization.canonical_root}</code><dl><dt>Estimated files</dt><dd>{repositoryAuthorization.estimated_files}</dd><dt>Estimated bytes</dt><dd>{repositoryAuthorization.estimated_bytes}</dd><dt>Exclusions</dt><dd>{repositoryAuthorization.exclusions.join(", ")}</dd><dt>Readiness</dt><dd>{repositoryAuthorization.readiness}</dd></dl><button className="primary" disabled={busy||onStartRepository===undefined} onClick={onStartRepository}>Confirm repository scan</button></div>}</section><section className="action-panel"><h2>{text.synthetic}</h2><p>{text.syntheticNote}</p><button className="primary" disabled={!ready || busy || onStart === undefined} onClick={onStart}>{busy ? "…" : text.synthetic}</button></section></div>;
     if (page === "progress") return progress === null
@@ -187,6 +202,9 @@ export default function App() {
   const [installedAuthorization,setInstalledAuthorization]=useState<InstalledApplicationAuthorization|null>(null);
   const [installedInventory,setInstalledInventory]=useState<InstalledApplicationInventory|null>(null);
   const [providerStatus,setProviderStatus]=useState<readonly DatasetStatus[]>([]);
+  const [urlPreview,setUrlPreview]=useState<UrlTargetPreview|null>(null);
+  const [urlAuthorization,setUrlAuthorization]=useState<UrlTargetAuthorization|null>(null);
+  const [webAnalysis,setWebAnalysis]=useState<WebAnalysisView|null>(null);
   const selectedId = useRef<string | null>(null);
 
   useEffect(() => { selectedId.current = selected?.id ?? null; }, [selected?.id]);
@@ -210,6 +228,7 @@ export default function App() {
     let timer: ReturnType<typeof setTimeout> | undefined;
     setProgress(null);
     setFileAnalysis(null);
+    setWebAnalysis(null);
     setFindings([]);
     setReport(null);
     const poll = async () => {
@@ -218,8 +237,17 @@ export default function App() {
         if (!active) return;
         setProgress(next);
         if (terminalStates.has(next.status)) {
-          const [scanResult, findingResult] = await Promise.all([level0Api.getScan(selected.id), level0Api.findings(selected.id)]);
-          if (active) { setSelected(scanResult); setFindings(findingResult); setScans((current) => [scanResult, ...current.filter((item) => item.id !== scanResult.id)]); try { const result = await level0Api.getFileAnalysis(selected.id); if (active) setFileAnalysis(result); } catch { if (active) setFileAnalysis(null); } try { const result=await level0Api.getInstalledApplicationInventory(selected.id);if(active){setInstalledInventory(result);setProviderStatus(result.provider_status);}} catch { if(active)setInstalledInventory(null); } }
+          const scanResult = await level0Api.getScan(selected.id);
+          let findingResult: readonly FindingView[] = [];
+          try { findingResult = await level0Api.findings(selected.id); } catch { findingResult = []; }
+          if (active) {
+            setSelected(scanResult);
+            setFindings(findingResult);
+            setScans((current) => [scanResult, ...current.filter((item) => item.id !== scanResult.id)]);
+            try { const result = await level0Api.getFileAnalysis(selected.id); if (active) setFileAnalysis(result); } catch { if (active) setFileAnalysis(null); }
+            try { const result=await level0Api.getInstalledApplicationInventory(selected.id);if(active){setInstalledInventory(result);setProviderStatus(result.provider_status);}} catch { if(active)setInstalledInventory(null); }
+            try { const result=await level0Api.getUrlScanAnalysis(selected.id);if(active)setWebAnalysis(result);} catch {if(active)setWebAnalysis(null);}
+          }
         } else {
           timer = setTimeout(() => { void poll(); }, 750);
         }
@@ -251,6 +279,9 @@ export default function App() {
   const authorizeInstalled=async(previewId:string)=>{setBusy(true);setError(null);try{setInstalledAuthorization(await level0Api.authorizeInstalledApplications(previewId));}catch(cause){setError(safeUiError(cause,"Installed application authorization failed safely"));}finally{setBusy(false);}};
   const startInstalled=async()=>{if(!installedAuthorization)return;setBusy(true);setError(null);try{const scan=await level0Api.createInstalledApplicationScan(installedAuthorization.authorization_id);setSelected(scan);setScans(current=>[scan,...current]);setInstalledInventory(await level0Api.getInstalledApplicationInventory(scan.id));}catch(cause){setError(safeUiError(cause,"Installed application analysis failed safely"));}finally{setBusy(false);}};
   const refreshProviders=async()=>{setBusy(true);setError(null);try{const result=await level0Api.refreshPublicVulnerabilityData();setProviderStatus(result.provider_status);}catch(cause){setError(safeUiError(cause,"Public vulnerability datasets remain unavailable; prior validated cache was preserved"));}finally{setBusy(false);}};
+  const previewUrl=async(url:string,policy:QueryPolicy)=>{setBusy(true);setError(null);setUrlAuthorization(null);setWebAnalysis(null);try{setUrlPreview(await level0Api.previewUrlTarget(url,policy));}catch(cause){setUrlPreview(null);setError(safeUiError(cause,"URL target was refused safely"));}finally{setBusy(false);}};
+  const authorizeUrl=async(previewId:string)=>{setBusy(true);setError(null);try{setUrlAuthorization(await level0Api.authorizeUrlTarget(previewId));}catch(cause){setUrlAuthorization(null);setError(safeUiError(cause,"URL authorization was refused safely"));}finally{setBusy(false);}};
+  const startUrl=async()=>{if(!urlAuthorization)return;setBusy(true);setError(null);setWebAnalysis(null);try{const scan=await level0Api.createUrlScan(urlAuthorization.authorization_id);setSelected(scan);setScans(current=>[scan,...current]);}catch(cause){setError(safeUiError(cause,"Passive URL analysis could not be created safely"));}finally{setBusy(false);}};
   const generateReport = async (kind: ReportView["kind"]) => {
     if (selected === null) return;
     const scanId = selected.id;
@@ -258,5 +289,5 @@ export default function App() {
     try { const result = await level0Api.report(scanId, kind); if (selectedId.current === scanId) setReport(result); }
     catch (cause) { setError(safeUiError(cause, "Report generation failed safely")); } finally { setBusy(false); }
   };
-  return <FoundationView status={status} failed={failed} engines={engines} scans={scans} selected={selected} progress={progress} findings={findings} report={report} error={error} busy={busy} repositoryAuthorization={repositoryAuthorization} onAuthorizeRepository={(path)=>{void authorizeRepository(path);}} onStartRepository={()=>{void startRepository();}} filePreview={filePreview} fileAuthorization={fileAuthorization} fileAnalysis={fileAnalysis} onInspectFile={(path)=>{void inspectFile(path);}} onAuthorizeFile={(path)=>{void authorizeFile(path);}} onStartFile={()=>{void startFile();}} installedPreview={installedPreview} installedAuthorization={installedAuthorization} installedInventory={installedInventory} providerStatus={providerStatus} onPreviewInstalled={include=>{void previewInstalled(include);}} onAuthorizeInstalled={id=>{void authorizeInstalled(id);}} onStartInstalled={()=>{void startInstalled();}} onRefreshProviders={()=>{void refreshProviders();}} onStart={() => { void start(); }} onCancel={() => { void cancel(); }} onSelect={(scan) => { if (!busy) setSelected(scan); }} onReport={(kind) => { void generateReport(kind); }} />;
+  return <FoundationView status={status} failed={failed} engines={engines} scans={scans} selected={selected} progress={progress} findings={findings} report={report} error={error} busy={busy} repositoryAuthorization={repositoryAuthorization} onAuthorizeRepository={(path)=>{void authorizeRepository(path);}} onStartRepository={()=>{void startRepository();}} filePreview={filePreview} fileAuthorization={fileAuthorization} fileAnalysis={fileAnalysis} onInspectFile={(path)=>{void inspectFile(path);}} onAuthorizeFile={(path)=>{void authorizeFile(path);}} onStartFile={()=>{void startFile();}} installedPreview={installedPreview} installedAuthorization={installedAuthorization} installedInventory={installedInventory} providerStatus={providerStatus} onPreviewInstalled={include=>{void previewInstalled(include);}} onAuthorizeInstalled={id=>{void authorizeInstalled(id);}} onStartInstalled={()=>{void startInstalled();}} onRefreshProviders={()=>{void refreshProviders();}} urlPreview={urlPreview} urlAuthorization={urlAuthorization} webAnalysis={webAnalysis} onPreviewUrl={(url,policy)=>{void previewUrl(url,policy);}} onAuthorizeUrl={id=>{void authorizeUrl(id);}} onStartUrl={()=>{void startUrl();}} onStart={() => { void start(); }} onCancel={() => { void cancel(); }} onSelect={(scan) => { if (!busy) setSelected(scan); }} onReport={(kind) => { void generateReport(kind); }} />;
 }
