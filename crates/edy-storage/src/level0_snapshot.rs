@@ -71,6 +71,16 @@ CREATE TABLE IF NOT EXISTS level4_web_snapshots (
 CREATE INDEX IF NOT EXISTS idx_level4_target_fingerprint ON level4_web_snapshots(target_fingerprint);
 ";
 
+const LEVEL5_SCHEMA: &str = "
+CREATE TABLE IF NOT EXISTS level5_investigation_snapshots (
+  scan_id TEXT PRIMARY KEY CHECK(length(scan_id) = 36),
+  revision INTEGER NOT NULL CHECK(revision >= 1),
+  payload BLOB NOT NULL CHECK(length(payload) BETWEEN 2 AND 8388608),
+  payload_sha256 TEXT NOT NULL CHECK(length(payload_sha256) = 64)
+);
+CREATE INDEX IF NOT EXISTS idx_level5_revision ON level5_investigation_snapshots(revision);
+";
+
 #[derive(Debug)]
 pub enum SnapshotError {
     Sql(rusqlite::Error),
@@ -778,6 +788,120 @@ impl Level4SnapshotStore {
     }
 }
 
+/// Forward-only, integrity-checked Level 5 graph/case snapshot. The typed domain owns the
+/// schema; this boundary atomically persists only redacted normalized observations/results.
+pub struct Level5SnapshotStore {
+    connection: Connection,
+}
+
+impl Level5SnapshotStore {
+    pub fn open(path: &Path) -> Result<Self, SnapshotError> {
+        if !path.is_absolute() || path.parent().is_some_and(|parent| !parent.is_dir()) {
+            return Err(SnapshotError::InvalidInput);
+        }
+        let connection = Connection::open_with_flags(
+            path,
+            OpenFlags::SQLITE_OPEN_READ_WRITE
+                | OpenFlags::SQLITE_OPEN_CREATE
+                | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        )?;
+        connection.busy_timeout(Duration::from_secs(5))?;
+        connection.execute_batch(
+            "PRAGMA trusted_schema=OFF; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;",
+        )?;
+        let version: u32 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+        if version > 6 {
+            return Err(SnapshotError::Integrity);
+        }
+        let tx = connection.unchecked_transaction()?;
+        for schema in [
+            LEVEL0_SCHEMA,
+            LEVEL1_SCHEMA,
+            LEVEL2_SCHEMA,
+            LEVEL3_SCHEMA,
+            LEVEL4_SCHEMA,
+            LEVEL5_SCHEMA,
+        ] {
+            tx.execute_batch(schema)?;
+        }
+        if version < 6 {
+            tx.execute_batch("PRAGMA user_version=6;")?;
+        }
+        tx.commit()?;
+        verify_schema(&connection)?;
+        verify_level1_schema(&connection)?;
+        verify_level2_schema(&connection)?;
+        verify_level3_schema(&connection)?;
+        verify_level4_schema(&connection)?;
+        verify_level5_schema(&connection)?;
+        Ok(Self { connection })
+    }
+    pub fn create(&mut self, scan_id: &str, payload: &[u8]) -> Result<(), SnapshotError> {
+        validate(scan_id, payload)?;
+        reject_fixture_secret(payload)?;
+        reject_level5_secret(payload)?;
+        let tx = self.connection.transaction()?;
+        let count: u32 = tx.query_row(
+            "SELECT count(*) FROM level5_investigation_snapshots",
+            [],
+            |r| r.get(0),
+        )?;
+        if count >= 256 {
+            return Err(SnapshotError::InvalidInput);
+        }
+        tx.execute("INSERT INTO level5_investigation_snapshots(scan_id,revision,payload,payload_sha256) VALUES(?1,1,?2,?3)",params![scan_id,payload,digest(payload)])?;
+        tx.commit()?;
+        Ok(())
+    }
+    pub fn replace(
+        &mut self,
+        scan_id: &str,
+        expected_revision: u64,
+        payload: &[u8],
+    ) -> Result<u64, SnapshotError> {
+        validate(scan_id, payload)?;
+        reject_fixture_secret(payload)?;
+        reject_level5_secret(payload)?;
+        if expected_revision == 0 {
+            return Err(SnapshotError::InvalidInput);
+        }
+        let tx = self.connection.transaction()?;
+        let changed=tx.execute("UPDATE level5_investigation_snapshots SET revision=revision+1,payload=?3,payload_sha256=?4 WHERE scan_id=?1 AND revision=?2",params![scan_id,expected_revision as i64,payload,digest(payload)])?;
+        if changed != 1 {
+            return Err(SnapshotError::Conflict);
+        }
+        tx.commit()?;
+        Ok(expected_revision + 1)
+    }
+    pub fn load(&self, scan_id: &str) -> Result<SnapshotBlob, SnapshotError> {
+        validate_scan_id(scan_id)?;
+        let (revision,payload,expected):(i64,Vec<u8>,String)=self.connection.query_row("SELECT revision,payload,payload_sha256 FROM level5_investigation_snapshots WHERE scan_id=?1",[scan_id],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?))).map_err(|e|if matches!(e,rusqlite::Error::QueryReturnedNoRows){SnapshotError::NotFound}else{SnapshotError::Sql(e)})?;
+        validate(scan_id, &payload)?;
+        reject_level5_secret(&payload)?;
+        if digest(&payload) != expected {
+            return Err(SnapshotError::Integrity);
+        }
+        Ok(SnapshotBlob {
+            revision: revision.try_into().map_err(|_| SnapshotError::Integrity)?,
+            payload,
+        })
+    }
+    pub fn contains_bytes(&self, needle: &[u8]) -> Result<bool, SnapshotError> {
+        if needle.is_empty() || needle.len() > 4096 {
+            return Err(SnapshotError::InvalidInput);
+        }
+        let mut s = self
+            .connection
+            .prepare("SELECT payload FROM level5_investigation_snapshots")?;
+        for row in s.query_map([], |r| r.get::<_, Vec<u8>>(0))? {
+            if row?.windows(needle.len()).any(|w| w == needle) {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+}
+
 fn validate(scan_id: &str, payload: &[u8]) -> Result<(), SnapshotError> {
     validate_scan_id(scan_id)?;
     if payload.len() < 2 || payload.len() > MAX_SNAPSHOT_BYTES {
@@ -814,6 +938,22 @@ fn reject_fixture_secret(payload: &[u8]) -> Result<(), SnapshotError> {
         b"EDY_FAKE_TEST_TOKEN_".as_slice(),
         b"EDY_FAKE_QUERY_SECRET_LEVEL4".as_slice(),
         b"EDY_FAKE_COOKIE_SECRET_LEVEL4".as_slice(),
+    ] {
+        if payload
+            .windows(marker.len())
+            .any(|window| window.eq_ignore_ascii_case(marker))
+        {
+            return Err(SnapshotError::InvalidInput);
+        }
+    }
+    Ok(())
+}
+
+fn reject_level5_secret(payload: &[u8]) -> Result<(), SnapshotError> {
+    for marker in [
+        b"EDY_FAKE_SECRET_LEVEL5".as_slice(),
+        b"EDY_FAKE_COOKIE_LEVEL5".as_slice(),
+        b"EDY_FAKE_QUERY_LEVEL5".as_slice(),
     ] {
         if payload
             .windows(marker.len())
@@ -904,6 +1044,14 @@ fn verify_level4_schema(connection: &Connection) -> Result<(), SnapshotError> {
         if !sql.contains(required) {
             return Err(SnapshotError::Integrity);
         }
+    }
+    Ok(())
+}
+
+fn verify_level5_schema(connection: &Connection) -> Result<(), SnapshotError> {
+    let sql:String=connection.query_row("SELECT coalesce(sql,'') FROM sqlite_schema WHERE type='table' AND name='level5_investigation_snapshots'",[],|r|r.get(0))?;
+    if !sql.contains("payload_sha256") || !sql.contains("revision") {
+        return Err(SnapshotError::Integrity);
     }
     Ok(())
 }
@@ -1290,5 +1438,50 @@ mod tests {
                 5
             );
         }
+    }
+
+    #[test]
+    fn level5_migrates_level4_persists_atomically_and_rejects_all_plaintext_markers() {
+        let d = TempDir::new();
+        let p = d.0.join("level5.sqlite3");
+        Level4SnapshotStore::open(&p).unwrap();
+        let mut s = Level5SnapshotStore::open(&p).unwrap();
+        let id = "018f4c2a-1d3b-7abc-8def-0123456789e0";
+        for marker in [
+            "EDY_FAKE_SECRET_LEVEL5",
+            "EDY_FAKE_COOKIE_LEVEL5",
+            "EDY_FAKE_QUERY_LEVEL5",
+        ] {
+            assert!(
+                s.create(id, format!("{{\"unsafe\":\"{marker}\"}}").as_bytes())
+                    .is_err()
+            );
+        }
+        s.create(
+            id,
+            br#"{"schema":"LEVEL5_INVESTIGATION_V1","redacted":true}"#,
+        )
+        .unwrap();
+        assert_eq!(s.load(id).unwrap().revision, 1);
+        assert_eq!(
+            s.replace(
+                id,
+                1,
+                br#"{"schema":"LEVEL5_INVESTIGATION_V1","redacted":true,"revision":2}"#
+            )
+            .unwrap(),
+            2
+        );
+        assert!(matches!(
+            s.replace(id, 1, br#"{"safe":true}"#),
+            Err(SnapshotError::Conflict)
+        ));
+        assert_eq!(
+            Connection::open(&p)
+                .unwrap()
+                .query_row("PRAGMA user_version", [], |r| r.get::<_, u32>(0))
+                .unwrap(),
+            6
+        );
     }
 }
