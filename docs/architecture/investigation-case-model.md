@@ -15,3 +15,15 @@ analyzed targets. Priority is separately derived and always carries reasons.
 Blast radius reports counts of observed targets, components, findings,
 vulnerabilities and target types. It never invents an organization-wide percentage
 without a real denominator.
+
+Allowed transitions are closed: suggested to open; open to investigating,
+accepted-risk or ignored; investigating to remediating, resolved or accepted-risk;
+remediating to verification-pending; verification-pending to resolved or back to
+investigating; resolved to open for recorded recurrence. Invalid transitions fail
+without changing the stored case or timeline.
+
+Temporal correlation keeps a finding stable across observations. A later
+observation updates `last_seen` and `occurrence_count` instead of creating a
+duplicate finding. When recurrence/reopening is explicitly present in normalized
+input, the suggested case receives a deterministic `finding_reopened` event;
+this remains an observation and is not an incident claim.
