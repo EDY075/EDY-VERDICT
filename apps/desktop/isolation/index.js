@@ -3,6 +3,7 @@
 const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const FINDING_ID = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|(?:yara_finding_v1|signature_finding_v1|pe_indicator_v1|reputation_finding_v1)-[0-9a-f]{64}|(?:iav1|webv1)-[0-9a-f]{32})$/;
 const APPLICATION_ID = /^appv1-[0-9a-f]{32}$/;
+const LEVEL5_ITEM = /^(?:cluster-v1|case-v1)-[0-9a-f]{64}$/;
 const ownKeys = (value, expected) => value !== null && typeof value === "object" && !Array.isArray(value)
   && Object.keys(value).sort().join("|") === [...expected].sort().join("|");
 const idRequest = (payload, field) => ownKeys(payload, ["request"])
@@ -54,6 +55,22 @@ const validPayload = (cmd, payload) => {
   if (cmd === "generate_report") return ownKeys(payload, ["request"])
     && ownKeys(payload.request, ["kind", "scan_id"]) && UUID_V7.test(payload.request.scan_id)
     && ["executive", "technical", "developer"].includes(payload.request.kind);
+  if (["run_level5_correlation","cancel_level5_correlation"].includes(cmd)) return ownKeys(payload, []);
+  if (["list_investigation_clusters","list_investigation_cases"].includes(cmd)) return ownKeys(payload,["request"])
+    && ownKeys(payload.request,["run_id","offset","limit"]) && UUID_V7.test(payload.request.run_id)
+    && Number.isSafeInteger(payload.request.offset) && payload.request.offset >= 0 && payload.request.offset <= 10000
+    && Number.isSafeInteger(payload.request.limit) && payload.request.limit >= 1 && payload.request.limit <= 100;
+  if (["get_investigation_cluster","get_investigation_case","create_investigation_case","get_investigation_timeline"].includes(cmd)) return ownKeys(payload,["request"])
+    && ownKeys(payload.request,["run_id","item_id"]) && UUID_V7.test(payload.request.run_id) && LEVEL5_ITEM.test(payload.request.item_id);
+  if (cmd === "get_investigation_graph") return ownKeys(payload,["request"])
+    && ownKeys(payload.request,["run_id"]) && UUID_V7.test(payload.request.run_id);
+  if (cmd === "update_investigation_case") return ownKeys(payload,["request"])
+    && ownKeys(payload.request,["run_id","case_id","status","reason_safe"]) && UUID_V7.test(payload.request.run_id)
+    && LEVEL5_ITEM.test(payload.request.case_id) && ["open","investigating","remediating","verification_pending","resolved","accepted_risk","ignored"].includes(payload.request.status)
+    && typeof payload.request.reason_safe === "string" && payload.request.reason_safe.length <= 512;
+  if (cmd === "generate_investigation_report") return ownKeys(payload,["request"])
+    && ownKeys(payload.request,["run_id","case_id","kind"]) && UUID_V7.test(payload.request.run_id)
+    && LEVEL5_ITEM.test(payload.request.case_id) && ["executive","technical","analyst"].includes(payload.request.kind);
   return false;
 };
 

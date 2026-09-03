@@ -909,6 +909,8 @@ dependencies = [
  "edy-providers",
  "edy-reporting",
  "edy-storage",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -936,6 +938,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-wdio-webdriver",
+ "time",
  "uuid",
 ]
 
@@ -993,6 +996,8 @@ version = "0.1.0"
 dependencies = [
  "edy-core",
  "rusqlite",
+ "serde",
+ "serde_json",
  "sha2",
  "windows-sys 0.61.2",
  "zeroize",

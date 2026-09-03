@@ -8,6 +8,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use edy_core::InstalledApplication;
+#[cfg(all(feature = "native-e2e", debug_assertions))]
+use edy_desktop::investigation::NativeCorrelationScenario;
+use edy_desktop::investigation::{
+    CaseTransitionRequest, CorrelationSummaryView, InvestigationBackend, InvestigationItemRequest,
+    InvestigationPage, InvestigationPageRequest, InvestigationReportRequest,
+    InvestigationReportView, InvestigationRunRequest,
+};
 use edy_desktop::ipc::{
     AuthorizeFileTargetRequest, AuthorizeInstalledApplicationRequest,
     AuthorizeRepositoryTargetRequest, AuthorizeUrlTargetRequest, AuthorizedFileTargetView,
@@ -39,6 +46,7 @@ struct FoundationStatus {
 struct FoundationState {
     status: FoundationStatus,
     backend: Level0Backend,
+    investigation: InvestigationBackend,
     smoke: bool,
     smoke_received: AtomicBool,
 }
@@ -404,6 +412,104 @@ fn generate_report(
     state.backend.report(&request)
 }
 
+#[tauri::command]
+async fn run_level5_correlation(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+) -> Result<CorrelationSummaryView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.investigation.run_correlation()
+}
+#[tauri::command]
+fn cancel_level5_correlation(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+) -> Result<bool, SafeIpcError> {
+    ipc_guard(&window)?;
+    Ok(state.investigation.cancel_correlation())
+}
+#[tauri::command]
+fn list_investigation_clusters(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: InvestigationPageRequest,
+) -> Result<InvestigationPage<edy_core::FindingCluster>, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.investigation.list_clusters(request)
+}
+#[tauri::command]
+fn get_investigation_cluster(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: InvestigationItemRequest,
+) -> Result<edy_core::FindingCluster, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.investigation.get_cluster(request)
+}
+#[tauri::command]
+fn list_investigation_cases(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: InvestigationPageRequest,
+) -> Result<InvestigationPage<edy_core::InvestigationCase>, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.investigation.list_cases(request)
+}
+#[tauri::command]
+fn get_investigation_case(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: InvestigationItemRequest,
+) -> Result<edy_core::InvestigationCase, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.investigation.get_case(request)
+}
+#[tauri::command]
+fn create_investigation_case(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: InvestigationItemRequest,
+) -> Result<edy_core::InvestigationCase, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.investigation.create_case_from_cluster(request)
+}
+#[tauri::command]
+fn update_investigation_case(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: CaseTransitionRequest,
+) -> Result<edy_core::InvestigationCase, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.investigation.update_case_status(request)
+}
+#[tauri::command]
+fn get_investigation_graph(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: InvestigationRunRequest,
+) -> Result<edy_core::CorrelationResult, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.investigation.graph(&request.run_id)
+}
+#[tauri::command]
+fn get_investigation_timeline(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: InvestigationItemRequest,
+) -> Result<Vec<edy_core::TimelineEvent>, SafeIpcError> {
+    ipc_guard(&window)?;
+    Ok(state.investigation.get_case(request)?.timeline)
+}
+#[tauri::command]
+fn generate_investigation_report(
+    window: WebviewWindow,
+    state: tauri::State<'_, FoundationState>,
+    request: InvestigationReportRequest,
+) -> Result<InvestigationReportView, SafeIpcError> {
+    ipc_guard(&window)?;
+    state.investigation.report(request)
+}
+
 fn find_project_root(start: &Path) -> Option<PathBuf> {
     start
         .ancestors()
@@ -472,6 +578,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         });
     let native_level4 = cfg!(debug_assertions)
         && std::env::args().any(|arg| arg.starts_with("--level4-native-qa="));
+    let native_level5 = cfg!(debug_assertions)
+        && std::env::args().any(|arg| arg.starts_with("--level5-native-qa="));
+    #[cfg(all(feature = "native-e2e", debug_assertions))]
+    let native_level5_scenario = std::env::args()
+        .find_map(|arg| match arg.as_str() {
+            "--level5-native-scenario=cancel" => Some(NativeCorrelationScenario::Cancellation),
+            "--level5-native-scenario=limit" => Some(NativeCorrelationScenario::Limit),
+            _ => None,
+        })
+        .unwrap_or_default();
     // Explicit debug-only native QA, not a production setting or IPC surface. Real handlers,
     // Isolation and React remain unchanged; only local data isolation and viewport differ.
     let native_qa_size: Option<(f64, f64)> = if cfg!(debug_assertions) {
@@ -486,6 +602,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             "--level4-native-qa=1366x768" => Some((1366.0, 768.0)),
             "--level4-native-qa=1920x1080" => Some((1920.0, 1080.0)),
             "--level4-native-qa=2560x1440" => Some((2560.0, 1440.0)),
+            "--level5-native-qa=1366x768" => Some((1366.0, 768.0)),
+            "--level5-native-qa=1920x1080" => Some((1920.0, 1080.0)),
+            "--level5-native-qa=2560x1440" => Some((2560.0, 1440.0)),
             _ => None,
         })
     } else {
@@ -494,7 +613,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let data = local_directory(
         &root,
         if native_qa_size.is_some() {
-            if native_level4 {
+            if native_level5 {
+                "level5-native-qa-data"
+            } else if native_level4 {
                 "level4-native-qa-data"
             } else if native_level3 {
                 "level3-native-qa-data"
@@ -523,10 +644,20 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     };
     #[cfg(not(all(feature = "native-e2e", debug_assertions)))]
     let backend = Level0Backend::open(&root, &data.join("level0.sqlite3"))?;
+    #[cfg(all(feature = "native-e2e", debug_assertions))]
+    let investigation = if native_level5 {
+        InvestigationBackend::open_fixture(&data.join("level0.sqlite3"), native_level5_scenario)?
+    } else {
+        InvestigationBackend::open(&data.join("level0.sqlite3"))?
+    };
+    #[cfg(not(all(feature = "native-e2e", debug_assertions)))]
+    let investigation = InvestigationBackend::open(&data.join("level0.sqlite3"))?;
     let webview_data = local_directory(
         &root,
         if native_qa_size.is_some() {
-            if native_level4 {
+            if native_level5 {
+                "level5-native-qa-webview2"
+            } else if native_level4 {
                 "level4-native-qa-webview2"
             } else if native_level3 {
                 "level3-native-qa-webview2"
@@ -546,6 +677,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             schema_version: 1,
         },
         backend,
+        investigation,
         smoke,
         smoke_received: AtomicBool::new(false),
     };
@@ -595,6 +727,17 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             list_findings,
             get_finding,
             generate_report,
+            run_level5_correlation,
+            cancel_level5_correlation,
+            list_investigation_clusters,
+            get_investigation_cluster,
+            list_investigation_cases,
+            get_investigation_case,
+            create_investigation_case,
+            update_investigation_case,
+            get_investigation_graph,
+            get_investigation_timeline,
+            generate_investigation_report,
         ])
         .setup(move |app| {
             let config = app

@@ -1,8 +1,10 @@
 #![forbid(unsafe_code)]
 //! Safe, read-only Level 0 command surface.
 
+use edy_core::{GraphLimits, correlate_investigation};
 use edy_engine_manager::manifest::EngineManifest;
 use edy_engine_manager::receipt::{EngineReceipt, IntegrityObservation, ObservedArtifact};
+use edy_storage::level0_snapshot::Level5SnapshotStore;
 use std::fs::{self, File};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
@@ -69,13 +71,203 @@ pub fn run(args: &[String], project_root: &Path) -> CommandResult {
         [command, path] if command == "validate-manifest" => {
             validate_manifest(project_root, Path::new(path))
         }
+        [command] if command == "correlate" => correlate(project_root, false),
+        [command, json] if command == "correlate" && json == "--json" => {
+            correlate(project_root, true)
+        }
+        [group, command, run_id] if group == "clusters" && command == "list" => {
+            list_clusters(project_root, run_id, false)
+        }
+        [group, command, run_id, json]
+            if group == "clusters" && command == "list" && json == "--json" =>
+        {
+            list_clusters(project_root, run_id, true)
+        }
+        [group, command, run_id, cluster_id] if group == "clusters" && command == "show" => {
+            show_cluster(project_root, run_id, cluster_id, false)
+        }
+        [group, command, run_id, cluster_id, json]
+            if group == "clusters" && command == "show" && json == "--json" =>
+        {
+            show_cluster(project_root, run_id, cluster_id, true)
+        }
+        [group, command, run_id] if group == "cases" && command == "list" => {
+            list_cases(project_root, run_id, false)
+        }
+        [group, command, run_id, json]
+            if group == "cases" && command == "list" && json == "--json" =>
+        {
+            list_cases(project_root, run_id, true)
+        }
+        [group, command, run_id, case_id] if group == "cases" && command == "show" => {
+            show_case(project_root, run_id, case_id, false)
+        }
+        [group, command, run_id, case_id, json]
+            if group == "cases" && command == "show" && json == "--json" =>
+        {
+            show_case(project_root, run_id, case_id, true)
+        }
         [] => CommandResult::error(2, usage()),
         _ => CommandResult::error(2, format!("Unsupported or unsafe command.\n{}", usage())),
     }
 }
 
 fn usage() -> String {
-    "Usage: edy-verdict <doctor|engines|validate-manifest|version>".into()
+    "Usage: edy-verdict <doctor|engines|validate-manifest|version|correlate|clusters list|clusters show|cases list|cases show>".into()
+}
+
+fn investigation_store(root: &Path) -> Result<Level5SnapshotStore, CommandResult> {
+    let database = root.join(".local/data/edy-verdict.sqlite3");
+    if !root.is_absolute() || !database.is_file() {
+        return Err(CommandResult::error(
+            1,
+            "Level 5 project-local database is unavailable",
+        ));
+    }
+    Level5SnapshotStore::open_read_only(&database)
+        .map_err(|_| CommandResult::error(1, "Level 5 database failed integrity validation"))
+}
+
+fn correlate(root: &Path, json: bool) -> CommandResult {
+    let store = match investigation_store(root) {
+        Ok(store) => store,
+        Err(error) => return error,
+    };
+    let run_id = match store.list_run_ids(0, 1) {
+        Ok(ids) if !ids.is_empty() => ids[0].clone(),
+        _ => return CommandResult::error(1, "No approved Level 5 observations are persisted"),
+    };
+    let observations = match store.load_observations(&run_id) {
+        Ok(value) => value,
+        Err(_) => {
+            return CommandResult::error(1, "Persisted observations failed integrity validation");
+        }
+    };
+    let expected = match store.load_result(&run_id) {
+        Ok(value) => value,
+        Err(_) => {
+            return CommandResult::error(1, "Persisted correlation failed integrity validation");
+        }
+    };
+    let replay = match correlate_investigation(observations, GraphLimits::default(), || false) {
+        Ok(value) => value,
+        Err(_) => return CommandResult::error(1, "Correlation replay was refused"),
+    };
+    if replay != expected {
+        return CommandResult::error(1, "Correlation replay does not match the persisted result");
+    }
+    if json {
+        json_result(&replay)
+    } else {
+        CommandResult::success([
+            format!("run_id={run_id}"),
+            "replay=MATCH".into(),
+            format!("nodes={}", replay.nodes.len()),
+            format!("relationships={}", replay.edges.len()),
+            format!("clusters={}", replay.clusters.len()),
+            format!("cases={}", replay.suggested_cases.len()),
+        ])
+    }
+}
+
+fn list_clusters(root: &Path, run_id: &str, json: bool) -> CommandResult {
+    let store = match investigation_store(root) {
+        Ok(store) => store,
+        Err(error) => return error,
+    };
+    match store.list_clusters(run_id, 0, 100) {
+        Ok(items) if json => json_result(&items),
+        Ok(items) => CommandResult::success(items.into_iter().map(|item| {
+            format!(
+                "{} {:?} findings={} targets={}",
+                item.cluster_id,
+                item.cluster_type,
+                item.member_findings.len(),
+                item.target_count
+            )
+        })),
+        Err(_) => CommandResult::error(1, "Clusters could not be read"),
+    }
+}
+
+fn show_cluster(root: &Path, run_id: &str, cluster_id: &str, json: bool) -> CommandResult {
+    if !valid_level5_id(cluster_id, "cluster-v1-") {
+        return CommandResult::error(2, "Cluster identifier was refused");
+    }
+    let store = match investigation_store(root) {
+        Ok(store) => store,
+        Err(error) => return error,
+    };
+    match store.get_cluster(run_id, cluster_id) {
+        Ok(item) if json => json_result(&item),
+        Ok(item) => CommandResult::success([
+            format!("cluster_id={}", item.cluster_id),
+            format!("type={:?}", item.cluster_type),
+            format!("findings={}", item.member_findings.len()),
+            format!("evidence={}", item.evidence_count),
+            format!("explanation={}", item.explanation_safe),
+        ]),
+        Err(_) => CommandResult::error(1, "Cluster was not found"),
+    }
+}
+
+fn list_cases(root: &Path, run_id: &str, json: bool) -> CommandResult {
+    let store = match investigation_store(root) {
+        Ok(store) => store,
+        Err(error) => return error,
+    };
+    match store.list_cases(run_id, 0, 100) {
+        Ok(items) if json => json_result(&items),
+        Ok(items) => CommandResult::success(items.into_iter().map(|item| {
+            format!(
+                "{} {:?} risk={} confidence={} coverage={}",
+                item.case_id,
+                item.status,
+                item.assessment.risk,
+                item.assessment.confidence,
+                item.assessment.coverage
+            )
+        })),
+        Err(_) => CommandResult::error(1, "Cases could not be read"),
+    }
+}
+
+fn show_case(root: &Path, run_id: &str, case_id: &str, json: bool) -> CommandResult {
+    if !valid_level5_id(case_id, "case-v1-") {
+        return CommandResult::error(2, "Case identifier was refused");
+    }
+    let store = match investigation_store(root) {
+        Ok(store) => store,
+        Err(error) => return error,
+    };
+    match store.get_case(run_id, case_id) {
+        Ok(item) if json => json_result(&item),
+        Ok(item) => CommandResult::success([
+            format!("case_id={}", item.case_id),
+            format!("status={:?}", item.status),
+            format!("risk={}", item.assessment.risk),
+            format!("confidence={}", item.assessment.confidence),
+            format!("coverage={}", item.assessment.coverage),
+            format!("findings={}", item.finding_ids.len()),
+        ]),
+        Err(_) => CommandResult::error(1, "Case was not found"),
+    }
+}
+
+fn valid_level5_id(value: &str, prefix: &str) -> bool {
+    value.strip_prefix(prefix).is_some_and(|suffix| {
+        suffix.len() == 64
+            && suffix
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+    })
+}
+
+fn json_result<T: serde::Serialize>(value: &T) -> CommandResult {
+    match serde_json::to_string_pretty(value) {
+        Ok(output) => CommandResult::success([output]),
+        Err(_) => CommandResult::error(1, "JSON output failed"),
+    }
 }
 
 fn doctor(root: &Path) -> CommandResult {
@@ -328,5 +520,104 @@ mod tests {
         let error = read_bounded(&path, 4).unwrap_err();
         fs::remove_file(path).unwrap();
         assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    }
+
+    #[test]
+    fn level5_commands_replay_and_read_persisted_cases_without_host_actions() {
+        use edy_core::{
+            CorrelationFinding, GraphLimits, IdentifierKind, StrongIdentity, TargetType,
+            correlate_investigation,
+        };
+        let root = std::env::temp_dir().join(format!(
+            "edy-cli-level5-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let data = root.join(".local/data");
+        fs::create_dir_all(&data).unwrap();
+        let run_id = "018f4c2a-1d3b-7abc-8def-0123456789f1";
+        let finding = |id: &str, target: &str| CorrelationFinding {
+            finding_id: id.into(),
+            target_id: target.into(),
+            target_type: TargetType::Repository,
+            target_identity: StrongIdentity::new(IdentifierKind::StableTarget, target).unwrap(),
+            affected_identity: StrongIdentity::new(
+                IdentifierKind::Purl,
+                format!("pkg:npm/{target}@1.0.0"),
+            )
+            .unwrap(),
+            vulnerability_id: Some("CVE-2099-1001".into()),
+            artifact_sha256: None,
+            purl: Some(format!("pkg:npm/{target}@1.0.0")),
+            cpe: None,
+            web_origin: None,
+            web_domain: None,
+            evidence_ids: vec![format!("evidence-{id}")],
+            source_scans: vec![format!("scan-{id}")],
+            severity_points: 70,
+            kev: false,
+            epss_basis_points: None,
+            provider_available: true,
+            parser_certain: true,
+            conflicting_evidence: false,
+            first_seen: "2099-01-01T00:00:00Z".into(),
+            last_seen: "2099-01-02T00:00:00Z".into(),
+            occurrence_count: 1,
+            reopened: false,
+        };
+        let observations = vec![
+            finding("finding-a", "package-a"),
+            finding("finding-b", "package-b"),
+        ];
+        let result =
+            correlate_investigation(observations.clone(), GraphLimits::default(), || false)
+                .unwrap();
+        let mut store = Level5SnapshotStore::open(&data.join("edy-verdict.sqlite3")).unwrap();
+        store.promote(run_id, &observations, &result).unwrap();
+        drop(store);
+        let database_before = fs::read(data.join("edy-verdict.sqlite3")).unwrap();
+        let replay = run(&["correlate".into(), "--json".into()], &root);
+        assert_eq!(replay.exit_code, 0);
+        assert!(replay.stdout.contains("LEVEL5_INVESTIGATION_V1"));
+        let cases = run(
+            &[
+                "cases".into(),
+                "list".into(),
+                run_id.into(),
+                "--json".into(),
+            ],
+            &root,
+        );
+        assert_eq!(cases.exit_code, 0);
+        assert!(cases.stdout.contains("case-v1-"));
+        let show = run(
+            &[
+                "clusters".into(),
+                "show".into(),
+                run_id.into(),
+                result.clusters[0].cluster_id.clone(),
+            ],
+            &root,
+        );
+        assert_eq!(show.exit_code, 0);
+        assert!(show.stdout.contains("findings=2"));
+        let invalid = run(
+            &[
+                "cases".into(),
+                "show".into(),
+                run_id.into(),
+                "case-v1-not-hex".into(),
+            ],
+            &root,
+        );
+        assert_eq!(invalid.exit_code, 2);
+        assert_eq!(
+            fs::read(data.join("edy-verdict.sqlite3")).unwrap(),
+            database_before
+        );
+        fs::remove_dir_all(root).unwrap();
     }
 }

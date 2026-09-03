@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main",
-  "description": "Closed-set Level 0 through Level 4 security workflow commands from the local main webview only.",
+  "description": "Closed-set Level 0 through Level 5 security workflow commands from the local main webview only.",
   "local": true,
   "windows": ["main"],
   "webviews": ["main"],
@@ -38,6 +38,17 @@
     "allow-cancel-scan",
     "allow-list-findings",
     "allow-get-finding",
-    "allow-generate-report"
+    "allow-generate-report",
+    "allow-run-level5-correlation",
+    "allow-cancel-level5-correlation",
+    "allow-list-investigation-clusters",
+    "allow-get-investigation-cluster",
+    "allow-list-investigation-cases",
+    "allow-get-investigation-case",
+    "allow-create-investigation-case",
+    "allow-update-investigation-case",
+    "allow-get-investigation-graph",
+    "allow-get-investigation-timeline",
+    "allow-generate-investigation-report"
   ]
 }

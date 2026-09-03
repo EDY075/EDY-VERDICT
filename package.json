@@ -11,6 +11,7 @@
     "build": "pnpm --dir apps/desktop build",
     "test:level2-native": "node tests/native/level2-e2e.mjs",
     "test:level3-native": "node tests/native/level3-e2e.mjs",
-    "test:level4-native": "node tests/native/level4-e2e.mjs"
+    "test:level4-native": "node tests/native/level4-e2e.mjs",
+    "test:level5-native": "node tests/native/level5-e2e.mjs"
   }
 }

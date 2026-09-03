@@ -10,3 +10,5 @@ edy-engine-manager.workspace = true
 edy-providers.workspace = true
 edy-storage.workspace = true
 edy-reporting.workspace = true
+serde.workspace = true
+serde_json.workspace = true

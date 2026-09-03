@@ -8,6 +8,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 pub const INVESTIGATION_SCHEMA: &str = "LEVEL5_INVESTIGATION_V1";
 pub const ENTITY_ID_SCHEMA: &str = "ENTITY_ID_V1";
+pub const RELATIONSHIP_ID_SCHEMA: &str = "RELATIONSHIP_ID_V1";
+pub const RULE_STRUCTURAL: &str = "L5-RULE-STRUCTURAL-V1";
 pub const RULE_SHARED_CVE: &str = "L5-RULE-SHARED-CVE-V1";
 pub const RULE_SHARED_ARTIFACT: &str = "L5-RULE-SHARED-ARTIFACT-V1";
 pub const RULE_SHARED_COMPONENT: &str = "L5-RULE-SHARED-COMPONENT-V1";
@@ -27,6 +29,7 @@ pub enum EntityKind {
     Publisher,
     ScanTarget,
     Finding,
+    Evidence,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -45,6 +48,7 @@ pub enum IdentifierKind {
     ProviderIdentity,
     StableTarget,
     StableFinding,
+    StableEvidence,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -57,18 +61,14 @@ pub struct StrongIdentity {
 impl StrongIdentity {
     pub fn new(kind: IdentifierKind, value: impl Into<String>) -> Result<Self, InvestigationError> {
         let value = value.into();
-        if value.is_empty() || value.len() > 2048 || value.chars().any(char::is_control) {
+        if value.is_empty() || value.len() > 2048 || value.chars().any(unsafe_text_character) {
             return Err(InvestigationError::InvalidIdentity);
         }
         let valid = match kind {
             IdentifierKind::Sha256 => is_lower_hex(&value, 64),
             IdentifierKind::Cve => canonical_cve(&value).as_deref() == Some(value.as_str()),
-            IdentifierKind::Purl => {
-                value.starts_with("pkg:") && !value.contains(char::is_whitespace)
-            }
-            IdentifierKind::Cpe => {
-                value.starts_with("cpe:2.3:") && !value.contains(char::is_whitespace)
-            }
+            IdentifierKind::Purl => valid_purl(&value),
+            IdentifierKind::Cpe => crate::Cpe23::parse(&value).is_ok(),
             IdentifierKind::WebOrigin => {
                 (value.starts_with("https://") || value.starts_with("http://"))
                     && !value.contains('@')
@@ -78,6 +78,7 @@ impl StrongIdentity {
             IdentifierKind::CanonicalUrl => {
                 (value.starts_with("https://") || value.starts_with("http://"))
                     && !value.contains('@')
+                    && !value.contains('?')
                     && !value.contains('#')
             }
             IdentifierKind::Domain => valid_domain(&value),
@@ -204,6 +205,54 @@ impl CorrelationFinding {
         {
             return Err(InvestigationError::InvalidFinding);
         }
+        if self.target_identity.kind != IdentifierKind::StableTarget
+            || self.target_identity.canonical_value != self.target_id
+            || !valid_utc_timestamp(&self.first_seen)
+            || !valid_utc_timestamp(&self.last_seen)
+            || self.first_seen > self.last_seen
+        {
+            return Err(InvestigationError::InvalidFinding);
+        }
+        let coherent = match self.target_type {
+            TargetType::Repository => match self.affected_identity.kind {
+                IdentifierKind::Purl => self
+                    .purl
+                    .as_ref()
+                    .is_some_and(|value| value == &self.affected_identity.canonical_value),
+                IdentifierKind::Cpe => self
+                    .cpe
+                    .as_ref()
+                    .is_some_and(|value| value == &self.affected_identity.canonical_value),
+                _ => false,
+            },
+            TargetType::File => {
+                self.affected_identity.kind == IdentifierKind::Sha256
+                    && self
+                        .artifact_sha256
+                        .as_ref()
+                        .is_some_and(|value| value == &self.affected_identity.canonical_value)
+            }
+            TargetType::InstalledApplication => matches!(
+                self.affected_identity.kind,
+                IdentifierKind::MsiProduct
+                    | IdentifierKind::MsixPackage
+                    | IdentifierKind::Cpe
+                    | IdentifierKind::ProviderIdentity
+            ),
+            TargetType::WebUrl => {
+                self.affected_identity.kind == IdentifierKind::CanonicalUrl
+                    && self.web_origin.as_ref().is_some_and(|origin| {
+                        url_belongs_to_origin(&self.affected_identity.canonical_value, origin)
+                            && self
+                                .web_domain
+                                .as_ref()
+                                .is_some_and(|domain| origin_belongs_to_domain(origin, domain))
+                    })
+            }
+        };
+        if !coherent {
+            return Err(InvestigationError::InvalidFinding);
+        }
         Ok(())
     }
 }
@@ -222,6 +271,8 @@ pub enum RelationshipType {
     FindingSupportedByEvidence,
     FindingsShareVulnerability,
     FindingsShareArtifact,
+    FindingsShareComponent,
+    FindingsShareOrigin,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -232,6 +283,8 @@ pub struct RelationshipEdge {
     pub from_entity: String,
     pub to_entity: String,
     pub rule_id: String,
+    pub rule_version: u32,
+    pub finding_ids: Vec<String>,
     pub evidence_ids: Vec<String>,
     pub source_scans: Vec<String>,
     pub created_by: String,
@@ -377,6 +430,14 @@ impl InvestigationCase {
         if !allowed {
             return Err(InvestigationError::InvalidTransition);
         }
+        if !valid_utc_timestamp(timestamp)
+            || self
+                .timeline
+                .last()
+                .is_some_and(|event| timestamp < event.timestamp.as_str())
+        {
+            return Err(InvestigationError::InvalidTransition);
+        }
         let transition = CaseTransition {
             from: self.status,
             to,
@@ -399,6 +460,59 @@ impl InvestigationCase {
         });
         Ok(())
     }
+}
+
+fn valid_utc_timestamp(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    bytes.len() == 20
+        && bytes[4] == b'-'
+        && bytes[7] == b'-'
+        && bytes[10] == b'T'
+        && bytes[13] == b':'
+        && bytes[16] == b':'
+        && bytes[19] == b'Z'
+        && bytes.iter().enumerate().all(|(index, byte)| {
+            matches!(index, 4 | 7 | 10 | 13 | 16 | 19) || byte.is_ascii_digit()
+        })
+}
+
+fn valid_purl(value: &str) -> bool {
+    let Some(path) = value.strip_prefix("pkg:") else {
+        return false;
+    };
+    let path = path.split(['?', '#']).next().unwrap_or_default();
+    let Some((package_type, name)) = path.split_once('/') else {
+        return false;
+    };
+    !package_type.is_empty()
+        && package_type
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'+' | b'-'))
+        && !name.is_empty()
+        && !name.ends_with('/')
+        && !value.contains(char::is_whitespace)
+        && !value.contains('\\')
+}
+
+fn url_belongs_to_origin(url: &str, origin: &str) -> bool {
+    url == origin
+        || url
+            .strip_prefix(origin)
+            .is_some_and(|suffix| suffix.starts_with('/') || suffix.starts_with('?'))
+}
+
+fn origin_belongs_to_domain(origin: &str, domain: &str) -> bool {
+    let host_port = origin
+        .strip_prefix("https://")
+        .or_else(|| origin.strip_prefix("http://"));
+    let Some(host_port) = host_port else {
+        return false;
+    };
+    let host = host_port.split(':').next().unwrap_or_default();
+    host == domain
+        || host
+            .strip_suffix(domain)
+            .is_some_and(|prefix| prefix.ends_with('.') && !prefix[..prefix.len() - 1].is_empty())
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -568,11 +682,26 @@ pub fn correlate_investigation<F: FnMut() -> bool>(
                 nodes.entry(node.entity_id.clone()).or_insert(node);
             }
         }
+        for evidence_id in &finding.evidence_ids {
+            let node = EntityNode::new(
+                EntityKind::Evidence,
+                StrongIdentity::new(IdentifierKind::StableEvidence, evidence_id.clone())?,
+                "Evidence",
+            )?;
+            nodes.entry(node.entity_id.clone()).or_insert(node);
+        }
         if nodes.len() > limits.nodes_per_run {
             return Ok(partial_result(nodes, original_count));
         }
     }
-    let mut edges = Vec::new();
+    let mut edges = build_structural_edges(&findings, &finding_entities, &affected_entities)?;
+    for edge in &mut edges {
+        edge.finding_ids.truncate(limits.findings_per_case);
+        edge.evidence_ids
+            .truncate(limits.evidence_refs_per_relation);
+        edge.source_scans
+            .truncate(limits.evidence_refs_per_relation);
+    }
     let mut clusters = Vec::new();
     build_keyed_clusters(
         &findings,
@@ -609,7 +738,7 @@ pub fn correlate_investigation<F: FnMut() -> bool>(
         &limits,
         |f| f.purl.clone().or_else(|| f.cpe.clone()),
         ClusterType::SharedComponent,
-        RelationshipType::TargetContainsComponent,
+        RelationshipType::FindingsShareComponent,
         RULE_SHARED_COMPONENT,
         "These findings share an exact PURL or CPE component identity.",
     )?;
@@ -622,7 +751,7 @@ pub fn correlate_investigation<F: FnMut() -> bool>(
         &limits,
         |f| f.web_origin.clone(),
         ClusterType::SharedWebOrigin,
-        RelationshipType::UrlBelongsToOrigin,
+        RelationshipType::FindingsShareOrigin,
         RULE_SHARED_ORIGIN,
         "These findings share one normalized web origin; URL paths remain separate.",
     )?;
@@ -648,12 +777,248 @@ pub fn correlate_investigation<F: FnMut() -> bool>(
         suggested_cases,
         findings_preserved: original_count,
         rules_executed: vec![
+            RULE_STRUCTURAL.into(),
             RULE_SHARED_CVE.into(),
             RULE_SHARED_ARTIFACT.into(),
             RULE_SHARED_COMPONENT.into(),
             RULE_SHARED_ORIGIN.into(),
         ],
     })
+}
+
+fn build_structural_edges(
+    findings: &[CorrelationFinding],
+    finding_entities: &BTreeMap<String, String>,
+    affected_entities: &BTreeMap<String, String>,
+) -> Result<Vec<RelationshipEdge>, InvestigationError> {
+    let mut edges = BTreeMap::<String, RelationshipEdge>::new();
+    let mut by_hash = BTreeMap::<String, Vec<&CorrelationFinding>>::new();
+    for finding in findings {
+        let finding_entity = finding_entities[&finding.finding_id].clone();
+        let affected_entity = affected_entities[&finding.finding_id].clone();
+        insert_edge(
+            &mut edges,
+            RelationshipType::FindingAffectsEntity,
+            finding_entity.clone(),
+            affected_entity.clone(),
+            finding,
+            "A finding is linked only to its exact normalized affected entity.",
+        );
+        let target_entity = entity_id(
+            EntityKind::ScanTarget,
+            finding.target_identity.clone(),
+            target_label(finding.target_type),
+        )?;
+        if matches!(finding.target_type, TargetType::Repository)
+            && let Some(component) = finding
+                .purl
+                .as_ref()
+                .map(|value| (IdentifierKind::Purl, value))
+                .or_else(|| {
+                    finding
+                        .cpe
+                        .as_ref()
+                        .map(|value| (IdentifierKind::Cpe, value))
+                })
+        {
+            insert_edge(
+                &mut edges,
+                RelationshipType::TargetContainsComponent,
+                target_entity.clone(),
+                entity_id(
+                    EntityKind::SoftwarePackage,
+                    StrongIdentity::new(component.0, component.1.clone())?,
+                    "Package",
+                )?,
+                finding,
+                "The repository observation explicitly contains this normalized component identity.",
+            );
+        }
+        if let Some(cve) = &finding.vulnerability_id {
+            let vulnerability = entity_id(
+                EntityKind::Vulnerability,
+                StrongIdentity::new(IdentifierKind::Cve, cve.clone())?,
+                "Vulnerability",
+            )?;
+            let relationship = match finding.target_type {
+                TargetType::InstalledApplication => {
+                    Some(RelationshipType::ApplicationHasVulnerability)
+                }
+                TargetType::Repository => Some(RelationshipType::PackageHasVulnerability),
+                _ => None,
+            };
+            if let Some(relationship) = relationship {
+                insert_edge(
+                    &mut edges,
+                    relationship,
+                    affected_entity.clone(),
+                    vulnerability,
+                    finding,
+                    "An exact canonical CVE is associated with the observed affected entity.",
+                );
+            }
+        }
+        if let Some(hash) = &finding.artifact_sha256 {
+            by_hash.entry(hash.clone()).or_default().push(finding);
+            if matches!(finding.target_type, TargetType::File) {
+                let hash_entity = entity_id(
+                    EntityKind::FileArtifact,
+                    StrongIdentity::new(IdentifierKind::Sha256, hash.clone())?,
+                    "File artifact",
+                )?;
+                insert_edge(
+                    &mut edges,
+                    RelationshipType::FileHasHash,
+                    target_entity.clone(),
+                    hash_entity,
+                    finding,
+                    "The analyzed file target has this exact observed SHA-256 identity.",
+                );
+            }
+        }
+        if matches!(finding.target_type, TargetType::WebUrl)
+            && let Some(origin) = &finding.web_origin
+        {
+            let origin_entity = entity_id(
+                EntityKind::WebOrigin,
+                StrongIdentity::new(IdentifierKind::WebOrigin, origin.clone())?,
+                "Web origin",
+            )?;
+            insert_edge(
+                &mut edges,
+                RelationshipType::UrlBelongsToOrigin,
+                affected_entity.clone(),
+                origin_entity.clone(),
+                finding,
+                "The canonical URL belongs to this normalized scheme-host-port origin.",
+            );
+            if let Some(domain) = &finding.web_domain {
+                insert_edge(
+                    &mut edges,
+                    RelationshipType::OriginBelongsToDomain,
+                    origin_entity,
+                    entity_id(
+                        EntityKind::Domain,
+                        StrongIdentity::new(IdentifierKind::Domain, domain.clone())?,
+                        "Domain",
+                    )?,
+                    finding,
+                    "The normalized origin host belongs to this exact canonical domain.",
+                );
+            }
+        }
+        for evidence_id in &finding.evidence_ids {
+            insert_edge(
+                &mut edges,
+                RelationshipType::FindingSupportedByEvidence,
+                finding_entity.clone(),
+                entity_id(
+                    EntityKind::Evidence,
+                    StrongIdentity::new(IdentifierKind::StableEvidence, evidence_id.clone())?,
+                    "Evidence",
+                )?,
+                finding,
+                "The finding explicitly references this redacted evidence record.",
+            );
+        }
+    }
+    for members in by_hash.values() {
+        let Some(file_entity) = members
+            .iter()
+            .find(|finding| matches!(finding.target_type, TargetType::File))
+            .map(|finding| affected_entities[&finding.finding_id].clone())
+        else {
+            continue;
+        };
+        let applications = members
+            .iter()
+            .filter(|finding| matches!(finding.target_type, TargetType::InstalledApplication))
+            .map(|finding| affected_entities[&finding.finding_id].clone())
+            .collect::<BTreeSet<_>>();
+        if applications.is_empty() {
+            continue;
+        }
+        let mut combined = (*members[0]).clone();
+        combined.finding_id = members
+            .iter()
+            .map(|finding| finding.finding_id.as_str())
+            .collect::<Vec<_>>()
+            .join("|");
+        combined.evidence_ids = members
+            .iter()
+            .flat_map(|finding| finding.evidence_ids.clone())
+            .collect();
+        combined.source_scans = members
+            .iter()
+            .flat_map(|finding| finding.source_scans.clone())
+            .collect();
+        for application_entity in applications {
+            insert_edge(
+                &mut edges,
+                RelationshipType::FileAssociatedWithApplication,
+                application_entity,
+                file_entity.clone(),
+                &combined,
+                "An installed application observation and file observation share the same exact SHA-256 artifact identity.",
+            );
+        }
+    }
+    Ok(edges.into_values().collect())
+}
+
+fn entity_id(
+    kind: EntityKind,
+    identity: StrongIdentity,
+    label: &str,
+) -> Result<String, InvestigationError> {
+    Ok(EntityNode::new(kind, identity, label)?.entity_id)
+}
+
+fn insert_edge(
+    edges: &mut BTreeMap<String, RelationshipEdge>,
+    relationship: RelationshipType,
+    from_entity: String,
+    to_entity: String,
+    finding: &CorrelationFinding,
+    reasoning: &str,
+) {
+    let edge_id = stable_id(
+        RELATIONSHIP_ID_SCHEMA,
+        &[
+            RULE_STRUCTURAL,
+            &format!("{relationship:?}"),
+            &from_entity,
+            &to_entity,
+        ],
+    );
+    let entry = edges
+        .entry(edge_id.clone())
+        .or_insert_with(|| RelationshipEdge {
+            edge_id,
+            relationship,
+            from_entity,
+            to_entity,
+            rule_id: RULE_STRUCTURAL.into(),
+            rule_version: 1,
+            finding_ids: Vec::new(),
+            evidence_ids: Vec::new(),
+            source_scans: Vec::new(),
+            created_by: "deterministic-rule-engine".into(),
+            confidence: if finding.conflicting_evidence { 70 } else { 95 },
+            reasoning_safe: reasoning.into(),
+            schema_version: 1,
+        });
+    entry
+        .finding_ids
+        .extend(finding.finding_id.split('|').map(str::to_string));
+    entry.evidence_ids.extend(finding.evidence_ids.clone());
+    entry.source_scans.extend(finding.source_scans.clone());
+    entry.finding_ids.sort();
+    entry.finding_ids.dedup();
+    entry.evidence_ids.sort();
+    entry.evidence_ids.dedup();
+    entry.source_scans.sort();
+    entry.source_scans.dedup();
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -724,6 +1089,8 @@ fn build_keyed_clusters<K: Fn(&CorrelationFinding) -> Option<String>>(
                 from_entity: from,
                 to_entity: to,
                 rule_id: rule.into(),
+                rule_version: 1,
+                finding_ids: member_findings.clone(),
                 evidence_ids: evidence.clone(),
                 source_scans: scans.clone(),
                 created_by: "deterministic-rule-engine".into(),
@@ -809,7 +1176,41 @@ fn suggest_case(
         .collect::<BTreeSet<_>>()
         .into_iter()
         .collect();
-    Ok(InvestigationCase{case_id,title_safe:"Suggested cross-target investigation".into(),status:CaseStatus::Suggested,suggested:true,finding_ids:cluster.member_findings.clone(),cluster_ids:vec![cluster.cluster_id.clone()],entity_ids:entities,evidence_ids:evidence,blast_radius:blast,assessment,timeline:vec![TimelineEvent{sequence:1,timestamp:cluster.last_seen.clone(),event_type:"case_suggested".into(),summary_safe:"A strong deterministic cross-target correlation suggested review; no incident is claimed.".into(),source:"correlation-rule-engine".into()}],transitions:Vec::new()})
+    let mut timeline = vec![TimelineEvent {
+        sequence: 1,
+        timestamp: cluster.first_seen.clone(),
+        event_type: "case_suggested".into(),
+        summary_safe: "A strong deterministic cross-target correlation suggested review; no incident is claimed.".into(),
+        source: "correlation-rule-engine".into(),
+    }];
+    if members
+        .iter()
+        .any(|finding| finding.reopened || finding.occurrence_count > 1)
+    {
+        timeline.push(TimelineEvent {
+            sequence: 2,
+            timestamp: cluster.last_seen.clone(),
+            event_type: "finding_reopened".into(),
+            summary_safe:
+                "A previously observed finding recurred; this does not prove a security incident."
+                    .into(),
+            source: "correlation-rule-engine".into(),
+        });
+    }
+    Ok(InvestigationCase {
+        case_id,
+        title_safe: "Suggested cross-target investigation".into(),
+        status: CaseStatus::Suggested,
+        suggested: true,
+        finding_ids: cluster.member_findings.clone(),
+        cluster_ids: vec![cluster.cluster_id.clone()],
+        entity_ids: entities,
+        evidence_ids: evidence,
+        blast_radius: blast,
+        assessment,
+        timeline,
+        transitions: Vec::new(),
+    })
 }
 
 fn assess_case(findings: &[&CorrelationFinding], blast: &BlastRadius) -> DecisionAssessment {
@@ -999,13 +1400,25 @@ fn forbidden_material(value: &str) -> bool {
 fn safe_text(value: &str, max: usize) -> Result<String, InvestigationError> {
     if value.is_empty()
         || value.len() > max
-        || value.chars().any(char::is_control)
+        || value.chars().any(unsafe_text_character)
         || forbidden_material(value)
     {
         Err(InvestigationError::UnsafeText)
     } else {
         Ok(value.into())
     }
+}
+
+fn unsafe_text_character(value: char) -> bool {
+    value.is_control()
+        || matches!(
+            value,
+            '\u{061c}'
+                | '\u{200e}'
+                | '\u{200f}'
+                | '\u{202a}'..='\u{202e}'
+                | '\u{2066}'..='\u{2069}'
+        )
 }
 
 #[cfg(test)]
@@ -1130,10 +1543,84 @@ mod tests {
                 .iter()
                 .any(|c| c.assessment.priority == CasePriority::Immediate)
         );
+        for relationship in [
+            RelationshipType::TargetContainsComponent,
+            RelationshipType::FindingAffectsEntity,
+            RelationshipType::PackageHasVulnerability,
+            RelationshipType::ApplicationHasVulnerability,
+            RelationshipType::FileHasHash,
+            RelationshipType::FileAssociatedWithApplication,
+            RelationshipType::UrlBelongsToOrigin,
+            RelationshipType::OriginBelongsToDomain,
+            RelationshipType::FindingSupportedByEvidence,
+        ] {
+            assert!(
+                result
+                    .edges
+                    .iter()
+                    .any(|edge| edge.relationship == relationship),
+                "missing {relationship:?}"
+            );
+        }
+        let node_ids = result
+            .nodes
+            .iter()
+            .map(|node| node.entity_id.as_str())
+            .collect::<BTreeSet<_>>();
+        assert!(
+            result
+                .edges
+                .iter()
+                .all(|edge| node_ids.contains(edge.from_entity.as_str())
+                    && node_ids.contains(edge.to_entity.as_str()))
+        );
         assert_eq!(
             result,
             correlate_investigation(input, GraphLimits::default(), || false).unwrap()
         );
+    }
+
+    #[test]
+    fn correlation_refuses_identity_and_origin_poisoning() {
+        let mut repository = f(
+            "repo",
+            "repo-target",
+            TargetType::Repository,
+            Some("CVE-2099-1001"),
+            None,
+            Some("pkg:npm/expected@1.0.0"),
+            None,
+        );
+        repository.affected_identity =
+            StrongIdentity::new(IdentifierKind::Purl, "pkg:npm/forged@1.0.0").unwrap();
+        assert!(matches!(
+            correlate_investigation(vec![repository], GraphLimits::default(), || false),
+            Err(InvestigationError::InvalidFinding)
+        ));
+
+        let mut web = f(
+            "web",
+            "web-target",
+            TargetType::WebUrl,
+            None,
+            None,
+            None,
+            Some("https://example.synthetic"),
+        );
+        web.web_origin = Some("https://attacker.synthetic".into());
+        web.web_domain = Some("synthetic".into());
+        assert!(matches!(
+            correlate_investigation(vec![web], GraphLimits::default(), || false),
+            Err(InvestigationError::InvalidFinding)
+        ));
+        assert!(
+            StrongIdentity::new(
+                IdentifierKind::CanonicalUrl,
+                "https://example.synthetic/path?token=secret"
+            )
+            .is_err()
+        );
+        assert!(StrongIdentity::new(IdentifierKind::StableTarget, "safe\u{202e}exe.txt").is_err());
     }
     #[test]
     fn similar_names_domains_severity_and_different_hash_do_not_merge() {
@@ -1276,6 +1763,72 @@ mod tests {
         .unwrap();
         assert_eq!(c.timeline.last().unwrap().event_type, "finding_reopened");
         assert_eq!(c.transitions.len(), 4);
+        assert!(matches!(
+            c.transition(
+                CaseStatus::Investigating,
+                "2099-01-01T00:00:00Z",
+                "user",
+                "Backdated transition",
+            ),
+            Err(InvestigationError::InvalidTransition)
+        ));
+        assert!(matches!(
+            c.transition(
+                CaseStatus::Investigating,
+                "not-a-timestamp",
+                "user",
+                "Invalid timestamp",
+            ),
+            Err(InvestigationError::InvalidTransition)
+        ));
+    }
+
+    #[test]
+    fn temporal_replay_preserves_findings_and_materializes_recurrence() {
+        let mut repository = f(
+            "a",
+            "a",
+            TargetType::Repository,
+            Some("CVE-2099-1001"),
+            None,
+            Some("pkg:npm/a@1.0.0"),
+            None,
+        );
+        let application = f(
+            "b",
+            "b",
+            TargetType::InstalledApplication,
+            Some("CVE-2099-1001"),
+            None,
+            None,
+            None,
+        );
+        let first = correlate_investigation(
+            vec![repository.clone(), application.clone()],
+            GraphLimits::default(),
+            || false,
+        )
+        .unwrap();
+        repository.last_seen = "2099-01-03T00:00:00Z".into();
+        repository.occurrence_count = 2;
+        repository.reopened = true;
+        let second = correlate_investigation(
+            vec![repository, application],
+            GraphLimits::default(),
+            || false,
+        )
+        .unwrap();
+        assert_eq!(first.findings_preserved, second.findings_preserved);
+        assert_eq!(second.findings_preserved, 2);
+        assert_eq!(second.suggested_cases[0].timeline.len(), 2);
+        assert_eq!(
+            second.suggested_cases[0].timeline[1].event_type,
+            "finding_reopened"
+        );
+        assert_eq!(
+            second.suggested_cases[0].timeline[1].timestamp,
+            "2099-01-03T00:00:00Z"
+        );
     }
     #[test]
     fn graph_rejects_secret_material_and_hostile_labels() {

@@ -4,18 +4,42 @@ use serde::Serialize;
 
 pub const LEVEL5_REPORT_SCHEMA: &str = "LEVEL5_INVESTIGATION_REPORT_V1";
 
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum InvestigationAudience {
+    Executive,
+    Technical,
+    Analyst,
+}
+
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct InvestigationReport {
     pub schema: &'static str,
+    pub audience: InvestigationAudience,
     pub case: InvestigationCase,
+    pub audience_focus: String,
     pub conclusion: String,
     pub limitations: Vec<String>,
 }
 
 impl InvestigationReport {
     pub fn capture(case: &InvestigationCase) -> Self {
-        Self{schema:LEVEL5_REPORT_SCHEMA,case:case.clone(),conclusion:"Correlated evidence requires analyst review; this case does not establish causation, compromise, breach, or a complete attack chain.".into(),limitations:vec!["Correlation does not prove causation.".into(),"A shared CVE does not mean the same asset or compromise.".into(),"A suggested case does not prove an incident occurred.".into(),"Blast radius is observed only across associated analyzed targets.".into(),"Unavailable providers reduce case coverage and confidence.".into(),"Priority is distinct from severity; confidence is distinct from risk.".into()]}
+        Self::capture_for(case, InvestigationAudience::Analyst)
+    }
+    pub fn capture_for(case: &InvestigationCase, audience: InvestigationAudience) -> Self {
+        let audience_focus = match audience {
+            InvestigationAudience::Executive => {
+                "Decision context: observed scope, priority, confidence, coverage and limitations."
+            }
+            InvestigationAudience::Technical => {
+                "Technical context: deterministic relationships, supporting evidence, affected entities and rule outcomes."
+            }
+            InvestigationAudience::Analyst => {
+                "Analyst context: case workflow, finding membership, evidence references and chronological audit trail."
+            }
+        };
+        Self{schema:LEVEL5_REPORT_SCHEMA,audience,case:case.clone(),audience_focus:audience_focus.into(),conclusion:"Correlated evidence requires analyst review; this case does not establish causation, compromise, breach, or a complete attack chain.".into(),limitations:vec!["Correlation does not prove causation.".into(),"A shared CVE does not mean the same asset or compromise.".into(),"A suggested case does not prove an incident occurred.".into(),"Blast radius is observed only across associated analyzed targets.".into(),"Unavailable providers reduce case coverage and confidence.".into(),"Priority is distinct from severity; confidence is distinct from risk.".into()]}
     }
     pub fn json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string_pretty(self)
@@ -42,8 +66,9 @@ impl InvestigationReport {
             })
             .collect::<String>();
         format!(
-            "<!doctype html><html><head><meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'\"><title>EDY VERDICT investigation</title></head><body><main><h1>{}</h1><p>{}</p><dl><dt>Status</dt><dd>{:?}</dd><dt>Priority</dt><dd>{:?}</dd><dt>Risk</dt><dd>{}</dd><dt>Confidence</dt><dd>{}</dd><dt>Coverage</dt><dd>{}</dd><dt>Observed targets</dt><dd>{}</dd></dl><h2>Priority reasons</h2><ul>{}</ul><h2>Timeline</h2><table><tbody>{}</tbody></table><h2>Limitations</h2><ul>{}</ul></main></body></html>",
+            "<!doctype html><html><head><meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'\"><title>EDY VERDICT investigation</title></head><body><main><h1>{}</h1><p>{}</p><p>{}</p><dl><dt>Status</dt><dd>{:?}</dd><dt>Priority</dt><dd>{:?}</dd><dt>Risk</dt><dd>{}</dd><dt>Confidence</dt><dd>{}</dd><dt>Coverage</dt><dd>{}</dd><dt>Observed targets</dt><dd>{}</dd></dl><h2>Priority reasons</h2><ul>{}</ul><h2>Timeline</h2><table><tbody>{}</tbody></table><h2>Limitations</h2><ul>{}</ul></main></body></html>",
             escape(&self.case.title_safe),
+            escape(&self.audience_focus),
             escape(&self.conclusion),
             self.case.status,
             self.case.assessment.priority,

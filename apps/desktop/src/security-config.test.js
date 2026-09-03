@@ -16,6 +16,10 @@ const commands = [
   "get_url_scan_analysis", "get_url_redirect_chain", "get_url_security_headers",
   "get_url_cookie_observations", "get_url_reputation_status", "create_synthetic_scan", "get_scan", "list_scans",
   "get_scan_progress", "cancel_scan", "list_findings", "get_finding", "generate_report",
+  "run_level5_correlation", "cancel_level5_correlation", "list_investigation_clusters", "get_investigation_cluster",
+  "list_investigation_cases", "get_investigation_case", "create_investigation_case",
+  "update_investigation_case", "get_investigation_graph", "get_investigation_timeline",
+  "generate_investigation_report",
 ];
 
 describe("Tauri security configuration", () => {
@@ -87,6 +91,9 @@ describe("dependency-free Isolation hook", () => {
     expect(hook({cmd:"get_installed_application",payload:{request:{scan_id:"018f4c2a-1d3b-7abc-8def-0123456789ab",application_id:`appv1-${"a".repeat(32)}`}},callback:11,error:12}).cmd).toBe("get_installed_application");
     expect(hook({cmd:"preview_url_target",payload:{request:{url:"https://target.example/?token=secret",query_policy:"strip"}},callback:13,error:14}).cmd).toBe("preview_url_target");
     expect(hook({cmd:"authorize_url_target",payload:{request:{preview_id:"018f4c2a-1d3b-7abc-8def-0123456789ab",confirmed:true}},callback:15,error:16}).cmd).toBe("authorize_url_target");
+    expect(hook({cmd:"run_level5_correlation",payload:{},callback:17,error:18}).cmd).toBe("run_level5_correlation");
+    expect(hook({cmd:"cancel_level5_correlation",payload:{},callback:17,error:18}).cmd).toBe("cancel_level5_correlation");
+    expect(hook({cmd:"list_investigation_cases",payload:{request:{run_id:"018f4c2a-1d3b-7abc-8def-0123456789ab",offset:0,limit:100}},callback:19,error:20}).cmd).toBe("list_investigation_cases");
   });
 
   it.each([
@@ -105,6 +112,8 @@ describe("dependency-free Isolation hook", () => {
     { cmd: "preview_installed_applications", payload: { request: { include_system_components: "yes" } }, callback: 1, error: 2 },
     { cmd: "create_installed_application_scan", payload: { request: { authorization_id: "018f4c2a-1d3b-7abc-8def-0123456789ab", confirmed: false } }, callback: 1, error: 2 },
     { cmd: "get_installed_application", payload: { request: { scan_id: "018f4c2a-1d3b-7abc-8def-0123456789ab", application_id: "../../etc" } }, callback: 1, error: 2 },
+    { cmd: "list_investigation_cases", payload: { request: { run_id: "../../etc", offset: 0, limit: 100 } }, callback: 1, error: 2 },
+    { cmd: "create_investigation_case", payload: { request: { run_id: "018f4c2a-1d3b-7abc-8def-0123456789ab", item_id: "cluster-v1-unsafe" } }, callback: 1, error: 2 },
   ])("rejects malformed or forbidden IPC %# before encryption", (message) => {
     expect(() => isolationHook()(message)).toThrow("IPC denied");
   });

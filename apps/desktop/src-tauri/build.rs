@@ -35,6 +35,17 @@ fn main() {
             "list_findings",
             "get_finding",
             "generate_report",
+            "run_level5_correlation",
+            "cancel_level5_correlation",
+            "list_investigation_clusters",
+            "get_investigation_cluster",
+            "list_investigation_cases",
+            "get_investigation_case",
+            "create_investigation_case",
+            "update_investigation_case",
+            "get_investigation_graph",
+            "get_investigation_timeline",
+            "generate_investigation_report",
         ]),
     ))
     .expect("Foundation Tauri configuration must be valid");
