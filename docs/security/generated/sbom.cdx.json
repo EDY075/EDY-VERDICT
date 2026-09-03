@@ -3,7 +3,7 @@
   "specVersion": "1.6",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-09-02T22:08:02.785Z",
+    "timestamp": "2026-09-03T00:02:54.989Z",
     "component": {
       "type": "application",
       "name": "EDY VERDICT Foundation",
@@ -198,6 +198,42 @@
         {
           "alg": "SHA-256",
           "content": "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "aws-lc-rs",
+      "version": "1.18.1",
+      "bom-ref": "pkg:cargo/aws-lc-rs@1.18.1",
+      "purl": "pkg:cargo/aws-lc-rs@1.18.1",
+      "licenses": [
+        {
+          "expression": "ISC AND (Apache-2.0 OR ISC)"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b281d307588d634de920874890732659e2e7672f72b5e10e81badc1a8a83621e"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "aws-lc-sys",
+      "version": "0.45.0",
+      "bom-ref": "pkg:cargo/aws-lc-sys@0.45.0",
+      "purl": "pkg:cargo/aws-lc-sys@0.45.0",
+      "licenses": [
+        {
+          "expression": "ISC AND (Apache-2.0 OR ISC) AND Apache-2.0 AND MIT AND BSD-3-Clause AND (Apache-2.0 OR ISC OR MIT) AND (Apache-2.0 OR ISC OR MIT-0)"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9bff6c3b54fad79a2e60b8102caf565819711497c1f5f092f49508e2f5c31b27"
         }
       ]
     },
@@ -509,6 +545,24 @@
     },
     {
       "type": "library",
+      "name": "cfg_aliases",
+      "version": "0.2.2",
+      "bom-ref": "pkg:cargo/cfg_aliases@0.2.2",
+      "purl": "pkg:cargo/cfg_aliases@0.2.2",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f079e83a288787bcd14a6aea84cee5c87a67c5a3e660c30f557a3d24761b3527"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "name": "cfg-if",
       "version": "1.0.4",
       "bom-ref": "pkg:cargo/cfg-if@1.0.4",
@@ -522,6 +576,24 @@
         {
           "alg": "SHA-256",
           "content": "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "chacha20",
+      "version": "0.10.2",
+      "bom-ref": "pkg:cargo/chacha20@0.10.2",
+      "purl": "pkg:cargo/chacha20@0.10.2",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "65c35e4b699c7e15ccbe7ee35c005e4fc0a278d22238a2857e6ce2dadeda1b06"
         }
       ]
     },
@@ -563,6 +635,24 @@
     },
     {
       "type": "library",
+      "name": "cmake",
+      "version": "0.1.58",
+      "bom-ref": "pkg:cargo/cmake@0.1.58",
+      "purl": "pkg:cargo/cmake@0.1.58",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c0f78a02292a74a88ac736019ab962ece0bc380e3f977bf72e376c5d78ff0678"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "name": "cookie",
       "version": "0.18.2",
       "bom-ref": "pkg:cargo/cookie@0.18.2",
@@ -594,6 +684,24 @@
         {
           "alg": "SHA-256",
           "content": "59ed5838eebb26a2bb2e58f6d5b5316989ae9d08bab10e0e6d103e656d1b0280"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "cpufeatures",
+      "version": "0.3.1",
+      "bom-ref": "pkg:cargo/cpufeatures@0.3.1",
+      "purl": "pkg:cargo/cpufeatures@0.3.1",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5ca28b0ae3115b884660db4118d803791fd6756b6e88f39c0f3f7859060d7566"
         }
       ]
     },
@@ -1355,6 +1463,24 @@
     },
     {
       "type": "library",
+      "name": "fs_extra",
+      "version": "1.3.0",
+      "bom-ref": "pkg:cargo/fs_extra@1.3.0",
+      "purl": "pkg:cargo/fs_extra@1.3.0",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "42703706b716c37f96a77aea830392ad231f44c9e9a67872fa5548707e11b11c"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "name": "futures-channel",
       "version": "0.3.34",
       "bom-ref": "pkg:cargo/futures-channel@0.3.34",
@@ -1769,19 +1895,19 @@
     },
     {
       "type": "library",
-      "name": "hyper-tls",
-      "version": "0.6.0",
-      "bom-ref": "pkg:cargo/hyper-tls@0.6.0",
-      "purl": "pkg:cargo/hyper-tls@0.6.0",
+      "name": "hyper-rustls",
+      "version": "0.27.9",
+      "bom-ref": "pkg:cargo/hyper-rustls@0.27.9",
+      "purl": "pkg:cargo/hyper-rustls@0.27.9",
       "licenses": [
         {
-          "expression": "MIT OR Apache-2.0"
+          "expression": "Apache-2.0 OR ISC OR MIT"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "70206fc6890eaca9fde8a0bf71caa2ddfc9fe045ac9e5c70df101a7dbde866e0"
+          "content": "33ca68d021ef39cf6463ab54c1d0f5daf03377b70561305bb89a8f83aab66e0f"
         }
       ]
     },
@@ -2201,6 +2327,24 @@
     },
     {
       "type": "library",
+      "name": "jobserver",
+      "version": "0.1.35",
+      "bom-ref": "pkg:cargo/jobserver@0.1.35",
+      "purl": "pkg:cargo/jobserver@0.1.35",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1c00acbd29eabad4a2392fa0e921c874934dbbf4194312ad20f04a0ed67a3cb3"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "name": "json-patch",
       "version": "3.0.1",
       "bom-ref": "pkg:cargo/json-patch@3.0.1",
@@ -2345,6 +2489,24 @@
     },
     {
       "type": "library",
+      "name": "lru-slab",
+      "version": "0.1.2",
+      "bom-ref": "pkg:cargo/lru-slab@0.1.2",
+      "purl": "pkg:cargo/lru-slab@0.1.2",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0 OR Zlib"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "name": "markup5ever",
       "version": "0.38.0",
       "bom-ref": "pkg:cargo/markup5ever@0.38.0",
@@ -2466,24 +2628,6 @@
         {
           "alg": "SHA-256",
           "content": "1dd04e60bc0b07438a6771710ee1698f98f6ebbc7f89b61264af1563b8aeb878"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "native-tls",
-      "version": "0.2.18",
-      "bom-ref": "pkg:cargo/native-tls@0.2.18",
-      "purl": "pkg:cargo/native-tls@0.2.18",
-      "licenses": [
-        {
-          "expression": "MIT OR Apache-2.0"
-        }
-      ],
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "465500e14ea162429d264d44189adc38b199b62b1c21eea9f69e4b73cb03bbf2"
         }
       ]
     },
@@ -2921,6 +3065,60 @@
     },
     {
       "type": "library",
+      "name": "quinn-proto",
+      "version": "0.11.17",
+      "bom-ref": "pkg:cargo/quinn-proto@0.11.17",
+      "purl": "pkg:cargo/quinn-proto@0.11.17",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "04759210543be93709136e28212294a659ef5001836ff4eab4d663e4529bba83"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "quinn-udp",
+      "version": "0.5.15",
+      "bom-ref": "pkg:cargo/quinn-udp@0.5.15",
+      "purl": "pkg:cargo/quinn-udp@0.5.15",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "35a133f956daabe89a61a685c2649f13d82d5aa4bd5d12d1277e1072a21c0694"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "quinn",
+      "version": "0.11.11",
+      "bom-ref": "pkg:cargo/quinn@0.11.11",
+      "purl": "pkg:cargo/quinn@0.11.11",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0c1a41e437b6bbd489372cd4971de128e85c855f56c57f283d20ff016cf7c0a8"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "name": "quote",
       "version": "1.0.47",
       "bom-ref": "pkg:cargo/quote@1.0.47",
@@ -2940,6 +3138,24 @@
     {
       "type": "library",
       "name": "rand_core",
+      "version": "0.10.1",
+      "bom-ref": "pkg:cargo/rand_core@0.10.1",
+      "purl": "pkg:cargo/rand_core@0.10.1",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "rand_core",
       "version": "0.6.4",
       "bom-ref": "pkg:cargo/rand_core@0.6.4",
       "purl": "pkg:cargo/rand_core@0.6.4",
@@ -2952,6 +3168,42 @@
         {
           "alg": "SHA-256",
           "content": "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "rand_pcg",
+      "version": "0.10.2",
+      "bom-ref": "pkg:cargo/rand_pcg@0.10.2",
+      "purl": "pkg:cargo/rand_pcg@0.10.2",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "caa0f4137e1c0a72f4c651489402276c8e8e1cf081f3b0ba156d2cbeef09e86a"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "rand",
+      "version": "0.10.2",
+      "bom-ref": "pkg:cargo/rand@0.10.2",
+      "purl": "pkg:cargo/rand@0.10.2",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c7f5fa3a058cd35567ef9bfa5e75732bee0f9e4c55fa90477bef2dfcdbc4be80"
         }
       ]
     },
@@ -3083,6 +3335,24 @@
     },
     {
       "type": "library",
+      "name": "ring",
+      "version": "0.17.14",
+      "bom-ref": "pkg:cargo/ring@0.17.14",
+      "purl": "pkg:cargo/ring@0.17.14",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 AND ISC"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a4689e6c2294d81e88dc6261c768b63bc4fcdb852be6d1352498b114f61383b7"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "name": "rusqlite",
       "version": "0.40.2",
       "bom-ref": "pkg:cargo/rusqlite@0.40.2",
@@ -3155,6 +3425,60 @@
     },
     {
       "type": "library",
+      "name": "rustls-platform-verifier",
+      "version": "0.7.0",
+      "bom-ref": "pkg:cargo/rustls-platform-verifier@0.7.0",
+      "purl": "pkg:cargo/rustls-platform-verifier@0.7.0",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "26d1e2536ce4f35f4846aa13bff16bd0ff40157cdb14cc056c7b14ba41233ba0"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "rustls-webpki",
+      "version": "0.103.15",
+      "bom-ref": "pkg:cargo/rustls-webpki@0.103.15",
+      "purl": "pkg:cargo/rustls-webpki@0.103.15",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f3c3cf1d8b1e7d4927e2d154c3fcb02979afb9939629c62cd9048d4f07b60ac2"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "rustls",
+      "version": "0.23.43",
+      "bom-ref": "pkg:cargo/rustls@0.23.43",
+      "purl": "pkg:cargo/rustls@0.23.43",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 OR ISC OR MIT"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0283386ce02abc0151e1761d08802dfe86c173b0b494af5cbc086574e453da06"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "name": "same-file",
       "version": "1.0.6",
       "bom-ref": "pkg:cargo/same-file@1.0.6",
@@ -3168,24 +3492,6 @@
         {
           "alg": "SHA-256",
           "content": "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "schannel",
-      "version": "0.1.29",
-      "bom-ref": "pkg:cargo/schannel@0.1.29",
-      "purl": "pkg:cargo/schannel@0.1.29",
-      "licenses": [
-        {
-          "expression": "MIT"
-        }
-      ],
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "91c1b7e4904c873ef0710c1f407dde2e6287de2bebc1bbbf7d430bb7cbffd939"
         }
       ]
     },
@@ -4217,19 +4523,19 @@
     },
     {
       "type": "library",
-      "name": "tokio-native-tls",
-      "version": "0.3.1",
-      "bom-ref": "pkg:cargo/tokio-native-tls@0.3.1",
-      "purl": "pkg:cargo/tokio-native-tls@0.3.1",
+      "name": "tokio-rustls",
+      "version": "0.26.4",
+      "bom-ref": "pkg:cargo/tokio-rustls@0.26.4",
+      "purl": "pkg:cargo/tokio-rustls@0.26.4",
       "licenses": [
         {
-          "expression": "MIT"
+          "expression": "MIT OR Apache-2.0"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "bbae76ab933c85776efabc971569dd6119c580d8f5d448769dec1764bf796ef2"
+          "content": "1729aa945f29d91ba541258c8df89027d5792d85a8841fb65e8bf0f4ede4ef61"
         }
       ]
     },
@@ -4698,6 +5004,24 @@
         {
           "alg": "SHA-256",
           "content": "fc1de2c688dc15305988b563c3854064043356019f97a4b46276fe734c4f07ea"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "untrusted",
+      "version": "0.9.0",
+      "bom-ref": "pkg:cargo/untrusted@0.9.0",
+      "purl": "pkg:cargo/untrusted@0.9.0",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
         }
       ]
     },
@@ -9838,6 +10162,22 @@
       "dependsOn": []
     },
     {
+      "ref": "pkg:cargo/aws-lc-rs@1.18.1",
+      "dependsOn": [
+        "pkg:cargo/aws-lc-sys@0.45.0",
+        "pkg:cargo/zeroize@1.8.2"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/aws-lc-sys@0.45.0",
+      "dependsOn": [
+        "pkg:cargo/cc@1.4.4",
+        "pkg:cargo/cmake@0.1.58",
+        "pkg:cargo/dunce@1.0.5",
+        "pkg:cargo/fs_extra@1.3.0"
+      ]
+    },
+    {
       "ref": "pkg:cargo/base64@0.22.1",
       "dependsOn": []
     },
@@ -9932,6 +10272,7 @@
       "ref": "pkg:cargo/cc@1.4.4",
       "dependsOn": [
         "pkg:cargo/find-msvc-tools@0.1.11",
+        "pkg:cargo/jobserver@0.1.35",
         "pkg:cargo/shlex@2.0.1"
       ]
     },
@@ -9946,6 +10287,18 @@
     {
       "ref": "pkg:cargo/cfg-if@1.0.4",
       "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/cfg_aliases@0.2.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/chacha20@0.10.2",
+      "dependsOn": [
+        "pkg:cargo/cfg-if@1.0.4",
+        "pkg:cargo/cpufeatures@0.3.1",
+        "pkg:cargo/rand_core@0.10.1"
+      ]
     },
     {
       "ref": "pkg:cargo/chrono@0.4.45",
@@ -9963,6 +10316,12 @@
       ]
     },
     {
+      "ref": "pkg:cargo/cmake@0.1.58",
+      "dependsOn": [
+        "pkg:cargo/cc@1.4.4"
+      ]
+    },
+    {
       "ref": "pkg:cargo/cookie@0.18.2",
       "dependsOn": [
         "pkg:cargo/time@0.3.55",
@@ -9971,6 +10330,10 @@
     },
     {
       "ref": "pkg:cargo/cpufeatures@0.2.17",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/cpufeatures@0.3.1",
       "dependsOn": []
     },
     {
@@ -10239,6 +10602,10 @@
       ]
     },
     {
+      "ref": "pkg:cargo/fs_extra@1.3.0",
+      "dependsOn": []
+    },
+    {
       "ref": "pkg:cargo/futures-channel@0.3.34",
       "dependsOn": [
         "pkg:cargo/futures-core@0.3.34",
@@ -10304,7 +10671,8 @@
     {
       "ref": "pkg:cargo/getrandom@0.4.3",
       "dependsOn": [
-        "pkg:cargo/cfg-if@1.0.4"
+        "pkg:cargo/cfg-if@1.0.4",
+        "pkg:cargo/rand_core@0.10.1"
       ]
     },
     {
@@ -10395,15 +10763,14 @@
       ]
     },
     {
-      "ref": "pkg:cargo/hyper-tls@0.6.0",
+      "ref": "pkg:cargo/hyper-rustls@0.27.9",
       "dependsOn": [
-        "pkg:cargo/bytes@1.12.1",
-        "pkg:cargo/http-body-util@0.1.5",
+        "pkg:cargo/http@1.5.0",
         "pkg:cargo/hyper@1.11.1",
         "pkg:cargo/hyper-util@0.1.20",
-        "pkg:cargo/native-tls@0.2.18",
+        "pkg:cargo/rustls@0.23.43",
         "pkg:cargo/tokio@1.53.1",
-        "pkg:cargo/tokio-native-tls@0.3.1",
+        "pkg:cargo/tokio-rustls@0.26.4",
         "pkg:cargo/tower-service@0.3.3"
       ]
     },
@@ -10581,6 +10948,12 @@
       ]
     },
     {
+      "ref": "pkg:cargo/jobserver@0.1.35",
+      "dependsOn": [
+        "pkg:cargo/getrandom@0.4.3"
+      ]
+    },
+    {
       "ref": "pkg:cargo/json-patch@3.0.1",
       "dependsOn": [
         "pkg:cargo/jsonptr@0.6.3",
@@ -10631,6 +11004,10 @@
       "dependsOn": []
     },
     {
+      "ref": "pkg:cargo/lru-slab@0.1.2",
+      "dependsOn": []
+    },
+    {
       "ref": "pkg:cargo/markup5ever@0.38.0",
       "dependsOn": [
         "pkg:cargo/log@0.4.34",
@@ -10676,12 +11053,6 @@
         "pkg:cargo/serde@1.0.229",
         "pkg:cargo/thiserror@2.0.20",
         "pkg:cargo/windows-sys@0.61.2"
-      ]
-    },
-    {
-      "ref": "pkg:cargo/native-tls@0.2.18",
-      "dependsOn": [
-        "pkg:cargo/schannel@0.1.29"
       ]
     },
     {
@@ -10831,15 +11202,76 @@
       ]
     },
     {
+      "ref": "pkg:cargo/quinn@0.11.11",
+      "dependsOn": [
+        "pkg:cargo/bytes@1.12.1",
+        "pkg:cargo/cfg_aliases@0.2.2",
+        "pkg:cargo/pin-project-lite@0.2.17",
+        "pkg:cargo/quinn-proto@0.11.17",
+        "pkg:cargo/quinn-udp@0.5.15",
+        "pkg:cargo/rustc-hash@2.1.3",
+        "pkg:cargo/rustls@0.23.43",
+        "pkg:cargo/socket2@0.6.5",
+        "pkg:cargo/thiserror@2.0.20",
+        "pkg:cargo/tokio@1.53.1",
+        "pkg:cargo/tracing@0.1.44"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/quinn-proto@0.11.17",
+      "dependsOn": [
+        "pkg:cargo/aws-lc-rs@1.18.1",
+        "pkg:cargo/bytes@1.12.1",
+        "pkg:cargo/lru-slab@0.1.2",
+        "pkg:cargo/rand@0.10.2",
+        "pkg:cargo/rand_pcg@0.10.2",
+        "pkg:cargo/rustc-hash@2.1.3",
+        "pkg:cargo/rustls@0.23.43",
+        "pkg:cargo/slab@0.4.12",
+        "pkg:cargo/thiserror@2.0.20",
+        "pkg:cargo/tinyvec@1.12.0",
+        "pkg:cargo/tracing@0.1.44"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/quinn-udp@0.5.15",
+      "dependsOn": [
+        "pkg:cargo/cfg_aliases@0.2.2",
+        "pkg:cargo/libc@0.2.189",
+        "pkg:cargo/once_cell@1.21.4",
+        "pkg:cargo/socket2@0.6.5",
+        "pkg:cargo/tracing@0.1.44",
+        "pkg:cargo/windows-sys@0.59.0"
+      ]
+    },
+    {
       "ref": "pkg:cargo/quote@1.0.47",
       "dependsOn": [
         "pkg:cargo/proc-macro2@1.0.107"
       ]
     },
     {
+      "ref": "pkg:cargo/rand@0.10.2",
+      "dependsOn": [
+        "pkg:cargo/chacha20@0.10.2",
+        "pkg:cargo/getrandom@0.4.3",
+        "pkg:cargo/rand_core@0.10.1"
+      ]
+    },
+    {
       "ref": "pkg:cargo/rand_core@0.6.4",
       "dependsOn": [
         "pkg:cargo/getrandom@0.2.17"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/rand_core@0.10.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/rand_pcg@0.10.2",
+      "dependsOn": [
+        "pkg:cargo/rand_core@0.10.1"
       ]
     },
     {
@@ -10893,23 +11325,34 @@
         "pkg:cargo/http-body@1.1.0",
         "pkg:cargo/http-body-util@0.1.5",
         "pkg:cargo/hyper@1.11.1",
-        "pkg:cargo/hyper-tls@0.6.0",
+        "pkg:cargo/hyper-rustls@0.27.9",
         "pkg:cargo/hyper-util@0.1.20",
         "pkg:cargo/log@0.4.34",
-        "pkg:cargo/native-tls@0.2.18",
         "pkg:cargo/percent-encoding@2.3.2",
         "pkg:cargo/pin-project-lite@0.2.17",
+        "pkg:cargo/quinn@0.11.11",
+        "pkg:cargo/rustls@0.23.43",
         "pkg:cargo/rustls-pki-types@1.15.1",
+        "pkg:cargo/rustls-platform-verifier@0.7.0",
         "pkg:cargo/serde@1.0.229",
         "pkg:cargo/serde_json@1.0.149",
         "pkg:cargo/sync_wrapper@1.0.2",
         "pkg:cargo/tokio@1.53.1",
-        "pkg:cargo/tokio-native-tls@0.3.1",
+        "pkg:cargo/tokio-rustls@0.26.4",
         "pkg:cargo/tokio-util@0.7.19",
         "pkg:cargo/tower@0.5.3",
         "pkg:cargo/tower-http@0.6.11",
         "pkg:cargo/tower-service@0.3.3",
         "pkg:cargo/url@2.5.8"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/ring@0.17.14",
+      "dependsOn": [
+        "pkg:cargo/cc@1.4.4",
+        "pkg:cargo/cfg-if@1.0.4",
+        "pkg:cargo/getrandom@0.2.17",
+        "pkg:cargo/untrusted@0.9.0"
       ]
     },
     {
@@ -10934,21 +11377,43 @@
       ]
     },
     {
+      "ref": "pkg:cargo/rustls@0.23.43",
+      "dependsOn": [
+        "pkg:cargo/aws-lc-rs@1.18.1",
+        "pkg:cargo/once_cell@1.21.4",
+        "pkg:cargo/rustls-pki-types@1.15.1",
+        "pkg:cargo/rustls-webpki@0.103.15",
+        "pkg:cargo/subtle@2.6.1",
+        "pkg:cargo/zeroize@1.8.2"
+      ]
+    },
+    {
       "ref": "pkg:cargo/rustls-pki-types@1.15.1",
       "dependsOn": [
         "pkg:cargo/zeroize@1.8.2"
       ]
     },
     {
-      "ref": "pkg:cargo/same-file@1.0.6",
+      "ref": "pkg:cargo/rustls-platform-verifier@0.7.0",
       "dependsOn": [
-        "pkg:cargo/winapi-util@0.1.11"
+        "pkg:cargo/log@0.4.34",
+        "pkg:cargo/rustls@0.23.43",
+        "pkg:cargo/windows-sys@0.59.0"
       ]
     },
     {
-      "ref": "pkg:cargo/schannel@0.1.29",
+      "ref": "pkg:cargo/rustls-webpki@0.103.15",
       "dependsOn": [
-        "pkg:cargo/windows-sys@0.61.2"
+        "pkg:cargo/aws-lc-rs@1.18.1",
+        "pkg:cargo/ring@0.17.14",
+        "pkg:cargo/rustls-pki-types@1.15.1",
+        "pkg:cargo/untrusted@0.9.0"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/same-file@1.0.6",
+      "dependsOn": [
+        "pkg:cargo/winapi-util@0.1.11"
       ]
     },
     {
@@ -11492,9 +11957,9 @@
       ]
     },
     {
-      "ref": "pkg:cargo/tokio-native-tls@0.3.1",
+      "ref": "pkg:cargo/tokio-rustls@0.26.4",
       "dependsOn": [
-        "pkg:cargo/native-tls@0.2.18",
+        "pkg:cargo/rustls@0.23.43",
         "pkg:cargo/tokio@1.53.1"
       ]
     },
@@ -11667,6 +12132,10 @@
         "pkg:cargo/crypto-common@0.1.7",
         "pkg:cargo/subtle@2.6.1"
       ]
+    },
+    {
+      "ref": "pkg:cargo/untrusted@0.9.0",
+      "dependsOn": []
     },
     {
       "ref": "pkg:cargo/url@2.5.8",

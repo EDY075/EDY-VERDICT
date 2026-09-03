@@ -12,6 +12,7 @@ mod lifecycle;
 mod orchestrator;
 mod remediation;
 mod validation;
+mod web;
 
 pub use correlation::*;
 pub use domain::*;
@@ -24,6 +25,7 @@ pub use lifecycle::*;
 pub use orchestrator::*;
 pub use remediation::*;
 pub use validation::{DomainError, ValidationErrorKind};
+pub use web::*;
 
 use serde::{Deserialize, Serialize};
 

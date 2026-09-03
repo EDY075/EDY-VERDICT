@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 pub mod file;
 pub mod installed_apps;
 pub mod repository;
+pub mod web;
 
 pub const REPORT_SCHEMA: &str = "REPORT_SCHEMA_V2";
 pub const REPORT_SNAPSHOT_SCHEMA: &str = "REPORT_SNAPSHOT_V1";

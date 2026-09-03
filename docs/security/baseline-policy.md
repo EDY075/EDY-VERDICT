@@ -39,6 +39,10 @@ those packages are Windows runtime dependencies. Reassess upstream, do not silen
 patch Tauri or add exceptions. R$0 mandatory monthly services; release signing and
 distribution costs are out of this gate and remain separate authorization.
 
+The SPDX allowlist includes the reviewed permissive `ISC` and `MIT-0` identifiers
+required by the rustls/AWS-LC graph. This is an explicit license-policy decision,
+not a crate skip, clarification override or advisory exception.
+
 Preliminary notices/SBOM inventory is not release license clearance: missing root
 license texts and platform/build-tool scope are listed in generated artifacts.
 MPL-2.0 components require notice/source review for any later distribution.

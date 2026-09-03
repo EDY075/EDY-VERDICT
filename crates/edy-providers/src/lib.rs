@@ -1,6 +1,7 @@
 #![deny(unsafe_code)]
 //! Provider adapters. Host inventory stays local; public-data clients accept no host inventory.
 pub mod installed_apps;
+pub mod web;
 use edy_core::{
     Availability, Coverage, FilePrivacyMode, FileReputationPort, FileReputationQuery,
     FileReputationResult, ProviderPort, ProviderStatus,
