@@ -1,0 +1,16 @@
+# Release-candidate checklist
+
+- [x] Version `1.0.0-rc.1` coherent in Cargo, frontend, Tauri, CLI and reports.
+- [x] Windows 10 Pro 22H2 x64 build 19045 documented as the minimum.
+- [x] Frontend and Rust quality gates pass through project-local tooling.
+- [x] Native Level 7 matrix passes at 1366x768, 1920x1080 and 2560x1440.
+- [x] SQLite schema 8 integrity and restart persistence pass.
+- [x] Secret scan, npm audit and Cargo audit pass; SBOM/notices regenerated.
+- [x] Unsigned local NSIS package built without execution or distribution.
+- [ ] Tauri upstream gate closed by a verified official release.
+- [ ] Root product license selected by the rights holder.
+- [ ] Product signing identity, timestamping and verification configured.
+- [ ] Clean-machine install, upgrade and uninstall acceptance after those gates close.
+- [ ] Explicit authorization for public publication, push or release.
+
+Until every unchecked item closes, artifacts are local evaluation evidence only.

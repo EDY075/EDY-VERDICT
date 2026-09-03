@@ -46,4 +46,3 @@ export function completeOnboarding(): void {
 export function resetOnboarding(): void {
   try { globalThis.localStorage?.removeItem(keys.onboarding); } catch { /* Non-blocking. */ }
 }
-

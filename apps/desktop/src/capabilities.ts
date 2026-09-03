@@ -20,4 +20,3 @@ export const CAPABILITIES: readonly Capability[] = Object.freeze([
   {target:"Remediation",capability:"Guidance, manual verification, rescan and persistence",state:"AVAILABLE",explanation:"User performs any target change outside EDY VERDICT."},
   {target:"Remediation",capability:"Automatic target mutation and rollback",state:"POLICY_BLOCKED",explanation:"Production write capability was removed; no hidden executor exists."},
 ]);
-
