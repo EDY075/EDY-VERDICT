@@ -122,7 +122,8 @@ if ($GlobalInventorySource -notmatch '(?im)&\s+\$Rustup\s+toolchain\s+list\b') {
 $ProvisionSource = Get-Content -LiteralPath (Join-Path $TestProjectRoot 'scripts\Provision-Toolchains.ps1') -Raw
 if ($ProvisionSource -notmatch 'ExplicitProjectLocalProvisioning' -or
     $ProvisionSource.IndexOf('Enter-Project.ps1',[StringComparison]::Ordinal) -gt
-    $ProvisionSource.IndexOf('Get-Command rustup.exe',[StringComparison]::Ordinal)) {
+    $ProvisionSource.IndexOf("-Action ProvisionPinnedToolchain",[StringComparison]::Ordinal) -or
+    $ProvisionSource -match 'Get-Command rustup.exe') {
     throw 'project-local provisioning is not explicitly gated before rustup resolution'
 }
 $TestPassed++

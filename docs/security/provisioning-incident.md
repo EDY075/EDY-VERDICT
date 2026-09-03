@@ -66,3 +66,43 @@ uses `scripts/Invoke-ProjectRust.ps1`, which accepts only a closed action list a
 project-local binaries by absolute path. Global inventory uses the separate
 `scripts/Invoke-GlobalRustInventory.ps1`, which refuses repository or nested-repository working
 directories and requires an explicit global-inventory flag with no inherited Rust homes.
+
+## Level 6 recurrence and explicitly authorized cleanup — 2026-09-03
+
+`INCIDENT ROOT CAUSE = DIRECT_UNWRAPPED_CARGO_DENY_EXECUTION`.
+The agent invoked the project-local auditor directly from the repository without the
+approved wrapper or explicit project Rust homes. Cargo metadata resolution could therefore
+reach the global Rustup shim and honor the repository pin. The command record and the
+extra toolchain creation time (00:46:04, America/Sao_Paulo) establish this operational cause;
+the failure was not deliberately reproduced after cleanup.
+
+The user explicitly authorized only the official removal of the global
+`1.98.0-x86_64-pc-windows-msvc`. It was uninstalled from the neutral `D:\EDY-Projects`
+working directory. No manual filesystem cleanup, update, default change, profile edit,
+registry write or cache removal was performed. Before removal, 34 pending Level 6 files
+were recorded with path/size/SHA-256 and were verified unchanged immediately afterwards.
+
+Before/after content manifests matched for 65,674 files in global `stable` and 17,151 files
+in the Cargo registry. Cargo git-cache absence and empty Rustup download cache were preserved.
+The global default remained `stable-x86_64-pc-windows-msvc`, default host remained
+`x86_64-pc-windows-msvc`, user/machine PATH digests matched, and settings SHA-256 remained
+`AF11A5540001371324994ABAA9EA1E69D50FED1ACB1A87E4ABEF179E8816058F`.
+Evidence is project-local under `.local/level6-closure/` and is not versioned.
+
+The execution path now includes a read-only static regression gate before wrapper actions.
+Architecture metadata and supply-chain generation use a closed-action Node-to-PowerShell
+bridge. Provisioning delegates Rust execution to the wrapper and remains separately gated;
+it was not run in this cleanup. The unwrapped desktop Tauri CLI shortcut was removed.
+The wrapper pins child RUSTC/RUSTDOC, local Rust homes, toolchain and process-only PATH;
+it does not modify the global shell or Rustup settings.
+
+The new tests contain only inert command strings and detect direct rustup, cargo,
+cargo-deny, rustc, rustfmt and clippy calls across PowerShell, batch/shell, package scripts,
+Node E2E/audit tooling and runnable documentation snippets. Exceptions name the two
+execution-owner wrappers and the detector/test files explicitly; there is no wildcard.
+This is a static review control, not a security boundary against obfuscated hostile code.
+Deliberate/manual calls outside these wrappers remain an operational responsibility.
+
+Historical incident semantics are retained: incident occurred, was remediated, root cause
+was identified, and prevention was improved. Completion of Level 6 still requires its
+independent functional and consolidated security acceptance gates.

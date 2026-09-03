@@ -13,7 +13,6 @@ $ProjectRoot = Split-Path -Parent $PSScriptRoot
     -WorkingDirectory $ProjectRoot `
     -CandidateRustupHome $env:RUSTUP_HOME `
     -CandidateCargoHome $env:CARGO_HOME | Out-Null
-$RustupExe = (Get-Command rustup.exe -ErrorAction Stop).Source
 $Toolchains = Join-Path $ProjectRoot '.local/toolchains'
 $Downloads = Join-Path $ProjectRoot '.local/downloads'
 New-Item -ItemType Directory -Path $Toolchains,$Downloads -Force | Out-Null
@@ -42,10 +41,9 @@ if (!(Test-Path -LiteralPath (Join-Path $PnpmDir 'package/bin/pnpm.cjs'))) {
 }
 & $NodeExe --version
 pnpm --version
-& $RustupExe toolchain install 1.98.0 --profile minimal --component rustfmt --component clippy --target x86_64-pc-windows-msvc --no-self-update
+& (Join-Path $PSScriptRoot 'Invoke-ProjectRust.ps1') -Action ProvisionPinnedToolchain -ExplicitProjectLocalProvisioning
 if ($LASTEXITCODE -ne 0) { throw 'Rust provisioning failed' }
-& $RustupExe run 1.98.0 rustc --version
-& $RustupExe run 1.98.0 cargo --version
-& $RustupExe show
+& (Join-Path $PSScriptRoot 'Invoke-ProjectRust.ps1') -Action RustcVersion
+& (Join-Path $PSScriptRoot 'Invoke-ProjectRust.ps1') -Action CargoVersion
 Write-Output ('Node SHA256 verified; Authenticode: '+$NodeSignature.Status+'; signer: '+$NodeSignature.SignerCertificate.Subject)
 Write-Output 'pnpm registry SHA512 verified. No lifecycle script executed.'

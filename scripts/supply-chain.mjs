@@ -2,18 +2,14 @@
 // No package execution, provider call or engine download.
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { projectRust } from './project-rust.mjs';
 import { createHash } from 'node:crypto';
 const root=process.cwd();
 const output=join(root,'docs/security/generated');mkdirSync(output,{recursive:true});
 const hash=(bytes,algorithm='sha256')=>createHash(algorithm).update(bytes).digest('hex');
 const portable=p=>relative(root,p).replaceAll('\\','/');
 const write=(name,data)=>writeFileSync(join(output,name),JSON.stringify(data,null,2)+'\n');
-const rustupHome=join(root,'.local','rustup'),cargoHome=join(root,'.local','cargo');
-const toolchainBin=join(rustupHome,'toolchains','1.98.0-x86_64-pc-windows-msvc','bin'),cargoExe=join(toolchainBin,'cargo.exe');
-if(!existsSync(cargoExe))throw Error('project-local Cargo toolchain required');
-const rustEnv={...process.env,RUSTUP_HOME:rustupHome,CARGO_HOME:cargoHome,RUSTC:join(toolchainBin,'rustc.exe'),RUSTDOC:join(toolchainBin,'rustdoc.exe'),PATH:`${toolchainBin}${process.platform==='win32'?';':':'}${process.env.PATH??''}`};
-const meta=JSON.parse(execFileSync(cargoExe,['metadata','--locked','--format-version','1','--filter-platform','x86_64-pc-windows-msvc'],{encoding:'utf8',maxBuffer:64*1024*1024,env:rustEnv}));
+const meta=JSON.parse(projectRust('MetadataWindows'));
 const active=new Set(meta.resolve.nodes.map(n=>n.id));
 const lock=readFileSync('Cargo.lock','utf8');
 const checksums=new Map(lock.split('[[package]]').slice(1).map(block=>{

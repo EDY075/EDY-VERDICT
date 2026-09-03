@@ -34,4 +34,14 @@ if (-not $GuardActualRustup.Equals($GuardExpectedRustup, [StringComparison]::Ord
     throw 'PROJECT_RUST_ENVIRONMENT_DENIED: global or foreign Rustup/Cargo context detected inside repository'
 }
 
+foreach ($GuardHome in @($GuardExpectedRustup, $GuardExpectedCargo)) {
+    $GuardPath = $GuardHome
+    while ($GuardPath -and $GuardPath.StartsWith($GuardProjectRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        if (-not (Test-Path -LiteralPath $GuardPath -PathType Container) -or
+            ((Get-Item -LiteralPath $GuardPath).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            throw 'PROJECT_RUST_ENVIRONMENT_DENIED: Rust home chain is missing or a reparse point'
+        }
+        $GuardPath = Split-Path -Parent $GuardPath
+    }
+}
 Write-Output 'PROJECT_RUST_ENVIRONMENT_GATE=PASS_PROJECT_LOCAL'
