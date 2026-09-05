@@ -36,10 +36,10 @@ was installed or changed.
 ## Recurrence during the Level 0 final gate
 
 On 2026-09-02 a global inventory command, `rustup toolchain list`, was invoked with
-`D:\EDY-Projects\EDY-VERDICT` as its working directory while process-local
+`<workspace>\EDY-VERDICT` as its working directory while process-local
 `RUSTUP_HOME` and `CARGO_HOME` were unset. The global Rustup shim honored the repository
 `rust-toolchain.toml` and automatically provisioned the pinned 1.98.0 toolchain under
-`C:\Users\edmil\.rustup`. The project-local toolchain was not changed.
+`%USERPROFILE%\.rustup`. The project-local toolchain was not changed.
 
 The user explicitly authorized one official uninstall from the verified neutral `C:\`
 directory. Post-remediation checks confirmed that only global `stable` remained active and
@@ -77,7 +77,7 @@ extra toolchain creation time (00:46:04, America/Sao_Paulo) establish this opera
 the failure was not deliberately reproduced after cleanup.
 
 The user explicitly authorized only the official removal of the global
-`1.98.0-x86_64-pc-windows-msvc`. It was uninstalled from the neutral `D:\EDY-Projects`
+`1.98.0-x86_64-pc-windows-msvc`. It was uninstalled from a neutral workspace-parent
 working directory. No manual filesystem cleanup, update, default change, profile edit,
 registry write or cache removal was performed. Before removal, 34 pending Level 6 files
 were recorded with path/size/SHA-256 and were verified unchanged immediately afterwards.

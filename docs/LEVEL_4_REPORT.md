@@ -7,7 +7,7 @@ changed; no push, PR, deployment, package, installer or release was performed.
 ## Rustup hygiene incident
 
 During the final read-only environment comparison, the direct unwrapped command
-`C:\Users\edmil\.cargo\bin\rustup.exe toolchain list` was invoked from the
+`%USERPROFILE%\.cargo\bin\rustup.exe toolchain list` was invoked from the
 repository with `RUSTUP_HOME` and `CARGO_HOME` unset. The repository override then
 caused Rustup to recreate the global `1.98.0-x86_64-pc-windows-msvc` toolchain.
 The incident was immediately stopped and remediated using the previously authorized
