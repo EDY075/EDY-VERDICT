@@ -8,6 +8,10 @@ Local-first Windows security verification workbench for repositories, files, bin
 
 ![EDY VERDICT repository analysis using a bounded synthetic fixture](linkedin-post/02-repository-analysis.png)
 
+## Video presentation
+
+https://github.com/user-attachments/assets/662263bc-f717-49e2-9feb-4368402be79f
+
 ## Overview
 
 EDY VERDICT brings several security-verification workflows into one native Windows workbench. It treats every result as evidence with explicit coverage, risk, confidence, and provenance—never turning a missing check into a clean verdict.
